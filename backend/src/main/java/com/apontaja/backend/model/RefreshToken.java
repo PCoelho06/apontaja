@@ -30,10 +30,6 @@ public class RefreshToken {
     @Column(nullable = false)
     private Instant expiryDate;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean revoked = false;
-
     public boolean isExpired() {
         return Instant.now().isAfter(expiryDate);
     }
