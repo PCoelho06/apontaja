@@ -1,0 +1,49 @@
+# Test Environment Configuration
+spring:
+  datasource:
+    url: jdbc:h2:mem:apontaja_test
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: false
+  
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+  h2:
+    console:
+      enabled: false
+
+# Application Configuration
+app:
+  base-url: http://localhost:8080
+
+# JWT Configuration - Hardcoded for tests
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+
+# Test logging
+logging:
+  level:
+    com.apontaja.backend: INFO
+    org.springframework.security: WARN

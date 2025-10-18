@@ -1,0 +1,40 @@
+# Development Environment Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/apontaja_dev
+    username: ${DB_USERNAME:apontaja}
+    password: ${DB_PASSWORD:apontaja}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+
+  h2:
+    console:
+      enabled: false
+
+# Development logging
+logging:
+  level:
+    com.apontaja.backend: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

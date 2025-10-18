@@ -27,7 +27,6 @@ public class RefreshTokenService {
                 .user(user)
                 .token(UUID.randomUUID().toString())
                 .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
-                .revoked(false)
                 .build();
 
         return refreshTokenRepository.save(refreshToken);
@@ -51,8 +50,8 @@ public class RefreshTokenService {
         refreshTokenRepository.deleteByUser(user);
     }
 
-    public void revokeToken(RefreshToken token) {
-        token.setRevoked(true);
-        refreshTokenRepository.save(token);
+    @Transactional
+    public void deleteToken(RefreshToken token) {
+        refreshTokenRepository.delete(token);
     }
 }
