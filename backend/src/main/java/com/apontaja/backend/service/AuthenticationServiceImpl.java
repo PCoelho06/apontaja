@@ -11,8 +11,7 @@ import com.apontaja.backend.model.User;
 import com.apontaja.backend.repository.UserRepository;
 import com.apontaja.backend.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -20,11 +19,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
-
-    private static final Logger logger = LoggerFactory.getLogger(AuthenticationServiceImpl.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -43,7 +41,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             
             // Return generic response without revealing the email exists
             // This prevents email enumeration attacks
-            logger.info("Registration attempt with existing email: {}", request.getEmail());
+            log.info("Registration attempt with existing email: {}", request.getEmail());
             throw new RuntimeException("Registration request processed. If this email is valid, you will receive a confirmation email.");
         }
 
@@ -61,7 +59,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         // Send verification email to new user
         emailService.sendRegistrationVerificationEmail(user.getEmail(), user.getFirstName());
         
-        logger.info("New user registered: {}", user.getEmail());
+        log.info("New user registered: {}", user.getEmail());
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
@@ -86,7 +84,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         User user = (User) authentication.getPrincipal();
         
-        logger.info("User logged in: {}", user.getEmail());
+        log.info("User logged in: {}", user.getEmail());
         
         // Delete existing refresh tokens for this user
         refreshTokenService.deleteByUser(user);
@@ -112,7 +110,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .map(RefreshToken::getUser)
                 .map(user -> {
                     String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
-                    logger.debug("Access token refreshed for user: {}", user.getEmail());
+                    log.debug("Access token refreshed for user: {}", user.getEmail());
                     return AuthResponse.builder()
                             .accessToken(accessToken)
                             .refreshToken(requestRefreshToken)
@@ -129,7 +127,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public void logout(String refreshToken) {
         refreshTokenService.findByToken(refreshToken)
                 .ifPresent(token -> {
-                    logger.info("User logged out, deleting refresh token");
+                    log.info("User logged out, deleting refresh token");
                     refreshTokenService.deleteToken(token);
                 });
     }

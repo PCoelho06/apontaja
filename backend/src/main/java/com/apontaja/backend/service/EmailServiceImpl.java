@@ -1,28 +1,72 @@
 package com.apontaja.backend.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
     
-    private static final Logger logger = LoggerFactory.getLogger(EmailServiceImpl.class);
+    private final JavaMailSender mailSender;
+    
+    @Value("${spring.mail.from:noreply@apontaja.com}")
+    private String fromEmail;
+    
+    @Value("${app.base-url:http://localhost:8080}")
+    private String baseUrl;
     
     @Override
     public void sendExistingEmailNotification(String email) {
-        // TODO: Implement actual email sending
-        // This should inform the user that their email is already registered
-        // and provide a link to reset password if they forgot it
-        logger.info("Sending existing email notification to: {}", email);
-        logger.debug("Email would contain: Your email is already registered. If you forgot your password, click here to reset it.");
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(email);
+            message.setSubject("Registration Attempt - Apontaja");
+            message.setText(String.format(
+                "Hello,\n\n" +
+                "Someone attempted to register an account with this email address on Apontaja.\n\n" +
+                "If this was you and you already have an account, you can log in directly.\n" +
+                "If you forgot your password, you can reset it here: %s/reset-password\n\n" +
+                "If this wasn't you, you can safely ignore this email.\n\n" +
+                "Best regards,\n" +
+                "The Apontaja Team",
+                baseUrl
+            ));
+            
+            mailSender.send(message);
+            log.info("Existing email notification sent to: {}", email);
+        } catch (MailException e) {
+            log.error("Failed to send existing email notification to: {}", email, e);
+        }
     }
     
     @Override
     public void sendRegistrationVerificationEmail(String email, String firstName) {
-        // TODO: Implement actual email sending
-        // This should send a verification email to confirm the user's email address
-        logger.info("Sending registration verification email to: {} ({})", email, firstName);
-        logger.debug("Email would contain: Welcome {}! Please verify your email address by clicking the link.", firstName);
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(email);
+            message.setSubject("Welcome to Apontaja - Verify Your Email");
+            message.setText(String.format(
+                "Hello %s,\n\n" +
+                "Welcome to Apontaja! We're excited to have you on board.\n\n" +
+                "Your account has been successfully created. You can now log in and start using our services.\n\n" +
+                "If you have any questions, please don't hesitate to contact us.\n\n" +
+                "Best regards,\n" +
+                "The Apontaja Team",
+                firstName
+            ));
+            
+            mailSender.send(message);
+            log.info("Registration verification email sent to: {} ({})", email, firstName);
+        } catch (MailException e) {
+            log.error("Failed to send registration verification email to: {}", email, e);
+        }
     }
 }

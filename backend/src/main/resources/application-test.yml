@@ -17,10 +17,24 @@ spring:
 
   flyway:
     enabled: false
+  
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
   h2:
     console:
       enabled: false
+
+# Application Configuration
+app:
+  base-url: http://localhost:8080
 
 # JWT Configuration - Hardcoded for tests
 jwt:

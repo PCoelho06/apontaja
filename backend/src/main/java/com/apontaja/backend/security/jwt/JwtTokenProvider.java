@@ -3,8 +3,7 @@ package com.apontaja.backend.security.jwt;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,10 +12,9 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class JwtTokenProvider {
-
-    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -64,7 +62,7 @@ public class JwtTokenProvider {
                     .parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException ex) {
-            logger.warn("Invalid JWT token: {}", ex.getMessage());
+            log.warn("Invalid JWT token: {}", ex.getMessage());
             return false;
         }
     }
