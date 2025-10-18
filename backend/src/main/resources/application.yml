@@ -1,0 +1,19 @@
+# Application Configuration - Base
+spring:
+  application:
+    name: apontaja-backend
+
+server:
+  port: 8080
+
+# JWT Configuration - Use environment variables in production
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+
+# Logging Configuration
+logging:
+  level:
+    com.apontaja.backend: DEBUG
+    org.springframework.security: DEBUG
