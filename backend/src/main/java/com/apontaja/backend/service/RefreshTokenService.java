@@ -1,57 +1,19 @@
 package com.apontaja.backend.service;
 
-import com.apontaja.backend.exception.TokenRefreshException;
 import com.apontaja.backend.model.RefreshToken;
 import com.apontaja.backend.model.User;
-import com.apontaja.backend.repository.RefreshTokenRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-public class RefreshTokenService {
+public interface RefreshTokenService {
 
-    @Value("${jwt.refresh-token-expiration}")
-    private Long refreshTokenDurationMs;
+    RefreshToken createRefreshToken(User user);
 
-    private final RefreshTokenRepository refreshTokenRepository;
+    Optional<RefreshToken> findByToken(String token);
 
-    public RefreshToken createRefreshToken(User user) {
-        RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
-                .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
-                .build();
+    RefreshToken verifyExpiration(RefreshToken token);
 
-        return refreshTokenRepository.save(refreshToken);
-    }
+    void deleteByUser(User user);
 
-    public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenRepository.findByToken(token);
-    }
-
-    public RefreshToken verifyExpiration(RefreshToken token) {
-        if (token.isExpired()) {
-            refreshTokenRepository.delete(token);
-            throw new TokenRefreshException(token.getToken(), 
-                "Refresh token was expired. Please make a new signin request");
-        }
-        return token;
-    }
-
-    @Transactional
-    public void deleteByUser(User user) {
-        refreshTokenRepository.deleteByUser(user);
-    }
-
-    @Transactional
-    public void deleteToken(RefreshToken token) {
-        refreshTokenRepository.delete(token);
-    }
+    void deleteToken(RefreshToken token);
 }
