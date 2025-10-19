@@ -75,7 +75,7 @@ echo "Obtention du certificat SSL..."
 docker compose run --rm certbot certonly \
     --webroot \
     --webroot-path=/var/www/certbot \
-    --email votre-email@example.com \
+    --email p.coelho@lapinou.tech \
     --agree-tos \
     --no-eff-email \
     -d apontaja.com \

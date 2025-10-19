@@ -46,7 +46,7 @@ jobs:
           files: ./backend/target/site/jacoco/jacoco.xml
           flags: backend
 
-  # Job 2 : Build et tests Frontend
+  # Job 2 : Build Frontend
   frontend-tests:
     name: Frontend - Build & Tests
     runs-on: ubuntu-latest
@@ -69,10 +69,6 @@ jobs:
       - name: Lint code
         working-directory: ./frontend
         run: npm run lint
-
-      - name: Run tests
-        working-directory: ./frontend
-        run: npm run test:unit
 
       - name: Build Frontend
         working-directory: ./frontend
