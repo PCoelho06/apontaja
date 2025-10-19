@@ -1,0 +1,33 @@
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Docker
+certbot/
+
+# PostgreSQL data
+postgres_data/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSL (si vous générez localement)
+nginx/ssl/*.pem
+nginx/ssl/*.key
+
+# Backup
+*.backup
+*.bak
