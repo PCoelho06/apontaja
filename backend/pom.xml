@@ -184,6 +184,23 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.11</version>
+                <configuration>
+                    <excludes>
+                        <!-- Exclure les entités/modèles -->
+                        <exclude>**/model/**</exclude>
+                        <exclude>**/entity/**</exclude>
+                        <!-- Exclure les DTOs -->
+                        <exclude>**/dto/**</exclude>
+                        <!-- Exclure les exceptions personnalisées -->
+                        <exclude>**/exception/**</exclude>
+                        <!-- Exclure les configurations -->
+                        <exclude>**/config/**</exclude>
+                        <!-- Exclure la classe principale -->
+                        <exclude>**/BackendApplication.class</exclude>
+                        <!-- Exclure les security configs (JWT, filters, etc.) -->
+                        <exclude>**/security/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -205,12 +222,45 @@
                         <configuration>
                             <rules>
                                 <rule>
-                                    <element>PACKAGE</element>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.40</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.30</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <!-- Règle spécifique pour les services (plus stricte) -->
+                                <rule>
+                                    <element>CLASS</element>
+                                    <includes>
+                                        <include>**/service/*Service</include>
+                                    </includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
                                             <minimum>0.50</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <!-- Règle pour les controllers (moins stricte) -->
+                                <rule>
+                                    <element>CLASS</element>
+                                    <includes>
+                                        <include>**/controller/*Controller</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.30</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

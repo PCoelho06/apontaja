@@ -47,8 +47,8 @@ jobs:
           flags: backend
 
   # Job 2 : Build Frontend
-  frontend-tests:
-    name: Frontend - Build & Tests
+  frontend-build:
+    name: Frontend - Build & Lint
     runs-on: ubuntu-latest
 
     steps:
