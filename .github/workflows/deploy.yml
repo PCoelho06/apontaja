@@ -1,0 +1,78 @@
+name: CD - Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permet le déclenchement manuel
+
+# Ne déployer que si la CI a réussi
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        env:
+          VPS_IP: ${{ secrets.VPS_IP }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -p $SSH_PORT $SSH_USER@$VPS_IP << 'ENDSSH'
+            set -e
+          
+            # Aller dans le dossier du projet
+            cd ~/apontaja
+          
+            # Pull les derniers changements
+            git pull origin main
+          
+            # Copier les variables d'environnement si elles n'existent pas
+            if [ ! -f .env ]; then
+              echo "⚠️  Attention: .env n'existe pas, utilisation de .env.example"
+              cp .env.example .env
+            fi
+          
+            # Déployer
+            chmod +x deploy.sh
+            ./deploy.sh
+          ENDSSH
+
+      - name: Verify deployment
+        env:
+          VPS_IP: ${{ secrets.VPS_IP }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -p $SSH_PORT $SSH_USER@$VPS_IP << 'ENDSSH'
+            cd ~/apontaja
+            docker compose ps
+          ENDSSH
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Déploiement réussi sur https://apontaja.com"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Échec du déploiement"
+          exit 1
