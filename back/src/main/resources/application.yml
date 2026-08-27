@@ -6,6 +6,6 @@ server:
   port: 8080
 
 # Aucune configuration de datasource à ce stade (Phase 0 / étape 2).
-# La configuration PostgreSQL + Flyway sera ajoutée à l'étape 7, avec la stratégie
-# de gestion des secrets définie à l'étape 6 (ne jamais commiter d'identifiants en clair
+# La configuration PostgreSQL + Flyway sera ajoutée à l'étape 7. Stratégie de gestion des secrets
+# en place depuis l'étape 6 : voir application-local.yml.example (jamais d'identifiants en clair
 # ici — cf. audit §3.1 : "secret applicatif commité en clair" dans l'ancien projet).

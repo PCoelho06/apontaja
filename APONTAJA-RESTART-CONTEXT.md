@@ -48,6 +48,7 @@ d'un nouveau repo, en conservant ce qui a de la valeur (modèle métier, écrans
 | Backend — version | **Spring Boot 4.1** (Spring Framework 7), pas 3.x comme indiqué plus bas dans la table "Décision" initiale : la ligne 3.x est passée EOL le 30/06/2026, en cours de projet, tranché en session pour repartir directement sur la ligne actuelle. Java 21 inchangé (compatible) | `[DECIDED]` |
 | Lint back (Java) | Checkstyle, ruleset custom (`back/checkstyle.xml`) volontairement resserré (pas de `google_checks.xml`/`sun_checks.xml` complets — conflit d'indentation avec `.editorconfig` et risque de faux positifs sur le module `Indentation`). Lié à la phase Maven `verify` | `[DECIDED]` |
 | Hébergement Git / CI | GitHub (GitHub Actions). `.github/workflows/ci.yml` : job `back` (`mvn -B clean verify`, couvre build + tests + ArchUnit + Checkstyle) et job `front` (pnpm install/lint/build/test), sur chaque PR + push `main` + déclenchement manuel | `[DECIDED]` |
+| Gestion des secrets — dev local | Profil Spring `local` : `application.yml` (commité, jamais de secret) + `application-local.yml.example` (commité, template) + `application-local.yml` (réel, ignoré par Git). Activation via `SPRING_PROFILES_ACTIVE=local`. Portée volontairement limitée au dev local | `[DECIDED]` |
 | Gestionnaire de workspace front | pnpm workspaces. Pas de Turborepo pour l'instant (introduit plus tard si le temps de build/test incrémental le justifie) | `[DECIDED]` |
 | Auth — mécanisme | JWT access token courte durée + refresh token opaque, hashé en base, en cookie httpOnly + Secure + SameSite=Strict | `[DECIDED]` |
 | Auth — access token côté front | En mémoire JS uniquement, jamais dans localStorage/sessionStorage | `[DECIDED]` |
@@ -248,8 +249,13 @@ Seulement après ces 7 étapes validées : démarrage du vertical slice "Authent
 
 ## 6. Questions ouvertes
 
-Aucune question bloquante en attente. Toutes les décisions structurantes nécessaires pour
-démarrer la Phase 0 sont `[DECIDED]` (section 2).
+- **Gestion des secrets en production `[OPEN]`** — aucun hébergement choisi pour l'instant (dev
+  local uniquement pour la Phase 0, confirmé explicitement en session). Pas de secrets manager
+  cloud (Vault, AWS Secrets Manager...) mis en place tant que ce choix n'est pas fait. Non
+  bloquant pour la Phase 0 (aucun secret de production à gérer avant un déploiement réel), mais
+  à trancher avant toute mise en production — au plus tard en Phase 5 (durcissement).
+
+Aucune autre question bloquante en attente pour la suite immédiate de la Phase 0.
 
 ---
 
