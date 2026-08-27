@@ -1,0 +1,10 @@
+{
+  "name": "@apontaja/portail-salon",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Portail salon — écrans staff (login, agenda, carnet client, gestion salon).",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

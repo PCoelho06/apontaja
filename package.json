@@ -1,0 +1,18 @@
+{
+  "name": "apontaja",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Apontaja — SaaS de gestion de rendez-vous pour salons (coiffure/beauté). Mono-repo pnpm : portail-salon, portail-client, packages/ui-kit. Le backend (back/) est un projet Spring Boot/Gradle séparé.",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev:salon": "pnpm --filter portail-salon dev",
+    "dev:client": "pnpm --filter portail-client dev",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test"
+  }
+}

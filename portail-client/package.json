@@ -1,0 +1,10 @@
+{
+  "name": "@apontaja/portail-client",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Portail client — inscription, réservation, historique multi-salons.",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

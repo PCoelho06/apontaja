@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+    Apontaja — ruleset Checkstyle (Phase 0, étape 5).
+
+    Choix délibérément resserré plutôt que google_checks.xml/sun_checks.xml fournis par défaut :
+      - google_checks.xml impose une indentation 2 espaces, ce qui contredirait .editorconfig
+        (indent_size=4 pour *.java, acté depuis l'étape 1).
+      - Pas de module Indentation : historiquement le plus capricieux/faux-positif de Checkstyle,
+        écarté pour limiter le risque de casser la CI sur du code par ailleurs correct.
+      - Pas de Javadoc obligatoire (JavadocMethod/JavadocType) : le code actuel n'a pas de
+        javadoc systématique par méthode, on ne veut pas de vague de violations rétroactive.
+
+    Objectif : un lint réellement actif (imports propres, pas de code mort évident, style
+    d'accolades cohérent) sans friction disproportionnée au démarrage du projet. Le ruleset
+    pourra être durci plus tard si souhaité (ex. réintroduire Indentation une fois le code plus
+    volumineux, ou exiger la Javadoc sur les API publiques).
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- Pas de tabulations : cohérent avec .editorconfig (indent_style = space). -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+
+    <!-- Fichier terminé par une ligne vide : cohérent avec .editorconfig (insert_final_newline). -->
+    <module name="NewlineAtEndOfFile"/>
+
+    <!-- 
+        Correction : Le module LineLength a été déplacé ici.
+        Depuis Checkstyle 8.24+, il doit être un enfant direct de Checker et non de TreeWalker.
+    -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <!-- Tolère les lignes de directive Javadoc trop longues à découper proprement. -->
+        <property name="ignorePattern" value="^\s*\*.*$"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Imports -->
+        <module name="AvoidStarImport"/>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+
+        <!-- Erreurs classiques -->
+        <module name="EqualsHashCode"/>
+        <module name="EmptyCatchBlock"/>
+        <module name="EmptyStatement"/>
+
+        <!-- Style de base -->
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+        <module name="OneTopLevelClass"/>
+        <module name="PackageDeclaration"/>
+
+        <!-- Anti-code mort & Sécurité -->
+        <module name="UnusedLocalVariable"/>
+        <module name="ParameterAssignment"/>
+        <module name="RedundantModifier"/>
+        <module name="UpperEll"/>
+    </module>
+</module>

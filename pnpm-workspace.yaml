@@ -1,0 +1,4 @@
+packages:
+  - "portail-salon"
+  - "portail-client"
+  - "packages/*"
