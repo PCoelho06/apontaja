@@ -1,14 +1,31 @@
+# --- Node / pnpm (portail-salon, portail-client, packages/ui-kit) ---
 node_modules/
-.pnpm-store/
 dist/
-.env
-.env.*
-!.env.example
+.vite/
+*.local
+pnpm-lock.yaml.bak
+
+# --- Java / Maven (back/) ---
+back/target/
+back/.mvn/wrapper/maven-wrapper.jar.sha256
+back/out/
+back/bin/
+!back/.mvn/wrapper/maven-wrapper.jar
+
+# --- IDE ---
 .idea/
 .vscode/
+*.iml
 .DS_Store
 
-# Java / Gradle / Maven
-back/build/
-back/.gradle/
-back/target/
+# --- Secrets / config locale ---
+.env
+.env.local
+.env.*.local
+back/src/main/resources/application-local.yml
+back/src/main/resources/application-local.yaml
+
+# --- Logs ---
+*.log
+npm-debug.log*
+pnpm-debug.log*

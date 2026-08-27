@@ -1,0 +1,76 @@
+name: CI
+
+# Phase 0, étape 5 — CI de base : build + tests (y compris ArchUnit) + lint sur chaque PR.
+# Deux jobs indépendants (back Maven / front pnpm workspaces), sans filtrage par chemin pour
+# l'instant : simplicité voulue pour une "CI de base", à affiner plus tard si les temps de build
+# le justifient.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  back:
+    name: Back (Maven)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Utilise le Maven pré-installé sur le runner GitHub-hosted plutôt que ./mvnw : le wrapper
+      # Maven a été généré en local (mvn -N wrapper:wrapper) mais n'a pas transité par Claude
+      # (généré directement sur la machine de l'utilisateur), donc sa présence dans le repo au
+      # moment du premier push n'est pas garantie. À basculer sur ./mvnw une fois le wrapper
+      # commité, pour figer précisément la version de Maven utilisée en CI.
+      - name: Build & tests (incl. ArchUnit)
+        run: mvn -B clean verify
+
+  front:
+    name: Front (pnpm workspaces)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      # --frozen-lockfile échoue si pnpm-lock.yaml est absent ou désynchronisé de package.json :
+      # lancer `pnpm install` en local et commiter le lockfile est un préalable obligatoire avant
+      # que ce job puisse passer (voir README racine).
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --if-present : les packages front sont encore des placeholders (Phase 0, étape 1), sans
+      # script build/test tant que le vertical slice "Authentification" (Phase 1) n'a pas
+      # initialisé Vite/Vitest. Seul packages/ui-kit a un vrai script lint pour l'instant.
+      - name: Lint
+        run: pnpm -r --if-present lint
+
+      - name: Build
+        run: pnpm -r --if-present build
+
+      - name: Test
+        run: pnpm -r --if-present test
