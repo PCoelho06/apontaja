@@ -5,8 +5,8 @@
   "description": "Apontaja — SaaS de gestion de rendez-vous pour salons (coiffure/beauté). Mono-repo pnpm : portail-salon, portail-client, packages/ui-kit. Le backend (back/) est un projet Spring Boot/Gradle séparé.",
   "packageManager": "pnpm@11.24.0",
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
+    "node": ">=22.0.0",
+    "pnpm": ">=11.0.0"
   },
   "scripts": {
     "dev:salon": "pnpm --filter portail-salon dev",
