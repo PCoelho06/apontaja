@@ -43,6 +43,30 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+             Étape 7 : starter dédié (pas flyway-core en dépendance brute) — Spring Boot 4 a
+             sorti l'auto-configuration Flyway de spring-boot-autoconfigure vers un module
+             dédié spring-boot-flyway, embarqué par ce starter. Sans lui, flyway-core serait
+             présent sur le classpath mais l'auto-configuration ne se déclencherait jamais,
+             silencieusement (piège documenté après la sortie de Boot 4.1, évité ici en amont).
+             flyway-database-postgresql : support PostgreSQL, externalisé du cœur de Flyway
+             depuis Flyway 10+, requis séparément.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -58,6 +82,30 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+             Testcontainers (PostgreSQL réel), conforme à la stratégie de tests actée (§2) :
+             spring-boot-testcontainers fournit l'intégration @ServiceConnection (module stable,
+             non affecté par l'éclatement de spring-boot-autoconfigure — c'est un module distinct
+             depuis Boot 3.1, pas une auto-configuration technique comme Flyway/JDBC).
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <version>2.0.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>1.19.8</version>
             <scope>test</scope>
         </dependency>
 

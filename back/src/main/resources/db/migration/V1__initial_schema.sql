@@ -1,10 +1,19 @@
 -- =============================================================================
--- Apontaja — Schéma relationnel PostgreSQL de référence
+-- ⚠️  COPIE EXACTE de back/apontaja-schema.sql (référence canonique, §4 du fichier de
+-- contexte). Flyway exige ce nom de fichier (V1__..., convention de nommage), donc le contenu
+-- ne peut pas être partagé par référence — il doit être dupliqué ici.
+--
+-- Toute modification du schéma passe par apontaja-schema.sql d'abord, puis se répercute ici
+-- (soit en éditant directement cette migration tant qu'elle n'a jamais tourné en dehors du poste
+-- de dev, soit via une nouvelle migration V2__... une fois appliquée quelque part de partagé —
+-- règle Flyway standard : ne jamais modifier une migration déjà appliquée ailleurs).
+--
+-- Aucune vérification automatique de synchronisation entre les deux fichiers pour l'instant
+-- (pourrait être ajouté en CI plus tard si la dérive devient un problème réel).
 -- =============================================================================
--- ⚠️  Ce fichier est la référence canonique (§4 du fichier de contexte). Il est dupliqué
--- verbatim dans src/main/resources/db/migration/V1__initial_schema.sql (Flyway impose ce nom
--- de fichier, impossible de le partager par référence) — toute modification du schéma doit
--- passer par ICI d'abord, puis se répercuter dans la copie Flyway.
+
+-- =============================================================================
+-- Apontaja — Schéma relationnel PostgreSQL de référence
 -- =============================================================================
 -- Conventions générales :
 --   * PK en UUID (v7), GÉNÉRÉES CÔTÉ APPLICATION (Java), pas par PostgreSQL —

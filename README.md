@@ -23,10 +23,13 @@ fonctionnalité ensemble).
 
 ## Prérequis
 
-- Node.js 20+ (voir `.nvmrc`)
-- pnpm 9+ (`corepack enable` recommandé)
+- Node.js 22+ (voir `.nvmrc`)
+- pnpm 11+ (`corepack enable` recommandé)
 - Java 21
-- PostgreSQL (via Docker, détails à venir en Phase 0 étape 6-7)
+- **Docker actif** — requis pour deux usages distincts : PostgreSQL en dev local (voir
+  `back/src/main/resources/application-local.yml.example`), et Testcontainers pour les tests
+  d'intégration back (`mvn clean verify` démarre son propre PostgreSQL éphémère automatiquement,
+  aucune action manuelle nécessaire pour les tests — mais Docker doit tourner)
 
 ## CI/CD (GitHub Actions)
 

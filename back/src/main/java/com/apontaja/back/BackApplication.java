@@ -2,30 +2,21 @@ package com.apontaja.back;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration;
-import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 
 /**
  * Point d'entrée de l'application Apontaja.
  *
- * <p>Phase 0 / étape 2 — squelette minimal (Web, Security, Data JPA, Validation) avec un simple
- * endpoint /health. Aucune base de données n'est encore configurée à ce stade : le schéma
- * PostgreSQL (apontaja-schema.sql) ne sera appliqué via Flyway qu'à l'étape 7 de la Phase 0.
+ * <p>Depuis la Phase 0 / étape 7, l'auto-configuration JPA/DataSource/Flyway est active sans
+ * exclusion (contrairement aux étapes 2-6, où elle était temporairement désactivée faute de base
+ * de données configurée — voir l'historique dans {@code back/README.md}). Le schéma PostgreSQL
+ * de référence ({@code apontaja-schema.sql}, à la racine de {@code back/}) est appliqué via
+ * Flyway au démarrage, depuis sa copie dans {@code src/main/resources/db/migration/}.
  *
- * <p><b>TODO étape 7</b> : une fois la DataSource PostgreSQL + Flyway configurés, retirer les
- * exclusions ci-dessous ({@link DataSourceAutoConfiguration}, {@link HibernateJpaAutoConfiguration},
- * {@link DataSourceTransactionManagerAutoConfiguration}) pour réactiver l'auto-configuration JPA
- * normale. Sans base de données, les laisser actives est nécessaire : sinon le contexte Spring
- * échoue au démarrage faute de DataSource disponible.
+ * <p>Nécessite une base de données PostgreSQL accessible au démarrage — voir le profil Spring
+ * {@code local} ({@code application-local.yml}, non commité) pour le dev local. Aucun
+ * hébergement de production n'est encore décidé (voir §6 du fichier de contexte).
  */
-@SpringBootApplication(
-        exclude = {
-                DataSourceAutoConfiguration.class,
-                HibernateJpaAutoConfiguration.class,
-                DataSourceTransactionManagerAutoConfiguration.class
-        }
-)
+@SpringBootApplication
 public class BackApplication {
 
     public static void main(String[] args) {
