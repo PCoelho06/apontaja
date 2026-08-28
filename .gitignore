@@ -4,6 +4,7 @@ dist/
 .vite/
 *.local
 pnpm-lock.yaml.bak
+coverage/
 
 # --- Java / Maven (back/) ---
 back/target/
