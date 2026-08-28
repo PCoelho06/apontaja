@@ -16,8 +16,8 @@
 >   encore changer
 > - `[OPEN]` — question non tranchée, à trancher avant que ça devienne bloquant
 
-Dernière mise à jour : session 7 (schéma relationnel PostgreSQL complet produit, corrections
-issues de la deuxième revue croisée). Prêt à démarrer concrètement la Phase 0.
+Dernière mise à jour : session 8 (Phase 0 déroulée intégralement, des 7 étapes jusqu'à Flyway +
+Testcontainers). Prêt à démarrer le vertical slice "Authentification" (Phase 1).
 
 ---
 
@@ -49,6 +49,8 @@ d'un nouveau repo, en conservant ce qui a de la valeur (modèle métier, écrans
 | Lint back (Java) | Checkstyle, ruleset custom (`back/checkstyle.xml`) volontairement resserré (pas de `google_checks.xml`/`sun_checks.xml` complets — conflit d'indentation avec `.editorconfig` et risque de faux positifs sur le module `Indentation`). Lié à la phase Maven `verify` | `[DECIDED]` |
 | Hébergement Git / CI | GitHub (GitHub Actions). `.github/workflows/ci.yml` : job `back` (`mvn -B clean verify`, couvre build + tests + ArchUnit + Checkstyle) et job `front` (pnpm install/lint/build/test), sur chaque PR + push `main` + déclenchement manuel | `[DECIDED]` |
 | Gestion des secrets — dev local | Profil Spring `local` : `application.yml` (commité, jamais de secret) + `application-local.yml.example` (commité, template) + `application-local.yml` (réel, ignoré par Git). Activation via `SPRING_PROFILES_ACTIVE=local`. Portée volontairement limitée au dev local | `[DECIDED]` |
+| Migrations DB — implémentation | Flyway via `spring-boot-starter-flyway` + `flyway-database-postgresql` (modularisation Spring Boot 4 : `flyway-core` seul ne suffit pas). `apontaja-schema.sql` (racine `back/`) dupliqué verbatim dans `src/main/resources/db/migration/V1__initial_schema.sql` (contrainte de nommage Flyway). `spring.jpa.hibernate.ddl-auto=validate` : Flyway seul gère le schéma | `[DECIDED]` |
+| Tests d'intégration — implémentation | Testcontainers (`spring-boot-testcontainers` + `@ServiceConnection`), image `postgres:16-alpine` épinglée (pas `latest` : bug connu, Flyway sous Spring Boot 4.0.x ne supporte pas encore PostgreSQL 18). Config partagée : `PostgresTestcontainersConfiguration`, importée par tout `@SpringBootTest`. Nécessite Docker actif en local et en CI (déjà présent sur les runners GitHub-hosted) | `[DECIDED]` |
 | Gestionnaire de workspace front | pnpm workspaces. Pas de Turborepo pour l'instant (introduit plus tard si le temps de build/test incrémental le justifie) | `[DECIDED]` |
 | Auth — mécanisme | JWT access token courte durée + refresh token opaque, hashé en base, en cookie httpOnly + Secure + SameSite=Strict | `[DECIDED]` |
 | Auth — access token côté front | En mémoire JS uniquement, jamais dans localStorage/sessionStorage | `[DECIDED]` |
@@ -193,20 +195,21 @@ directement.
 
 ## 5. Plan d'action (roadmap en tranches verticales)
 
-### Phase 0 — Fondations (à dérouler dans cet ordre, pas en un seul bloc)
-1. [ ] Squelette du mono-repo pnpm workspaces : `back/`, `portail-salon/`, `portail-client/`,
+### Phase 0 — Fondations (à dérouler dans cet ordre, pas en un seul bloc) — ✅ TERMINÉE
+1. [x] Squelette du mono-repo pnpm workspaces : `back/`, `portail-salon/`, `portail-client/`,
        `packages/ui-kit/`, `pnpm-workspace.yaml`
-2. [ ] Spring Boot minimal (Web, Security, Data JPA, Validation) — un simple `/health` qui répond
-3. [ ] Mise en place de l'architecture de packages (§2 : domaine → couches web/application/
+2. [x] Spring Boot minimal (Web, Security, Data JPA, Validation) — un simple `/health` qui répond
+3. [x] Mise en place de l'architecture de packages (§2 : domaine → couches web/application/
        domain/infrastructure), sans encore de logique métier dedans
-4. [ ] Écriture des règles ArchUnit correspondant au graphe de dépendances défini en §2, **avant**
+4. [x] Écriture des règles ArchUnit correspondant au graphe de dépendances défini en §2, **avant**
        tout code métier — elles doivent échouer sur un projet vide de sens si mal câblées, puis
        passer une fois la structure en place
-5. [ ] CI de base : build + tests (y compris ArchUnit) + lint sur chaque PR
-6. [ ] Stratégie de gestion des secrets
-7. [ ] Application du schéma `apontaja-schema.sql` via Flyway (première migration)
+5. [x] CI de base : build + tests (y compris ArchUnit) + lint sur chaque PR
+6. [x] Stratégie de gestion des secrets (dev local — production reste `[OPEN]`, voir §6)
+7. [x] Application du schéma `apontaja-schema.sql` via Flyway (première migration)
 
-Seulement après ces 7 étapes validées : démarrage du vertical slice "Authentification" (Phase 1).
+Phase 0 validée dans son ensemble. Démarrage du vertical slice "Authentification" (Phase 1) prêt
+à être lancé à la prochaine session.
 
 ### Phase 1 — Vertical slice "Authentification" (back + front ensemble)
 - [ ] Implémentation `Account`, `RefreshToken`, `ConsentRecord`
@@ -303,6 +306,45 @@ données le bug historique de double-booking non détecté).
 
 **Session suivante — prochaine étape suggérée** : dérouler concrètement les 7 étapes de la
 Phase 0 (§5), en s'appuyant sur `apontaja-schema.sql` pour la première migration Flyway.
+
+**Session 8** : déroulement complet des 7 étapes de la Phase 0, une par une avec validation
+explicite à chaque étape.
+- **Étapes 1-4** : squelette mono-repo pnpm, projet Maven Spring Boot 4.1 minimal (`/health`),
+  structure de packages par domaine (§2), `ArchitectureTest` (ArchUnit, module cœur plutôt que
+  `archunit-junit5`). Plusieurs corrections de compatibilité Spring Boot 4 (modularisation de
+  `spring-boot-autoconfigure` postérieure à la connaissance de Claude — packages déplacés pour
+  `DataSourceAutoConfiguration`, `HibernateJpaAutoConfiguration`, `AutoConfigureMockMvc` ;
+  `spring-boot-starter-web` → `spring-boot-starter-webmvc`) trouvées via des `mvn clean verify`
+  réels exécutés par l'utilisateur, Claude n'ayant ni réseau ni `mvn` dans son environnement.
+- **Étape 5** : CI GitHub Actions (confirmé après clarification — `[DECIDED]`), Checkstyle choisi
+  comme linter Java (`[OPEN]` fermé, ruleset custom pour éviter le conflit d'indentation avec
+  `.editorconfig` et les faux positifs du module `Indentation`). Bug de placement de `LineLength`
+  (doit être enfant de `Checker`, pas de `TreeWalker`) et versions front pariées à l'aveugle
+  (pnpm, ESLint) corrigées par l'utilisateur. Incident de premier push : deux commits nécessaires
+  car des fichiers cachés (`.github/`, `.nvmrc`, `.gitignore`, `.editorconfig`) n'avaient pas
+  suivi lors d'une copie locale (masqués par défaut dans le Finder macOS). CI confirmée verte
+  après ajustement de `.nvmrc` (Node 20 → 22, requis par pnpm 11).
+- **Étape 6** : stratégie de secrets volontairement limitée au dev local (profil Spring `local`,
+  `application-local.yml.example`) — gestion des secrets en production actée comme `[OPEN]`
+  explicite, aucun hébergement choisi.
+- **Étape 7** : Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql` — la
+  modularisation Spring Boot 4 touche aussi Flyway, recherché en amont cette fois plutôt que
+  découvert après coup) appliquant `apontaja-schema.sql` (dupliqué verbatim en
+  `V1__initial_schema.sql`, contrainte de nommage Flyway). Tests d'intégration désormais réels
+  via Testcontainers (`postgres:16-alpine`, épinglé pour éviter un bug connu de Flyway avec
+  PostgreSQL 18 sous Spring Boot 4.0.x). `ddl-auto=validate` : Flyway seul gère le schéma.
+  **Non exécuté par Claude** (ni réseau, ni `mvn`, ni Docker disponibles) — à valider par
+  l'utilisateur, changement le plus risqué de la Phase 0 à ce stade.
+- **Nouvelle instruction permanente actée** (§8, point 7) : fournir systématiquement un nom de
+  branche avant chaque tranche de travail et un message de commit à la fin, sauf pour le tout
+  premier commit du repo (fait directement sur `main`).
+
+**Phase 0 terminée dans son intégralité.**
+
+**Session suivante — prochaine étape suggérée** : valider le dernier `mvn clean verify` de
+l'étape 7 (Flyway + Testcontainers, Docker requis), puis démarrer le vertical slice
+"Authentification" (Phase 1, §5) : `Account`, `RefreshToken`, `ConsentRecord`, JWT access/refresh,
+rate limiting, écrans login/register/mot de passe oublié du portail salon.
 
 ---
 

@@ -1,0 +1,33 @@
+# PostgreSQL de dev local uniquement — pas pour les tests.
+#
+# Les tests d'intégration (mvn clean verify) n'utilisent PAS ce compose : ils démarrent leur
+# propre PostgreSQL éphémère via Testcontainers (voir
+# src/test/java/com/apontaja/back/testsupport/PostgresTestcontainersConfiguration.java),
+# automatiquement, sans docker-compose. Docker doit juste tourner en arrière-plan pour ça.
+#
+# Ce fichier sert à lancer une base persistante pour quand TU fais tourner l'appli toi-même
+# (IDE, `mvn spring-boot:run`...). Usage :
+#   docker compose up -d
+# Identifiants alignés sur application-local.yml.example — copie ce fichier vers
+# application-local.yml (non commité) pour que Spring s'y connecte.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: apontaja-db
+    environment:
+      POSTGRES_USER: apontaja
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: apontaja
+    ports:
+      - "5432:5432"
+    volumes:
+      - apontaja-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apontaja"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  apontaja-db-data:

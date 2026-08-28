@@ -7,20 +7,20 @@ Backend Spring Boot 4.1 (Spring Framework 7) / Java 21 / Maven.
 > session. Java 21 reste inchangé (compatible avec Spring Boot 4.1). Build tool : **Maven**
 > (le fichier de contexte laissait le choix ouvert entre Gradle et Maven — tranché en session).
 
-**État actuel (Phase 0, étape 6 terminée)** :
-- `pom.xml` : Spring Boot 4.1.1, dépendances Web / Security / Data JPA / Validation
-- `BackApplication` : point d'entrée, avec exclusion **temporaire** de l'auto-configuration
-  JPA/DataSource (aucune base de données configurée avant l'étape 7 — voir TODO dans le code)
+**État actuel (Phase 0, étape 7 terminée — Phase 0 complète)** :
+- `pom.xml` : Spring Boot 4.1.1, dépendances Web / Security / Data JPA / Validation / Flyway
+- `BackApplication` : point d'entrée, auto-configuration JPA/DataSource/Flyway **active** depuis
+  l'étape 7 (plus d'exclusion temporaire)
 - `GET /health` : répond `{"status":"UP"}`, seul endpoint public pour l'instant
 - Sécurité minimale : tout le reste est refusé par défaut (`denyAll`), l'authentification réelle
   arrive en Phase 1
 - CSRF désactivé au niveau bootstrap — **statut `[PROVISIONAL]`**, pas une décision actée, voir
   le commentaire dans `SecurityConfig`
-- Tests : `BackApplicationTests` (démarrage du contexte) + `HealthControllerTest` (MockMvc)
 - Structure de packages par domaine en place (§2 du fichier de contexte) : les 8 domaines
   métier (`account`, `organization`, `salon`, `resource`, `service`, `appointment`, `customer`,
   `audit`), chacun avec ses 4 sous-couches `web`/`application`/`domain`/`infrastructure`. Chaque
-  package est documenté par un `package-info.java`. **Toujours aucune logique métier dedans.**
+  package est documenté par un `package-info.java`. **Toujours aucune logique métier dedans**
+  (arrive avec les vertical slices, à partir de la Phase 1).
 - Deux packages transverses hors structure par domaine (`com.apontaja.back.web` pour `/health`,
   `com.apontaja.back.config` pour la sécurité) — **choix non explicitement acté**, documenté dans
   leurs `package-info.java`.
@@ -28,41 +28,67 @@ Backend Spring Boot 4.1 (Spring Framework 7) / Java 21 / Maven.
   mécaniquement le graphe de dépendances autorisées entre domaines et les règles de couches (§2).
   Module ArchUnit cœur (`com.tngtech.archunit:archunit:1.5.0`, pas `archunit-junit5`, voir
   commentaire dans `pom.xml`), piloté par `@TestFactory`/`@BeforeAll` JUnit Jupiter standard —
-  génère un test dynamique par règle × domaine (~28 assertions au total). Couvre : isolation des
-  couches au sein d'un domaine, confidentialité inter-domaines (seule `.application` est
-  accessible depuis l'extérieur d'un domaine), et le graphe littéral du §2. **Ne couvre pas** la
-  discipline "DTO obligatoire" au sens strict (vérifier qu'une classe exposée est bien un DTO) —
-  seulement son corollaire structurel (aucun accès direct aux entités JPA d'un autre domaine).
-  Comme il n'y a encore aucune classe métier, ces règles passent trivialement pour l'instant.
-- **Checkstyle** (`checkstyle.xml`, décidé explicitement en session — voir `[OPEN]` fermé dans
-  `APONTAJA-RESTART-CONTEXT.md`) : ruleset custom volontairement resserré (imports propres, pas
-  de code mort évident, style d'accolades, 120 caractères/ligne) plutôt que `google_checks.xml`
-  (imposerait une indentation 2 espaces, en contradiction avec `.editorconfig`) ou
-  `sun_checks.xml` complet (module `Indentation` historiquement capricieux, Javadoc obligatoire
-  qui aurait fait échouer tout le code déjà écrit). Lié à la phase `verify` via
-  `maven-checkstyle-plugin` 3.6.0 : `mvn clean verify` (déjà utilisé partout, y compris en CI)
-  suffit à le déclencher, aucun changement nécessaire dans `.github/workflows/ci.yml`.
-  **Confirmé vert en CI** après correction d'un vrai bug de ma part (voir "Historique des
-  corrections" ci-dessous) et enrichi de 4 règles supplémentaires par l'utilisateur
-  (`UnusedLocalVariable`, `ParameterAssignment`, `RedundantModifier`, `UpperEll`).
+  génère un test dynamique par règle × domaine (~28 assertions au total). Ne couvre pas la
+  discipline "DTO obligatoire" au sens strict, seulement son corollaire structurel (aucun accès
+  direct aux entités JPA d'un autre domaine). Comme il n'y a encore aucune classe métier, ces
+  règles passent trivialement pour l'instant.
+- **Checkstyle** (`checkstyle.xml`) : ruleset custom volontairement resserré, enrichi de 4 règles
+  supplémentaires par l'utilisateur (`UnusedLocalVariable`, `ParameterAssignment`,
+  `RedundantModifier`, `UpperEll`). Lié à la phase `verify`. **Confirmé vert en CI.**
 - **CI GitHub Actions** (`.github/workflows/ci.yml`, racine du repo) : job `back` = `mvn -B clean
-  verify` (build, tests, ArchUnit, Checkstyle, tout en une commande). **Confirmé vert** après
-  correctifs (voir "Historique des corrections").
-- **Gestion des secrets — dev local** (voir section dédiée ci-dessous) : mécanisme en place
-  (profil Spring `local`, `application-local.yml.example` commité, `application-local.yml`
-  ignoré par Git). Gestion des secrets en **production** volontairement laissée `[OPEN]`, aucun
-  hébergement choisi pour l'instant.
+  verify` (build, tests, ArchUnit, Checkstyle). **Confirmé vert.**
+- **Gestion des secrets — dev local** : profil Spring `local`, `application-local.yml.example`
+  commité, `application-local.yml` ignoré par Git. Secrets en **production** volontairement
+  laissés `[OPEN]`, aucun hébergement choisi pour l'instant.
+- **Flyway + PostgreSQL** (étape 7) : `apontaja-schema.sql` (racine de `back/`, référence
+  canonique) dupliqué verbatim dans `src/main/resources/db/migration/V1__initial_schema.sql`
+  (Flyway impose ce nom de fichier, impossible de le référencer directement — voir le bandeau en
+  tête des deux fichiers pour la procédure de synchronisation, actuellement manuelle, aucune
+  vérification automatique de dérive). `spring.jpa.hibernate.ddl-auto=validate` : Flyway est la
+  seule source de vérité sur le schéma, Hibernate ne le modifie jamais.
+- **Testcontainers** (`PostgreSQLContainer`, image `postgres:16-alpine` — pas `latest`, un bug
+  connu de Flyway sous Spring Boot 4.0.x rejette PostgreSQL 18) : `BackApplicationTests` et
+  `HealthControllerTest` bootent désormais un vrai PostgreSQL éphémère via
+  `PostgresTestcontainersConfiguration` (`@ServiceConnection`), donc exercent réellement
+  l'application de `V1__initial_schema.sql` par Flyway à chaque exécution — c'est la preuve de
+  bon fonctionnement de la migration. **Nécessite Docker actif en local et en CI** (déjà présent
+  par défaut sur les runners GitHub-hosted, aucune config CI supplémentaire nécessaire).
+- **`docker-compose.yml`** (racine de `back/`) : PostgreSQL **de dev local uniquement**, distinct
+  de Testcontainers — voir encadré ci-dessous, question posée en session après un premier retour
+  d'expérience utilisateur (venant de H2, pas encore familier de Testcontainers).
 
-**⚠️ `ArchitectureTest` n'a pas été exécuté par Claude** (pas d'accès réseau/`mvn` dans
-l'environnement de génération) — à valider avec le prochain `mvn clean verify`. Pour vérifier que
-les règles détecteraient bien une violation (et ne sont pas vacuousement toujours vraies faute de
-code métier), on peut temporairement ajouter une classe qui enfreint volontairement le graphe
-(ex. une classe dans `account.application` qui référence `salon.domain`), relancer les tests,
-constater l'échec attendu, puis la supprimer.
+### Testcontainers vs `docker-compose.yml` — ne pas confondre
 
-`apontaja-schema.sql` (à la racine de ce dossier) est le schéma PostgreSQL de référence —
-il fait foi en cas de divergence avec la documentation. Il sera appliqué via Flyway comme
-première migration (étape 7 de la Phase 0).
+Ce sont deux mécanismes séparés, pour deux besoins différents :
+
+| | Testcontainers | `docker-compose.yml` |
+|---|---|---|
+| Pour quoi | Tests d'intégration (`mvn clean verify`) | Faire tourner l'appli toi-même (IDE, `mvn spring-boot:run`) |
+| Démarré par | Le code du test lui-même (`PostgresTestcontainersConfiguration`), automatiquement | Toi, manuellement (`docker compose up -d`) |
+| Durée de vie | Éphémère, un conteneur par exécution de tests, détruit ensuite | Persistant, tu le lances une fois et le réutilises |
+| Fichier à écrire | Aucun — juste avoir Docker qui tourne | `back/docker-compose.yml` |
+
+Remplace H2 dans ce projet précisément parce que le schéma utilise des fonctionnalités
+PostgreSQL réelles (`citext`, contraintes `EXCLUDE` + `btree_gist`) que H2 ne simule pas
+fidèlement même en mode compatibilité Postgres — cf. l'audit §3.4 : "Incohérence DB entre
+environnements (MySQL dev / config Postgres prod)" dans l'ancien projet, qu'on évite ici en
+testant contre un vrai PostgreSQL partout, dev comme tests.
+
+**Deux pièges Spring Boot 4 identifiés et évités en amont** (recherchés avant d'écrire le code,
+cette fois, plutôt que découverts après coup comme aux étapes précédentes) :
+1. Flyway est passé en module séparé (`spring-boot-starter-flyway`, pas `flyway-core` en
+   dépendance brute — sinon l'auto-configuration ne se déclenche jamais, silencieusement) +
+   `flyway-database-postgresql` (support PostgreSQL externalisé depuis Flyway 10+).
+2. PostgreSQL 18 pas encore supporté par Flyway tel que géré par Spring Boot 4.0.x → épinglage
+   explicite sur `postgres:16-alpine` pour Testcontainers.
+
+**⚠️ Toujours non exécuté par Claude** (pas d'accès réseau/`mvn`/Docker dans l'environnement de
+génération) — Flyway + Testcontainers n'ont donc **jamais tourné réellement**, contrairement aux
+étapes précédentes où au moins la compilation avait pu être anticipée. C'est le changement le
+plus risqué de toute la Phase 0 à valider par ton prochain `mvn clean verify` (Docker actif
+requis en local). Pour vérifier qu'`ArchitectureTest` détecterait bien une violation, on peut
+temporairement ajouter une classe qui enfreint volontairement le graphe, relancer les tests,
+constater l'échec, puis la supprimer.
 
 Voir `../APONTAJA-RESTART-CONTEXT.md` pour toutes les décisions d'architecture (structure de
 packages, graphe de dépendances entre domaines, conventions).
@@ -84,9 +110,9 @@ production, à trancher quand l'hébergement le sera (voir `APONTAJA-RESTART-CON
 - Activation : variable d'environnement `SPRING_PROFILES_ACTIVE=local` (jamais en dur dans un
   fichier commité)
 
-Pas encore de secret réel à gérer à ce stade (le datasource n'est pas encore branché — voir TODO
-dans `BackApplication.java`), donc `application-local.yml.example` ne contient qu'un espace
-réservé pour les identifiants PostgreSQL qui seront finalisés à l'étape 7.
+Depuis l'étape 7, `application-local.yml` contient les vrais identifiants PostgreSQL locaux
+(datasource réellement branché dans `BackApplication`) — c'est le premier secret concret que ce
+mécanisme protège.
 
 ## Historique des corrections post-génération
 

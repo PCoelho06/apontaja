@@ -2,10 +2,20 @@ spring:
   application:
     name: apontaja-back
 
+  # Emplacement par défaut de Flyway (classpath:db/migration), explicité pour la lisibilité.
+  # Copie exacte de ../../../apontaja-schema.sql (racine de back/, référence canonique) — voir
+  # le commentaire en tête de V1__initial_schema.sql pour la procédure de synchronisation.
+  flyway:
+    locations: classpath:db/migration
+
+  # Flyway est la SEULE source de vérité sur le schéma (cf. audit §3.3 : incohérences DB entre
+  # environnements dans l'ancien projet). Hibernate ne doit jamais générer/modifier le schéma :
+  # validate échoue bruyamment si les entités JPA divergent du schéma Flyway, plutôt que de
+  # laisser Hibernate "corriger" silencieusement en douce.
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
 server:
   port: 8080
 
-# Aucune configuration de datasource à ce stade (Phase 0 / étape 2).
-# La configuration PostgreSQL + Flyway sera ajoutée à l'étape 7. Stratégie de gestion des secrets
-# en place depuis l'étape 6 : voir application-local.yml.example (jamais d'identifiants en clair
-# ici — cf. audit §3.1 : "secret applicatif commité en clair" dans l'ancien projet).
