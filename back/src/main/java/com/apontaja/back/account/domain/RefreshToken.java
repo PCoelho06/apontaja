@@ -3,7 +3,12 @@ package com.apontaja.back.account.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -13,10 +18,14 @@ import java.util.UUID;
  * Session / device. {@code accountId} en UUID brut (pas de relation JPA
  * vers {@link Account}) volontairement : évite le lazy-loading sur le
  * chemin chaud de validation d'un refresh token (tranche 5).
+ *
+ * <p>
+ * Implémente {@link Persistable} pour la même raison que {@link Account}
+ * (ID UUIDv7 assigné côté application).
  */
 @Entity
 @Table(name = "refresh_token")
-public class RefreshToken {
+public class RefreshToken implements Persistable<UUID> {
 
     @Id
     private UUID id;
@@ -40,6 +49,9 @@ public class RefreshToken {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Transient
+    private boolean isNew = true;
+
     protected RefreshToken() {
         // requis par Hibernate
     }
@@ -59,6 +71,22 @@ public class RefreshToken {
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
     }
 
+    @Override
+    public UUID getId() {
+        return id;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+
     public boolean isRevoked() {
         return revokedAt != null;
     }
@@ -73,10 +101,6 @@ public class RefreshToken {
 
     public void revoke(Instant at) {
         this.revokedAt = Objects.requireNonNull(at, "at");
-    }
-
-    public UUID getId() {
-        return id;
     }
 
     public UUID getAccountId() {

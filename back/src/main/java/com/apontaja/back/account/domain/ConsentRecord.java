@@ -5,16 +5,28 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Consentement plateforme (CGU, confidentialité, marketing global) — distinct du consentement marketing par salon. */
+/**
+ * Consentement plateforme (CGU, confidentialité, marketing global) — distinct
+ * du consentement marketing par salon.
+ *
+ * <p>
+ * Implémente {@link Persistable} pour la même raison que {@link Account}
+ * (ID UUIDv7 assigné côté application).
+ */
 @Entity
 @Table(name = "consent_record")
-public class ConsentRecord {
+public class ConsentRecord implements Persistable<UUID> {
 
     @Id
     private UUID id;
@@ -32,6 +44,9 @@ public class ConsentRecord {
     @Column(name = "accepted_at", nullable = false)
     private Instant acceptedAt;
 
+    @Transient
+    private boolean isNew = true;
+
     protected ConsentRecord() {
         // requis par Hibernate
     }
@@ -44,8 +59,20 @@ public class ConsentRecord {
         this.acceptedAt = Objects.requireNonNull(acceptedAt, "acceptedAt");
     }
 
+    @Override
     public UUID getId() {
         return id;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
     }
 
     public UUID getAccountId() {

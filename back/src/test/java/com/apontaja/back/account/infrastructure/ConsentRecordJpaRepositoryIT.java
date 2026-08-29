@@ -5,8 +5,6 @@ import com.apontaja.back.account.domain.ConsentRecord;
 import com.apontaja.back.account.domain.ConsentType;
 import com.apontaja.back.testsupport.PostgresTestcontainersConfiguration;
 
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -30,21 +28,18 @@ class ConsentRecordJpaRepositoryIT {
         @Autowired
         private ConsentRecordJpaRepository consentRecordJpaRepository;
 
-        @Autowired
-        private EntityManager entityManager;
-
         @Test
         void enregistre_et_retrouve_les_consentements_d_un_compte() {
                 Instant now = Instant.now();
                 Account account = new Account(UUID.randomUUID(), "dave@example.com", "hash", now);
                 accountJpaRepository.save(account);
-                entityManager.flush();
+                accountJpaRepository.flush();
 
                 consentRecordJpaRepository.save(
                                 new ConsentRecord(UUID.randomUUID(), account.getId(), ConsentType.TOS, "v1", now));
                 consentRecordJpaRepository.save(
                                 new ConsentRecord(UUID.randomUUID(), account.getId(), ConsentType.PRIVACY, "v1", now));
-                entityManager.flush();
+                consentRecordJpaRepository.flush();
 
                 List<ConsentRecord> result = consentRecordJpaRepository.findByAccountId(account.getId());
 

@@ -3,7 +3,12 @@ package com.apontaja.back.account.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -16,14 +21,25 @@ import java.util.UUID;
  * IS NULL} en base) — cette classe ne recalcule pas cette règle, elle est
  * appliquée par la contrainte DB et vérifiée en amont via
  * {@link AccountRepository#existsAliveByEmail(String)}.
+ *
+ * <p>
+ * Implémente {@link Persistable} car l'ID (UUIDv7) est assigné côté
+ * application avant l'appel à {@code save()} — sans ça, Spring Data JPA
+ * déduit à tort que l'entité n'est "pas nouvelle" (ID non null) et fait un
+ * {@code merge()} au lieu d'un {@code persist()} (SELECT superflu, identité
+ * d'objet différente après sauvegarde).
  */
 @Entity
 @Table(name = "account")
-public class Account {
+public class Account implements Persistable<UUID> {
 
     @Id
     private UUID id;
 
+    /**
+     * Colonne citext en base : comparaison insensible à la casse déléguée à
+     * PostgreSQL.
+     */
     @Column(nullable = false, columnDefinition = "citext")
     private String email;
 
@@ -39,6 +55,9 @@ public class Account {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Transient
+    private boolean isNew = true;
+
     protected Account() {
         // requis par Hibernate
     }
@@ -48,6 +67,22 @@ public class Account {
         this.email = Objects.requireNonNull(email, "email");
         this.passwordHash = Objects.requireNonNull(passwordHash, "passwordHash");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
+    }
+
+    @Override
+    public UUID getId() {
+        return id;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
     }
 
     public void markEmailVerified(Instant at) {
@@ -64,10 +99,6 @@ public class Account {
 
     public boolean isDeleted() {
         return deletedAt != null;
-    }
-
-    public UUID getId() {
-        return id;
     }
 
     public String getEmail() {
