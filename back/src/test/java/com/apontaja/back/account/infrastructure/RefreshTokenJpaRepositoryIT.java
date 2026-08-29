@@ -4,8 +4,6 @@ import com.apontaja.back.account.domain.Account;
 import com.apontaja.back.account.domain.RefreshToken;
 import com.apontaja.back.testsupport.PostgresTestcontainersConfiguration;
 
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -32,14 +30,11 @@ class RefreshTokenJpaRepositoryIT {
     @Autowired
     private RefreshTokenJpaRepository refreshTokenJpaRepository;
 
-    @Autowired
-    private EntityManager entityManager;
-
     private UUID createAccount() {
         Instant now = Instant.now();
         Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", now);
         accountJpaRepository.save(account);
-        entityManager.flush();
+        accountJpaRepository.flush();
         return account.getId();
     }
 
@@ -51,14 +46,14 @@ class RefreshTokenJpaRepositoryIT {
         refreshTokenJpaRepository.save(
                 new RefreshToken(UUID.randomUUID(), accountId, "same-hash", "device-1", now.plus(30, ChronoUnit.DAYS),
                         now));
-        entityManager.flush();
+        refreshTokenJpaRepository.flush();
 
         RefreshToken duplicate = new RefreshToken(UUID.randomUUID(), accountId, "same-hash", "device-2",
                 now.plus(30, ChronoUnit.DAYS), now);
 
         assertThatThrownBy(() -> {
             refreshTokenJpaRepository.save(duplicate);
-            entityManager.flush();
+            refreshTokenJpaRepository.flush();
         }).isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -75,7 +70,7 @@ class RefreshTokenJpaRepositoryIT {
 
         refreshTokenJpaRepository.save(active);
         refreshTokenJpaRepository.save(revoked);
-        entityManager.flush();
+        refreshTokenJpaRepository.flush();
 
         List<RefreshToken> result = refreshTokenJpaRepository.findActiveByAccountId(accountId);
 
