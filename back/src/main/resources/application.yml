@@ -16,6 +16,14 @@ spring:
     hibernate:
       ddl-auto: validate
 
+apontaja:
+  security:
+    jwt:
+      # Placeholder de dev — écrasé par application-local.yml quand le
+      # profil "local" est actif. Un vrai secret d'environnement sera requis
+      # avant toute mise en production (cf. §6 [OPEN] du contexte).
+      secret: "placeholder-dev-secret-never-use-in-production-32-bytes-minimum-xx"
+
 server:
   port: 8080
 
