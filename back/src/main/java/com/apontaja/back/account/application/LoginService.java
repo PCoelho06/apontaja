@@ -9,6 +9,7 @@ import com.apontaja.back.account.domain.RefreshToken;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
 import com.apontaja.back.account.domain.TokenHasher;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,8 +23,6 @@ import java.util.UUID;
 @Service
 public class LoginService {
 
-    private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(30);
-
     private final AccountRepository accountRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -32,6 +31,7 @@ public class LoginService {
     private final TokenHasher tokenHasher;
     private final IdGenerator idGenerator;
     private final Clock clock;
+    private final Duration refreshTokenTtl;
 
     /**
      * Hash factice précalculé une fois : sert à faire tourner
@@ -48,7 +48,8 @@ public class LoginService {
             OpaqueTokenGenerator opaqueTokenGenerator,
             TokenHasher tokenHasher,
             IdGenerator idGenerator,
-            Clock clock) {
+            Clock clock,
+            @Value("${apontaja.security.refresh-token.ttl:30d}") Duration refreshTokenTtl) {
         this.accountRepository = accountRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -57,6 +58,7 @@ public class LoginService {
         this.tokenHasher = tokenHasher;
         this.idGenerator = idGenerator;
         this.clock = clock;
+        this.refreshTokenTtl = refreshTokenTtl;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -77,7 +79,7 @@ public class LoginService {
 
         String rawRefreshToken = opaqueTokenGenerator.generate();
         Instant now = clock.instant();
-        Instant expiresAt = now.plus(REFRESH_TOKEN_TTL);
+        Instant expiresAt = now.plus(refreshTokenTtl);
         RefreshToken refreshToken = new RefreshToken(
                 idGenerator.generate(),
                 account.getId(),

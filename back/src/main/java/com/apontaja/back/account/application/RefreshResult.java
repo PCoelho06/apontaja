@@ -1,0 +1,7 @@
+package com.apontaja.back.account.application;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record RefreshResult(UUID accountId, String accessToken, String rawRefreshToken, Instant refreshTokenExpiresAt) {
+}
