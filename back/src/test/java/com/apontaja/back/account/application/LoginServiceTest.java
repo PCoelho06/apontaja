@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
@@ -69,7 +70,8 @@ class LoginServiceTest {
                 opaqueTokenGenerator,
                 tokenHasher,
                 () -> new UUID(0, 1),
-                Clock.fixed(fixedNow, ZoneOffset.UTC));
+                Clock.fixed(fixedNow, ZoneOffset.UTC),
+                Duration.ofDays(30));
     }
 
     private Account existingAccount() {
