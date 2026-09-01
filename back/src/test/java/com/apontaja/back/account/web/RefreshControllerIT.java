@@ -26,7 +26,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+                properties = "apontaja.security.rate-limiting.enabled=false")
 @AutoConfigureMockMvc
 @Import(PostgresTestcontainersConfiguration.class)
 class RefreshControllerIT {
@@ -47,18 +48,13 @@ class RefreshControllerIT {
         private Clock clock;
 
         private Cookie loginAndGetRefreshCookie(String email) throws Exception {
-                accountRepository.save(new Account(
-                                idGenerator.generate(), email,
-                                passwordEncoder.encode("un-mot-de-passe-suffisamment-long"),
-                                clock.instant()));
+                accountRepository.save(new Account(idGenerator.generate(), email,
+                                passwordEncoder.encode("un-mot-de-passe-suffisamment-long"), clock.instant()));
 
-                MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""
+                MvcResult loginResult = mockMvc
+                                .perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
                                                 {"email": "%s", "password": "un-mot-de-passe-suffisamment-long"}
-                                                """.formatted(email)))
-                                .andExpect(status().isOk())
-                                .andReturn();
+                                                """.formatted(email))).andExpect(status().isOk()).andReturn();
 
                 Cookie cookie = loginResult.getResponse().getCookie("refresh_token");
                 assertThat(cookie).isNotNull();
@@ -69,8 +65,7 @@ class RefreshControllerIT {
         void refresh_sans_token_csrf_est_rejete_403() throws Exception {
                 Cookie refreshCookie = loginAndGetRefreshCookie("kate-" + UUID.randomUUID() + "@example.com");
 
-                mockMvc.perform(post("/api/auth/refresh").cookie(refreshCookie))
-                                .andExpect(status().isForbidden());
+                mockMvc.perform(post("/api/auth/refresh").cookie(refreshCookie)).andExpect(status().isForbidden());
         }
 
         @Test
@@ -78,8 +73,7 @@ class RefreshControllerIT {
                 Cookie refreshCookie = loginAndGetRefreshCookie("liam-" + UUID.randomUUID() + "@example.com");
 
                 MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh").cookie(refreshCookie).with(csrf()))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                                .andExpect(status().isOk()).andExpect(jsonPath("$.accessToken").isNotEmpty())
                                 .andReturn();
 
                 Cookie newCookie = refreshResult.getResponse().getCookie("refresh_token");
@@ -96,8 +90,7 @@ class RefreshControllerIT {
                 Cookie refreshCookie = loginAndGetRefreshCookie("mona-" + UUID.randomUUID() + "@example.com");
 
                 MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh").cookie(refreshCookie).with(csrf()))
-                                .andExpect(status().isOk())
-                                .andReturn();
+                                .andExpect(status().isOk()).andReturn();
                 Cookie rotatedCookie = refreshResult.getResponse().getCookie("refresh_token");
 
                 // Rejeu de l'ancien token (déjà révoqué par la rotation ci-dessus) :
@@ -116,8 +109,7 @@ class RefreshControllerIT {
                 Cookie refreshCookie = loginAndGetRefreshCookie("noah-" + UUID.randomUUID() + "@example.com");
 
                 MvcResult logoutResult = mockMvc.perform(post("/api/auth/logout").cookie(refreshCookie).with(csrf()))
-                                .andExpect(status().isNoContent())
-                                .andReturn();
+                                .andExpect(status().isNoContent()).andReturn();
 
                 Cookie clearedCookie = logoutResult.getResponse().getCookie("refresh_token");
                 assertThat(clearedCookie).isNotNull();
@@ -129,7 +121,6 @@ class RefreshControllerIT {
 
         @Test
         void logout_sans_cookie_est_idempotent() throws Exception {
-                mockMvc.perform(post("/api/auth/logout").with(csrf()))
-                                .andExpect(status().isNoContent());
+                mockMvc.perform(post("/api/auth/logout").with(csrf())).andExpect(status().isNoContent());
         }
 }
