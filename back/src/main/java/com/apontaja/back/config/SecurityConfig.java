@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 import jakarta.servlet.Filter;
 
@@ -27,29 +28,34 @@ import jakarta.servlet.Filter;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final Filter jwtAuthenticationFilter;
+        private final Filter jwtAuthenticationFilter;
+        private final Filter rateLimitingFilter;
 
-    public SecurityConfig(@Qualifier("jwtAuthenticationFilter") Filter jwtAuthenticationFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
+        public SecurityConfig(
+                        @Qualifier("jwtAuthenticationFilter") Filter jwtAuthenticationFilter,
+                        @Qualifier("rateLimitingFilter") Filter rateLimitingFilter) {
+                this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+                this.rateLimitingFilter = rateLimitingFilter;
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/health").permitAll()
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/auth/register", "/api/auth/login",
-                                "/api/auth/refresh", "/api/auth/logout")
-                        .permitAll()
-                        .anyRequest().authenticated())
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers("/api/auth/register", "/api/auth/login"))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .httpBasic(httpBasic -> httpBasic.disable())
-                .formLogin(formLogin -> formLogin.disable());
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .authorizeHttpRequests(authorize -> authorize
+                                                .requestMatchers("/health").permitAll()
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/auth/register", "/api/auth/login",
+                                                                "/api/auth/refresh", "/api/auth/logout")
+                                                .permitAll()
+                                                .anyRequest().authenticated())
+                                .csrf(csrf -> csrf
+                                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                                .ignoringRequestMatchers("/api/auth/register", "/api/auth/login"))
+                                .addFilterBefore(rateLimitingFilter, CsrfFilter.class)
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                .httpBasic(httpBasic -> httpBasic.disable())
+                                .formLogin(formLogin -> formLogin.disable());
 
-        return http.build();
-    }
+                return http.build();
+        }
 }
