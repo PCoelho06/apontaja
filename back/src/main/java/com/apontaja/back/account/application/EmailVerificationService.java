@@ -69,7 +69,7 @@ public class EmailVerificationService {
                 now);
         accountTokenRepository.save(token);
 
-        String link = frontendBaseUrl + "/confirm-email?token=" + rawToken;
+        String link = frontendBaseUrl + "/confirmer-email?token=" + rawToken;
         emailSender.send(
                 account.getEmail(),
                 "Confirmez votre adresse email",

@@ -77,7 +77,7 @@ public class PasswordResetService {
                     now);
             accountTokenRepository.save(token);
 
-            String link = frontendBaseUrl + "/reset-password?token=" + rawToken;
+            String link = frontendBaseUrl + "/reinitialiser-mot-de-passe?token=" + rawToken;
             emailSender.send(
                     account.getEmail(),
                     "Réinitialisation de votre mot de passe",
