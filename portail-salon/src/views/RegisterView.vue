@@ -44,8 +44,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthLayout title="Créer un compte" subtitle="Quelques informations pour démarrer.">
-    <div v-if="isDone" class="space-y-4">
+  <AuthLayout
+    title="Créer un compte"
+    subtitle="Quelques informations pour démarrer."
+  >
+    <div
+      v-if="isDone"
+      class="space-y-4"
+    >
       <p class="text-sm text-ink">
         Compte créé. Un email de confirmation vient de vous être envoyé — vérifiez votre boîte de
         réception, puis connectez-vous.
@@ -58,7 +64,11 @@ async function handleSubmit() {
       </RouterLink>
     </div>
 
-    <form v-else class="space-y-5" @submit.prevent="handleSubmit">
+    <form
+      v-else
+      class="space-y-5"
+      @submit.prevent="handleSubmit"
+    >
       <AuthTextField
         id="email"
         v-model="email"
@@ -76,7 +86,13 @@ async function handleSubmit() {
         :error="fieldErrors.password || passwordHint"
       />
 
-      <p v-if="errorMessage" class="text-sm text-danger" role="alert">{{ errorMessage }}</p>
+      <p
+        v-if="errorMessage"
+        class="text-sm text-danger"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </p>
 
       <button
         type="submit"
@@ -93,9 +109,17 @@ async function handleSubmit() {
       </p>
     </form>
 
-    <p v-if="!isDone" class="mt-6 text-sm text-ink/70">
+    <p
+      v-if="!isDone"
+      class="mt-6 text-sm text-ink/70"
+    >
       Déjà un compte ?
-      <RouterLink :to="{ name: 'login' }" class="text-wine hover:underline">Se connecter</RouterLink>
+      <RouterLink
+        :to="{ name: 'login' }"
+        class="text-wine hover:underline"
+      >
+        Se connecter
+      </RouterLink>
     </p>
   </AuthLayout>
 </template>

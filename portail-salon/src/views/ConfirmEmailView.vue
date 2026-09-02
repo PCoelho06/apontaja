@@ -32,11 +32,30 @@ onMounted(async () => {
 
 <template>
   <AuthLayout title="Confirmation de l'email">
-    <p v-if="status === 'pending'" class="text-sm text-ink">Vérification en cours...</p>
-    <p v-else-if="status === 'success'" class="text-sm text-ink">Votre email est confirmé.</p>
-    <p v-else class="text-sm text-danger" role="alert">{{ errorMessage }}</p>
+    <p
+      v-if="status === 'pending'"
+      class="text-sm text-ink"
+    >
+      Vérification en cours...
+    </p>
+    <p
+      v-else-if="status === 'success'"
+      class="text-sm text-ink"
+    >
+      Votre email est confirmé.
+    </p>
+    <p
+      v-else
+      class="text-sm text-danger"
+      role="alert"
+    >
+      {{ errorMessage }}
+    </p>
 
-    <RouterLink :to="{ name: 'login' }" class="mt-6 inline-block text-sm text-wine hover:underline">
+    <RouterLink
+      :to="{ name: 'login' }"
+      class="mt-6 inline-block text-sm text-wine hover:underline"
+    >
       Retour à la connexion
     </RouterLink>
   </AuthLayout>

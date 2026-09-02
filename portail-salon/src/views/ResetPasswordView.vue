@@ -32,16 +32,32 @@ async function handleSubmit() {
 
 <template>
   <AuthLayout title="Nouveau mot de passe">
-    <p v-if="!token" class="text-sm text-danger" role="alert">
+    <p
+      v-if="!token"
+      class="text-sm text-danger"
+      role="alert"
+    >
       Lien invalide — merci de repartir depuis l'email reçu.
     </p>
 
-    <div v-else-if="isDone" class="space-y-4 text-sm text-ink">
+    <div
+      v-else-if="isDone"
+      class="space-y-4 text-sm text-ink"
+    >
       <p>Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter.</p>
-      <RouterLink :to="{ name: 'login' }" class="text-wine hover:underline">Se connecter</RouterLink>
+      <RouterLink
+        :to="{ name: 'login' }"
+        class="text-wine hover:underline"
+      >
+        Se connecter
+      </RouterLink>
     </div>
 
-    <form v-else class="space-y-5" @submit.prevent="handleSubmit">
+    <form
+      v-else
+      class="space-y-5"
+      @submit.prevent="handleSubmit"
+    >
       <AuthTextField
         id="newPassword"
         v-model="newPassword"
@@ -50,7 +66,13 @@ async function handleSubmit() {
         autocomplete="new-password"
       />
 
-      <p v-if="errorMessage" class="text-sm text-danger" role="alert">{{ errorMessage }}</p>
+      <p
+        v-if="errorMessage"
+        class="text-sm text-danger"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </p>
 
       <button
         type="submit"

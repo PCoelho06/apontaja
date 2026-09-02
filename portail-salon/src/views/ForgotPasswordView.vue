@@ -35,19 +35,46 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthLayout title="Mot de passe oublié" subtitle="Recevez un lien pour en choisir un nouveau.">
-    <div v-if="isDone" class="space-y-4 text-sm text-ink">
+  <AuthLayout
+    title="Mot de passe oublié"
+    subtitle="Recevez un lien pour en choisir un nouveau."
+  >
+    <div
+      v-if="isDone"
+      class="space-y-4 text-sm text-ink"
+    >
       <p>
         Si un compte existe pour cette adresse, un email contenant un lien de réinitialisation
         vient d'être envoyé.
       </p>
-      <RouterLink :to="{ name: 'login' }" class="text-wine hover:underline">Retour à la connexion</RouterLink>
+      <RouterLink
+        :to="{ name: 'login' }"
+        class="text-wine hover:underline"
+      >
+        Retour à la connexion
+      </RouterLink>
     </div>
 
-    <form v-else class="space-y-5" @submit.prevent="handleSubmit">
-      <AuthTextField id="email" v-model="email" label="Email" type="email" autocomplete="email" />
+    <form
+      v-else
+      class="space-y-5"
+      @submit.prevent="handleSubmit"
+    >
+      <AuthTextField
+        id="email"
+        v-model="email"
+        label="Email"
+        type="email"
+        autocomplete="email"
+      />
 
-      <p v-if="errorMessage" class="text-sm text-danger" role="alert">{{ errorMessage }}</p>
+      <p
+        v-if="errorMessage"
+        class="text-sm text-danger"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </p>
 
       <button
         type="submit"
@@ -59,8 +86,16 @@ async function handleSubmit() {
       </button>
     </form>
 
-    <p v-if="!isDone" class="mt-6 text-sm text-ink/70">
-      <RouterLink :to="{ name: 'login' }" class="text-wine hover:underline">Retour à la connexion</RouterLink>
+    <p
+      v-if="!isDone"
+      class="mt-6 text-sm text-ink/70"
+    >
+      <RouterLink
+        :to="{ name: 'login' }"
+        class="text-wine hover:underline"
+      >
+        Retour à la connexion
+      </RouterLink>
     </p>
   </AuthLayout>
 </template>

@@ -30,9 +30,21 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthLayout title="Se connecter" subtitle="Accédez à l'espace de gestion de votre salon.">
-    <form class="space-y-5" @submit.prevent="handleSubmit">
-      <AuthTextField id="email" v-model="email" label="Email" type="email" autocomplete="email" />
+  <AuthLayout
+    title="Se connecter"
+    subtitle="Accédez à l'espace de gestion de votre salon."
+  >
+    <form
+      class="space-y-5"
+      @submit.prevent="handleSubmit"
+    >
+      <AuthTextField
+        id="email"
+        v-model="email"
+        label="Email"
+        type="email"
+        autocomplete="email"
+      />
       <AuthTextField
         id="password"
         v-model="password"
@@ -41,7 +53,13 @@ async function handleSubmit() {
         autocomplete="current-password"
       />
 
-      <p v-if="errorMessage" class="text-sm text-danger" role="alert">{{ errorMessage }}</p>
+      <p
+        v-if="errorMessage"
+        class="text-sm text-danger"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </p>
 
       <button
         type="submit"
@@ -54,13 +72,21 @@ async function handleSubmit() {
     </form>
 
     <p class="mt-6 text-sm text-ink/70">
-      <RouterLink :to="{ name: 'forgot-password' }" class="text-wine hover:underline">
+      <RouterLink
+        :to="{ name: 'forgot-password' }"
+        class="text-wine hover:underline"
+      >
         Mot de passe oublié ?
       </RouterLink>
     </p>
     <p class="mt-2 text-sm text-ink/70">
       Pas encore de compte ?
-      <RouterLink :to="{ name: 'register' }" class="text-wine hover:underline">Créer un compte</RouterLink>
+      <RouterLink
+        :to="{ name: 'register' }"
+        class="text-wine hover:underline"
+      >
+        Créer un compte
+      </RouterLink>
     </p>
   </AuthLayout>
 </template>
