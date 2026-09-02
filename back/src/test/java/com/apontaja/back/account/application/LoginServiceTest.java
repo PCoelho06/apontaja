@@ -62,15 +62,8 @@ class LoginServiceTest {
         // encode() est appelé une fois à la construction pour le hash factice.
         when(passwordEncoder.encode(anyString())).thenReturn("dummy-hash");
 
-        service = new LoginService(
-                accountRepository,
-                refreshTokenRepository,
-                passwordEncoder,
-                accessTokenIssuer,
-                opaqueTokenGenerator,
-                tokenHasher,
-                () -> new UUID(0, 1),
-                Clock.fixed(fixedNow, ZoneOffset.UTC),
+        service = new LoginService(accountRepository, refreshTokenRepository, passwordEncoder, accessTokenIssuer,
+                opaqueTokenGenerator, tokenHasher, () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC),
                 Duration.ofDays(30));
     }
 

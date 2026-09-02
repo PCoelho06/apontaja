@@ -26,6 +26,7 @@ public class RegisterAccountService {
 
     private final AccountRepository accountRepository;
     private final ConsentRecordRepository consentRecordRepository;
+    private final EmailVerificationService emailVerificationService;
     private final PasswordEncoder passwordEncoder;
     private final IdGenerator idGenerator;
     private final Clock clock;
@@ -33,11 +34,13 @@ public class RegisterAccountService {
     RegisterAccountService(
             AccountRepository accountRepository,
             ConsentRecordRepository consentRecordRepository,
+            EmailVerificationService emailVerificationService,
             PasswordEncoder passwordEncoder,
             IdGenerator idGenerator,
             Clock clock) {
         this.accountRepository = accountRepository;
         this.consentRecordRepository = consentRecordRepository;
+        this.emailVerificationService = emailVerificationService;
         this.passwordEncoder = passwordEncoder;
         this.idGenerator = idGenerator;
         this.clock = clock;
@@ -60,6 +63,8 @@ public class RegisterAccountService {
                 idGenerator.generate(), account.getId(), ConsentType.TOS, TOS_VERSION, now));
         consentRecordRepository.save(new ConsentRecord(
                 idGenerator.generate(), account.getId(), ConsentType.PRIVACY, PRIVACY_VERSION, now));
+
+        emailVerificationService.issueAndSend(account);
 
         return new RegisterAccountResult(account.getId(), account.getEmail());
     }

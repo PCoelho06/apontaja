@@ -43,9 +43,8 @@ class RefreshTokenJpaRepositoryIT {
         UUID accountId = createAccount();
         Instant now = Instant.now();
 
-        refreshTokenJpaRepository.save(
-                new RefreshToken(UUID.randomUUID(), accountId, "same-hash", "device-1", now.plus(30, ChronoUnit.DAYS),
-                        now));
+        refreshTokenJpaRepository.save(new RefreshToken(UUID.randomUUID(), accountId, "same-hash", "device-1",
+                now.plus(30, ChronoUnit.DAYS), now));
         refreshTokenJpaRepository.flush();
 
         RefreshToken duplicate = new RefreshToken(UUID.randomUUID(), accountId, "same-hash", "device-2",

@@ -38,6 +38,9 @@ class RegisterAccountServiceTest {
     private ConsentRecordRepository consentRecordRepository;
 
     @Mock
+    private EmailVerificationService emailVerificationService;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private RegisterAccountService service;
@@ -48,7 +51,8 @@ class RegisterAccountServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
         service = new RegisterAccountService(
-                accountRepository, consentRecordRepository, passwordEncoder, new SequentialTestIdGenerator(), clock);
+                accountRepository, consentRecordRepository, emailVerificationService, passwordEncoder,
+                new SequentialTestIdGenerator(), clock);
     }
 
     @Test
@@ -70,6 +74,8 @@ class RegisterAccountServiceTest {
         verify(consentRecordRepository, Mockito.times(2)).save(consentCaptor.capture());
         List<ConsentType> types = consentCaptor.getAllValues().stream().map(ConsentRecord::getType).toList();
         assertThat(types).containsExactlyInAnyOrder(ConsentType.TOS, ConsentType.PRIVACY);
+
+        verify(emailVerificationService).issueAndSend(any(Account.class));
     }
 
     @Test

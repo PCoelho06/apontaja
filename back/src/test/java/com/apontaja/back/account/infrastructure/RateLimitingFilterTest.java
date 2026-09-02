@@ -14,6 +14,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 
 class RateLimitingFilterTest {
 
@@ -67,8 +69,7 @@ class RateLimitingFilterTest {
         filter.doFilterInternal(sixthRequest, sixthResponse, chain);
 
         verify(sixthResponse).setStatus(429);
-        verify(sixthResponse).setHeader(org.mockito.ArgumentMatchers.eq("Retry-After"),
-                org.mockito.ArgumentMatchers.anyString());
+        verify(sixthResponse).setHeader(eq("Retry-After"), anyString());
         verify(chain, never()).doFilter(sixthRequest, sixthResponse);
         assertThat(body.toString()).contains("429");
     }

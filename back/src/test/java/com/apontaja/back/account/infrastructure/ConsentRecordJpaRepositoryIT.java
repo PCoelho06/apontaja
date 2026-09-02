@@ -22,28 +22,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(PostgresTestcontainersConfiguration.class)
 class ConsentRecordJpaRepositoryIT {
 
-        @Autowired
-        private AccountJpaRepository accountJpaRepository;
+    @Autowired
+    private AccountJpaRepository accountJpaRepository;
 
-        @Autowired
-        private ConsentRecordJpaRepository consentRecordJpaRepository;
+    @Autowired
+    private ConsentRecordJpaRepository consentRecordJpaRepository;
 
-        @Test
-        void enregistre_et_retrouve_les_consentements_d_un_compte() {
-                Instant now = Instant.now();
-                Account account = new Account(UUID.randomUUID(), "dave@example.com", "hash", now);
-                accountJpaRepository.save(account);
-                accountJpaRepository.flush();
+    @Test
+    void enregistre_et_retrouve_les_consentements_d_un_compte() {
+        Instant now = Instant.now();
+        Account account = new Account(UUID.randomUUID(), "dave@example.com", "hash", now);
+        accountJpaRepository.save(account);
+        accountJpaRepository.flush();
 
-                consentRecordJpaRepository.save(
-                                new ConsentRecord(UUID.randomUUID(), account.getId(), ConsentType.TOS, "v1", now));
-                consentRecordJpaRepository.save(
-                                new ConsentRecord(UUID.randomUUID(), account.getId(), ConsentType.PRIVACY, "v1", now));
-                consentRecordJpaRepository.flush();
+        consentRecordJpaRepository.save(
+                new ConsentRecord(UUID.randomUUID(), account.getId(), ConsentType.TOS, "v1", now));
+        consentRecordJpaRepository.save(
+                new ConsentRecord(UUID.randomUUID(), account.getId(), ConsentType.PRIVACY, "v1", now));
+        consentRecordJpaRepository.flush();
 
-                List<ConsentRecord> result = consentRecordJpaRepository.findByAccountId(account.getId());
+        List<ConsentRecord> result = consentRecordJpaRepository.findByAccountId(account.getId());
 
-                assertThat(result).extracting(ConsentRecord::getType)
-                                .containsExactlyInAnyOrder(ConsentType.TOS, ConsentType.PRIVACY);
-        }
+        assertThat(result).extracting(ConsentRecord::getType)
+                .containsExactlyInAnyOrder(ConsentType.TOS, ConsentType.PRIVACY);
+    }
 }
