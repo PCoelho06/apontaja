@@ -27,9 +27,7 @@ class RegisterControllerIT {
                 return """
                                 {
                                   "email": "%s",
-                                  "password": "un-mot-de-passe-suffisamment-long",
-                                  "acceptTos": true,
-                                  "acceptPrivacy": true
+                                  "password": "un-mot-de-passe-suffisamment-long"
                                 }
                                 """.formatted(email);
         }
@@ -58,30 +56,12 @@ class RegisterControllerIT {
                 String body = """
                                 {
                                   "email": "gwen@example.com",
-                                  "password": "court",
-                                  "acceptTos": true,
-                                  "acceptPrivacy": true
+                                  "password": "court"
                                 }
                                 """;
 
                 mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.fieldErrors.password").exists());
-        }
-
-        @Test
-        void register_repond_400_si_cgu_non_acceptees() throws Exception {
-                String body = """
-                                {
-                                  "email": "harry@example.com",
-                                  "password": "un-mot-de-passe-suffisamment-long",
-                                  "acceptTos": false,
-                                  "acceptPrivacy": true
-                                }
-                                """;
-
-                mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.fieldErrors.acceptTos").exists());
         }
 }

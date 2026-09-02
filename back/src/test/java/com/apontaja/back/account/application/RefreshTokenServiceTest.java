@@ -49,19 +49,12 @@ class RefreshTokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RefreshTokenService(
-                refreshTokenRepository,
-                accessTokenIssuer,
-                opaqueTokenGenerator,
-                tokenHasher,
-                () -> new UUID(0, 1),
-                Clock.fixed(fixedNow, ZoneOffset.UTC),
-                Duration.ofDays(30));
+        service = new RefreshTokenService(refreshTokenRepository, accessTokenIssuer, opaqueTokenGenerator, tokenHasher,
+                () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC), Duration.ofDays(30));
     }
 
     private RefreshToken activeToken() {
-        return new RefreshToken(
-                UUID.randomUUID(), accountId, "hashed-old", "device-1",
+        return new RefreshToken(UUID.randomUUID(), accountId, "hashed-old", "device-1",
                 fixedNow.plus(1, ChronoUnit.DAYS), fixedNow.minus(1, ChronoUnit.DAYS));
     }
 
@@ -92,13 +85,11 @@ class RefreshTokenServiceTest {
         when(tokenHasher.hash("raw-stolen")).thenReturn("hashed-old");
         when(refreshTokenRepository.findByTokenHash("hashed-old")).thenReturn(Optional.of(reusedToken));
 
-        RefreshToken otherActiveToken = new RefreshToken(
-                UUID.randomUUID(), accountId, "hashed-other", "device-2",
+        RefreshToken otherActiveToken = new RefreshToken(UUID.randomUUID(), accountId, "hashed-other", "device-2",
                 fixedNow.plus(1, ChronoUnit.DAYS), fixedNow.minus(1, ChronoUnit.DAYS));
         when(refreshTokenRepository.findActiveByAccountId(accountId)).thenReturn(List.of(otherActiveToken));
 
-        assertThatThrownBy(() -> service.refresh("raw-stolen"))
-                .isInstanceOf(RefreshTokenReuseDetectedException.class);
+        assertThatThrownBy(() -> service.refresh("raw-stolen")).isInstanceOf(RefreshTokenReuseDetectedException.class);
 
         assertThat(otherActiveToken.isRevoked()).isTrue();
         verify(refreshTokenRepository).save(otherActiveToken);
@@ -106,14 +97,12 @@ class RefreshTokenServiceTest {
 
     @Test
     void token_expire_est_rejete_sans_declencher_la_revocation_de_toute_la_famille() {
-        RefreshToken expiredToken = new RefreshToken(
-                UUID.randomUUID(), accountId, "hashed-expired", "device-1",
+        RefreshToken expiredToken = new RefreshToken(UUID.randomUUID(), accountId, "hashed-expired", "device-1",
                 fixedNow.minus(1, ChronoUnit.HOURS), fixedNow.minus(1, ChronoUnit.DAYS));
         when(tokenHasher.hash("raw-expired")).thenReturn("hashed-expired");
         when(refreshTokenRepository.findByTokenHash("hashed-expired")).thenReturn(Optional.of(expiredToken));
 
-        assertThatThrownBy(() -> service.refresh("raw-expired"))
-                .isInstanceOf(InvalidRefreshTokenException.class);
+        assertThatThrownBy(() -> service.refresh("raw-expired")).isInstanceOf(InvalidRefreshTokenException.class);
 
         verify(refreshTokenRepository, org.mockito.Mockito.never()).findActiveByAccountId(any());
     }

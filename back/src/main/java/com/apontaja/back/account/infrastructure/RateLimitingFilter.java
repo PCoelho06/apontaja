@@ -51,7 +51,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             "/api/auth/login", () -> Bandwidth.builder().capacity(10)
                     .refillGreedy(10, Duration.ofMinutes(15)).build(),
             "/api/auth/refresh", () -> Bandwidth.builder().capacity(30)
-                    .refillGreedy(30, Duration.ofMinutes(15)).build());
+                    .refillGreedy(30, Duration.ofMinutes(15)).build(),
+            "/api/auth/forgot-password", () -> Bandwidth.builder().capacity(5)
+                    .refillGreedy(5, Duration.ofHours(1)).build(),
+            "/api/auth/resend-verification-email", () -> Bandwidth.builder().capacity(5)
+                    .refillGreedy(5, Duration.ofHours(1)).build(),
+            "/api/auth/reset-password", () -> Bandwidth.builder().capacity(10)
+                    .refillGreedy(10, Duration.ofHours(1)).build(),
+            "/api/auth/confirm-email", () -> Bandwidth.builder().capacity(20)
+                    .refillGreedy(20, Duration.ofHours(1)).build());
 
     private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
             .expireAfterAccess(Duration.ofHours(2))

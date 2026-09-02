@@ -16,18 +16,18 @@ import java.util.UUID;
 
 /**
  * Identité technique pure. Voir apontaja-schema.sql pour la définition
- * canonique (table {@code account}) : l'unicité d'email n'est garantie
- * qu'entre comptes "vivants" (index unique partiel {@code WHERE deleted_at
+ * canonique (table {@code account}) : l'unicité d'email n'est garantie qu'entre
+ * comptes "vivants" (index unique partiel {@code WHERE deleted_at
  * IS NULL} en base) — cette classe ne recalcule pas cette règle, elle est
  * appliquée par la contrainte DB et vérifiée en amont via
  * {@link AccountRepository#existsAliveByEmail(String)}.
  *
  * <p>
- * Implémente {@link Persistable} car l'ID (UUIDv7) est assigné côté
- * application avant l'appel à {@code save()} — sans ça, Spring Data JPA
- * déduit à tort que l'entité n'est "pas nouvelle" (ID non null) et fait un
- * {@code merge()} au lieu d'un {@code persist()} (SELECT superflu, identité
- * d'objet différente après sauvegarde).
+ * Implémente {@link Persistable} car l'ID (UUIDv7) est assigné côté application
+ * avant l'appel à {@code save()} — sans ça, Spring Data JPA déduit à tort que
+ * l'entité n'est "pas nouvelle" (ID non null) et fait un {@code merge()} au
+ * lieu d'un {@code persist()} (SELECT superflu, identité d'objet différente
+ * après sauvegarde).
  */
 @Entity
 @Table(name = "account")
@@ -91,6 +91,10 @@ public class Account implements Persistable<UUID> {
 
     public void softDelete(Instant at) {
         this.deletedAt = Objects.requireNonNull(at, "at");
+    }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = Objects.requireNonNull(newPasswordHash, "newPasswordHash");
     }
 
     public boolean isEmailVerified() {
