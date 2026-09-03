@@ -4,8 +4,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Port défini par le domaine, implémenté par {@code infrastructure}
- * (règle de dépendance : infrastructure -> domain, jamais l'inverse).
+ * Port défini par le domaine, implémenté par {@code infrastructure} (règle de
+ * dépendance : infrastructure -> domain, jamais l'inverse).
  */
 public interface AccountRepository {
 
@@ -13,7 +13,9 @@ public interface AccountRepository {
 
     Optional<Account> findById(UUID id);
 
-    /** Compte "vivant" (non soft-deleted) par email — unicité applicative + login. */
+    /**
+     * Compte "vivant" (non soft-deleted) par email — unicité applicative + login.
+     */
     Optional<Account> findAliveByEmail(String email);
 
     boolean existsAliveByEmail(String email);
