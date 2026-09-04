@@ -1,6 +1,6 @@
 package com.apontaja.back.account.web;
 
-import com.apontaja.back.account.domain.EmailSender;
+import com.apontaja.back.shared.domain.EmailSender;
 import com.apontaja.back.testsupport.PostgresTestcontainersConfiguration;
 
 import org.junit.jupiter.api.Test;

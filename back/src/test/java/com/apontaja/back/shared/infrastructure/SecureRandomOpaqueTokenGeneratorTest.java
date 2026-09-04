@@ -1,4 +1,4 @@
-package com.apontaja.back.account.infrastructure;
+package com.apontaja.back.shared.infrastructure;
 
 import org.junit.jupiter.api.Test;
 

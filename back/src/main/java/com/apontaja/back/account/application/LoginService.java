@@ -3,11 +3,11 @@ package com.apontaja.back.account.application;
 import com.apontaja.back.account.domain.Account;
 import com.apontaja.back.account.domain.AccessTokenIssuer;
 import com.apontaja.back.account.domain.AccountRepository;
-import com.apontaja.back.account.domain.OpaqueTokenGenerator;
 import com.apontaja.back.account.domain.RefreshToken;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
-import com.apontaja.back.account.domain.TokenHasher;
 import com.apontaja.back.shared.domain.IdGenerator;
+import com.apontaja.back.shared.domain.OpaqueTokenGenerator;
+import com.apontaja.back.shared.domain.TokenHasher;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
