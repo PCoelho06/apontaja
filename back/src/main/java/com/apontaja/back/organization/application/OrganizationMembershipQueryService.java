@@ -1,10 +1,12 @@
 package com.apontaja.back.organization.application;
 
+import com.apontaja.back.organization.domain.OrganizationMembership;
 import com.apontaja.back.organization.domain.OrganizationMembershipRepository;
 import com.apontaja.back.organization.domain.OrganizationRole;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,5 +29,17 @@ public class OrganizationMembershipQueryService {
     public boolean isAliveOwner(UUID accountId, UUID organizationId) {
         return organizationMembershipRepository.findAliveByAccountIdAndOrganizationId(accountId, organizationId)
                 .filter(membership -> membership.getRole() == OrganizationRole.OWNER).isPresent();
+    }
+
+    /**
+     * Organisations dont le compte est OWNER — utilisé pour la règle d'accès
+     * élargie aux salons (voir SalonAccessGuard/SalonListQueryService) : un OWNER
+     * voit tous les salons de son organisation, même sans StaffMembership explicite
+     * dessus.
+     */
+    public List<UUID> findAliveOwnedOrganizationIds(UUID accountId) {
+        return organizationMembershipRepository.findAliveByAccountId(accountId).stream()
+                .filter(membership -> membership.getRole() == OrganizationRole.OWNER)
+                .map(OrganizationMembership::getOrganizationId).toList();
     }
 }
