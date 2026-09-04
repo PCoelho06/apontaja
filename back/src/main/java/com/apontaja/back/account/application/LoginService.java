@@ -3,11 +3,11 @@ package com.apontaja.back.account.application;
 import com.apontaja.back.account.domain.Account;
 import com.apontaja.back.account.domain.AccessTokenIssuer;
 import com.apontaja.back.account.domain.AccountRepository;
-import com.apontaja.back.account.domain.IdGenerator;
 import com.apontaja.back.account.domain.OpaqueTokenGenerator;
 import com.apontaja.back.account.domain.RefreshToken;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
 import com.apontaja.back.account.domain.TokenHasher;
+import com.apontaja.back.shared.domain.IdGenerator;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,20 +35,14 @@ public class LoginService {
 
     /**
      * Hash factice précalculé une fois : sert à faire tourner
-     * passwordEncoder.matches() même quand le compte n'existe pas, pour ne
-     * pas laisser fuiter par le timing de réponse si un email est déjà pris.
+     * passwordEncoder.matches() même quand le compte n'existe pas, pour ne pas
+     * laisser fuiter par le timing de réponse si un email est déjà pris.
      */
     private final String dummyHash;
 
-    LoginService(
-            AccountRepository accountRepository,
-            RefreshTokenRepository refreshTokenRepository,
-            PasswordEncoder passwordEncoder,
-            AccessTokenIssuer accessTokenIssuer,
-            OpaqueTokenGenerator opaqueTokenGenerator,
-            TokenHasher tokenHasher,
-            IdGenerator idGenerator,
-            Clock clock,
+    LoginService(AccountRepository accountRepository, RefreshTokenRepository refreshTokenRepository,
+            PasswordEncoder passwordEncoder, AccessTokenIssuer accessTokenIssuer,
+            OpaqueTokenGenerator opaqueTokenGenerator, TokenHasher tokenHasher, IdGenerator idGenerator, Clock clock,
             @Value("${apontaja.security.refresh-token.ttl:30d}") Duration refreshTokenTtl) {
         this.accountRepository = accountRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -66,8 +60,7 @@ public class LoginService {
     public LoginResult login(LoginCommand command) {
         Optional<Account> maybeAccount = accountRepository.findAliveByEmail(command.email().trim());
 
-        boolean passwordMatches = passwordEncoder.matches(
-                command.rawPassword(),
+        boolean passwordMatches = passwordEncoder.matches(command.rawPassword(),
                 maybeAccount.map(Account::getPasswordHash).orElse(dummyHash));
 
         if (maybeAccount.isEmpty() || !passwordMatches) {
@@ -80,13 +73,8 @@ public class LoginService {
         String rawRefreshToken = opaqueTokenGenerator.generate();
         Instant now = clock.instant();
         Instant expiresAt = now.plus(refreshTokenTtl);
-        RefreshToken refreshToken = new RefreshToken(
-                idGenerator.generate(),
-                account.getId(),
-                tokenHasher.hash(rawRefreshToken),
-                command.deviceInfo(),
-                expiresAt,
-                now);
+        RefreshToken refreshToken = new RefreshToken(idGenerator.generate(), account.getId(),
+                tokenHasher.hash(rawRefreshToken), command.deviceInfo(), expiresAt, now);
         refreshTokenRepository.save(refreshToken);
 
         return new LoginResult(account.getId(), account.getEmail(), accessToken, rawRefreshToken, expiresAt);

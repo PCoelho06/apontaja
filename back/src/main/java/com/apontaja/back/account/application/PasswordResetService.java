@@ -6,10 +6,10 @@ import com.apontaja.back.account.domain.AccountToken;
 import com.apontaja.back.account.domain.AccountTokenRepository;
 import com.apontaja.back.account.domain.AccountTokenType;
 import com.apontaja.back.account.domain.EmailSender;
-import com.apontaja.back.account.domain.IdGenerator;
 import com.apontaja.back.account.domain.OpaqueTokenGenerator;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
 import com.apontaja.back.account.domain.TokenHasher;
+import com.apontaja.back.shared.domain.IdGenerator;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,15 +35,9 @@ public class PasswordResetService {
     private final Duration tokenTtl;
     private final String frontendBaseUrl;
 
-    PasswordResetService(
-            AccountRepository accountRepository,
-            AccountTokenRepository accountTokenRepository,
-            RefreshTokenRepository refreshTokenRepository,
-            OpaqueTokenGenerator opaqueTokenGenerator,
-            TokenHasher tokenHasher,
-            PasswordEncoder passwordEncoder,
-            EmailSender emailSender,
-            IdGenerator idGenerator,
+    PasswordResetService(AccountRepository accountRepository, AccountTokenRepository accountTokenRepository,
+            RefreshTokenRepository refreshTokenRepository, OpaqueTokenGenerator opaqueTokenGenerator,
+            TokenHasher tokenHasher, PasswordEncoder passwordEncoder, EmailSender emailSender, IdGenerator idGenerator,
             Clock clock,
             // Fenêtre volontairement courte : plus sensible qu'une vérification d'email.
             @Value("${apontaja.security.password-reset.ttl:1h}") Duration tokenTtl,
@@ -61,35 +55,31 @@ public class PasswordResetService {
         this.frontendBaseUrl = frontendBaseUrl;
     }
 
-    /** Toujours un succès silencieux côté appelant — anti-énumération (même principe que login). */
+    /**
+     * Toujours un succès silencieux côté appelant — anti-énumération (même principe
+     * que login).
+     */
     @Transactional
     public void requestReset(String email) {
         accountRepository.findAliveByEmail(email.trim()).ifPresent(account -> {
             Instant now = clock.instant();
             String rawToken = opaqueTokenGenerator.generate();
 
-            AccountToken token = new AccountToken(
-                    idGenerator.generate(),
-                    account.getId(),
-                    AccountTokenType.PASSWORD_RESET,
-                    tokenHasher.hash(rawToken),
-                    now.plus(tokenTtl),
-                    now);
+            AccountToken token = new AccountToken(idGenerator.generate(), account.getId(),
+                    AccountTokenType.PASSWORD_RESET, tokenHasher.hash(rawToken), now.plus(tokenTtl), now);
             accountTokenRepository.save(token);
 
             String link = frontendBaseUrl + "/reinitialiser-mot-de-passe?token=" + rawToken;
-            emailSender.send(
-                    account.getEmail(),
-                    "Réinitialisation de votre mot de passe",
-                    "Cliquez sur ce lien pour choisir un nouveau mot de passe (valable "
-                            + tokenTtl.toMinutes() + " min) : " + link);
+            emailSender.send(account.getEmail(), "Réinitialisation de votre mot de passe",
+                    "Cliquez sur ce lien pour choisir un nouveau mot de passe (valable " + tokenTtl.toMinutes()
+                            + " min) : " + link);
         });
     }
 
     /**
-     * Un reset réussi révoque toutes les sessions actives du compte : un mot
-     * de passe qu'on réinitialise est un mot de passe qu'on soupçonne
-     * compromis (même principe que la détection de réutilisation, tranche 5).
+     * Un reset réussi révoque toutes les sessions actives du compte : un mot de
+     * passe qu'on réinitialise est un mot de passe qu'on soupçonne compromis (même
+     * principe que la détection de réutilisation, tranche 5).
      */
     @Transactional
     public void resetPassword(String rawToken, String newRawPassword) {
@@ -111,10 +101,9 @@ public class PasswordResetService {
         token.markUsed(now);
         accountTokenRepository.save(token);
 
-        refreshTokenRepository.findActiveByAccountId(account.getId())
-                .forEach(refreshToken -> {
-                    refreshToken.revoke(now);
-                    refreshTokenRepository.save(refreshToken);
-                });
+        refreshTokenRepository.findActiveByAccountId(account.getId()).forEach(refreshToken -> {
+            refreshToken.revoke(now);
+            refreshTokenRepository.save(refreshToken);
+        });
     }
 }

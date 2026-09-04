@@ -5,7 +5,7 @@ import com.apontaja.back.account.domain.AccountRepository;
 import com.apontaja.back.account.domain.ConsentRecord;
 import com.apontaja.back.account.domain.ConsentRecordRepository;
 import com.apontaja.back.account.domain.ConsentType;
-import com.apontaja.back.account.domain.IdGenerator;
+import com.apontaja.back.shared.domain.IdGenerator;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,12 +31,8 @@ public class RegisterAccountService {
     private final IdGenerator idGenerator;
     private final Clock clock;
 
-    RegisterAccountService(
-            AccountRepository accountRepository,
-            ConsentRecordRepository consentRecordRepository,
-            EmailVerificationService emailVerificationService,
-            PasswordEncoder passwordEncoder,
-            IdGenerator idGenerator,
+    RegisterAccountService(AccountRepository accountRepository, ConsentRecordRepository consentRecordRepository,
+            EmailVerificationService emailVerificationService, PasswordEncoder passwordEncoder, IdGenerator idGenerator,
             Clock clock) {
         this.accountRepository = accountRepository;
         this.consentRecordRepository = consentRecordRepository;
@@ -55,14 +51,14 @@ public class RegisterAccountService {
         }
 
         Instant now = clock.instant();
-        Account account = new Account(
-                idGenerator.generate(), email, passwordEncoder.encode(command.rawPassword()), now);
+        Account account = new Account(idGenerator.generate(), email, passwordEncoder.encode(command.rawPassword()),
+                now);
         accountRepository.save(account);
 
-        consentRecordRepository.save(new ConsentRecord(
-                idGenerator.generate(), account.getId(), ConsentType.TOS, TOS_VERSION, now));
-        consentRecordRepository.save(new ConsentRecord(
-                idGenerator.generate(), account.getId(), ConsentType.PRIVACY, PRIVACY_VERSION, now));
+        consentRecordRepository
+                .save(new ConsentRecord(idGenerator.generate(), account.getId(), ConsentType.TOS, TOS_VERSION, now));
+        consentRecordRepository.save(
+                new ConsentRecord(idGenerator.generate(), account.getId(), ConsentType.PRIVACY, PRIVACY_VERSION, now));
 
         emailVerificationService.issueAndSend(account);
 

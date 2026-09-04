@@ -5,7 +5,7 @@ import com.apontaja.back.account.domain.AccountRepository;
 import com.apontaja.back.account.domain.ConsentRecord;
 import com.apontaja.back.account.domain.ConsentRecordRepository;
 import com.apontaja.back.account.domain.ConsentType;
-import com.apontaja.back.account.domain.IdGenerator;
+import com.apontaja.back.shared.domain.IdGenerator;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,9 +50,8 @@ class RegisterAccountServiceTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
-        service = new RegisterAccountService(
-                accountRepository, consentRecordRepository, emailVerificationService, passwordEncoder,
-                new SequentialTestIdGenerator(), clock);
+        service = new RegisterAccountService(accountRepository, consentRecordRepository, emailVerificationService,
+                passwordEncoder, new SequentialTestIdGenerator(), clock);
     }
 
     @Test
@@ -61,8 +60,8 @@ class RegisterAccountServiceTest {
         when(passwordEncoder.encode("un-mot-de-passe-suffisamment-long")).thenReturn("hashed");
         when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RegisterAccountResult result = service.register(
-                new RegisterAccountCommand("alice@example.com", "un-mot-de-passe-suffisamment-long"));
+        RegisterAccountResult result = service
+                .register(new RegisterAccountCommand("alice@example.com", "un-mot-de-passe-suffisamment-long"));
 
         assertThat(result.email()).isEqualTo("alice@example.com");
 
@@ -82,9 +81,9 @@ class RegisterAccountServiceTest {
     void rejette_l_inscription_si_l_email_est_deja_utilise() {
         when(accountRepository.existsAliveByEmail("bob@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.register(
-                new RegisterAccountCommand("bob@example.com", "un-mot-de-passe-suffisamment-long")))
-                .isInstanceOf(EmailAlreadyUsedException.class);
+        assertThatThrownBy(() -> service
+                .register(new RegisterAccountCommand("bob@example.com", "un-mot-de-passe-suffisamment-long")))
+                        .isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     private static final class SequentialTestIdGenerator implements IdGenerator {
