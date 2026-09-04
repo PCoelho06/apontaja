@@ -36,4 +36,9 @@ class StaffMembershipRepositoryAdapter implements StaffMembershipRepository {
     public List<StaffMembership> findAliveByAccountId(UUID accountId) {
         return jpaRepository.findByAccountIdAndDeletedAtIsNull(accountId);
     }
+
+    @Override
+    public Optional<StaffMembership> findAliveById(UUID id) {
+        return jpaRepository.findByIdAndDeletedAtIsNull(id);
+    }
 }

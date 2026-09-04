@@ -79,4 +79,29 @@ public class StaffManagementGuard {
             return null;
         }
     }
+
+    /**
+     * Utilisé pour DELETE : l'acteur doit pouvoir gérer le rôle ACTUEL de la cible.
+     */
+    public boolean canManageMembership(UUID actorAccountId, UUID salonId, UUID staffMembershipId) {
+        StaffRole currentRole = findRoleOrNull(salonId, staffMembershipId);
+        return currentRole != null && canManageRole(actorAccountId, salonId, currentRole.name());
+    }
+
+    /**
+     * Utilisé pour PATCH (changement de rôle) : l'acteur doit pouvoir gérer À LA
+     * FOIS le rôle actuel de la cible ET le nouveau rôle demandé — sinon un MANAGER
+     * pourrait promouvoir un EMPLOYEE en MANAGER, hors de sa portée (voir tranche
+     * 5.2).
+     */
+    public boolean canChangeStaffRole(UUID actorAccountId, UUID salonId, UUID staffMembershipId, String newRoleName) {
+        return canManageMembership(actorAccountId, salonId, staffMembershipId)
+                && canManageRole(actorAccountId, salonId, newRoleName);
+    }
+
+    private StaffRole findRoleOrNull(UUID salonId, UUID staffMembershipId) {
+        return staffMembershipRepository.findAliveById(staffMembershipId)
+                .filter(membership -> membership.getSalonId().equals(salonId)).map(StaffMembership::getRole)
+                .orElse(null);
+    }
 }

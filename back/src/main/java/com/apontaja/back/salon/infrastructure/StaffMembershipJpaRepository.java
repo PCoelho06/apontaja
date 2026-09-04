@@ -14,4 +14,6 @@ interface StaffMembershipJpaRepository extends JpaRepository<StaffMembership, UU
     List<StaffMembership> findBySalonIdAndDeletedAtIsNull(UUID salonId);
 
     List<StaffMembership> findByAccountIdAndDeletedAtIsNull(UUID accountId);
+
+    Optional<StaffMembership> findByIdAndDeletedAtIsNull(UUID id);
 }
