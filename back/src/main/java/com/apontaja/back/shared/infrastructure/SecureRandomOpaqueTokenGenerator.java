@@ -1,8 +1,8 @@
-package com.apontaja.back.account.infrastructure;
-
-import com.apontaja.back.account.domain.OpaqueTokenGenerator;
+package com.apontaja.back.shared.infrastructure;
 
 import org.springframework.stereotype.Component;
+
+import com.apontaja.back.shared.domain.OpaqueTokenGenerator;
 
 import java.security.SecureRandom;
 import java.util.Base64;

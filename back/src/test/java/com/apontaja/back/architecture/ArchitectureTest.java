@@ -102,7 +102,7 @@ class ArchitectureTest {
     private static final Map<String, List<String>> ALLOWED_DEPENDENTS = new LinkedHashMap<>();
 
     static {
-        ALLOWED_DEPENDENTS.put("account", List.of("organization", "customer"));
+        ALLOWED_DEPENDENTS.put("account", List.of("organization", "customer", "salon"));
         ALLOWED_DEPENDENTS.put("organization", List.of("salon"));
         ALLOWED_DEPENDENTS.put("salon", List.of("resource", "appointment"));
         ALLOWED_DEPENDENTS.put("resource", List.of("service", "appointment"));

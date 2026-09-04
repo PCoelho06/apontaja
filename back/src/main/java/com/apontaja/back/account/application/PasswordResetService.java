@@ -5,11 +5,11 @@ import com.apontaja.back.account.domain.AccountRepository;
 import com.apontaja.back.account.domain.AccountToken;
 import com.apontaja.back.account.domain.AccountTokenRepository;
 import com.apontaja.back.account.domain.AccountTokenType;
-import com.apontaja.back.account.domain.EmailSender;
-import com.apontaja.back.account.domain.OpaqueTokenGenerator;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
-import com.apontaja.back.account.domain.TokenHasher;
+import com.apontaja.back.shared.domain.EmailSender;
 import com.apontaja.back.shared.domain.IdGenerator;
+import com.apontaja.back.shared.domain.OpaqueTokenGenerator;
+import com.apontaja.back.shared.domain.TokenHasher;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;

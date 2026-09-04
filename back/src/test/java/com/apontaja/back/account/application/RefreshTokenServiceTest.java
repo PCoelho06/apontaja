@@ -1,10 +1,10 @@
 package com.apontaja.back.account.application;
 
 import com.apontaja.back.account.domain.AccessTokenIssuer;
-import com.apontaja.back.account.domain.OpaqueTokenGenerator;
 import com.apontaja.back.account.domain.RefreshToken;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
-import com.apontaja.back.account.domain.TokenHasher;
+import com.apontaja.back.shared.domain.OpaqueTokenGenerator;
+import com.apontaja.back.shared.domain.TokenHasher;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

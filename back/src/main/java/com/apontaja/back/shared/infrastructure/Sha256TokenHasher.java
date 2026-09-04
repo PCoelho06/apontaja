@@ -1,8 +1,8 @@
-package com.apontaja.back.account.infrastructure;
-
-import com.apontaja.back.account.domain.TokenHasher;
+package com.apontaja.back.shared.infrastructure;
 
 import org.springframework.stereotype.Component;
+
+import com.apontaja.back.shared.domain.TokenHasher;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
