@@ -15,4 +15,6 @@ public interface StaffInvitationRepository {
      * (StaffInvitation.isUsable).
      */
     List<StaffInvitation> findPendingBySalonId(UUID salonId);
+
+    boolean existsPendingBySalonIdAndEmail(UUID salonId, String email);
 }

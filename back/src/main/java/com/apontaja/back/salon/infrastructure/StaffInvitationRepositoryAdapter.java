@@ -32,4 +32,9 @@ class StaffInvitationRepositoryAdapter implements StaffInvitationRepository {
     public List<StaffInvitation> findPendingBySalonId(UUID salonId) {
         return jpaRepository.findPendingBySalonId(salonId);
     }
+
+    @Override
+    public boolean existsPendingBySalonIdAndEmail(UUID salonId, String email) {
+        return jpaRepository.existsPendingBySalonIdAndEmail(salonId, email);
+    }
 }
