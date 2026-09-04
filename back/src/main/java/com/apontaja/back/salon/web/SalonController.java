@@ -3,11 +3,17 @@ package com.apontaja.back.salon.web;
 import com.apontaja.back.salon.application.CreateSalonCommand;
 import com.apontaja.back.salon.application.CreateSalonResult;
 import com.apontaja.back.salon.application.SalonCreationService;
+import com.apontaja.back.salon.application.SalonListItem;
+import com.apontaja.back.salon.application.SalonListQueryService;
 import com.apontaja.back.salon.application.SalonQueryService;
 import com.apontaja.back.salon.application.SalonSummary;
+import com.apontaja.back.web.PageResponse;
 
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -28,10 +35,13 @@ class SalonController {
 
     private final SalonCreationService salonCreationService;
     private final SalonQueryService salonQueryService;
+    private final SalonListQueryService salonListQueryService;
 
-    SalonController(SalonCreationService salonCreationService, SalonQueryService salonQueryService) {
+    SalonController(SalonCreationService salonCreationService, SalonQueryService salonQueryService,
+            SalonListQueryService salonListQueryService) {
         this.salonCreationService = salonCreationService;
         this.salonQueryService = salonQueryService;
+        this.salonListQueryService = salonListQueryService;
     }
 
     @PostMapping
@@ -63,5 +73,22 @@ class SalonController {
     private static SalonResponse toResponse(SalonSummary summary) {
         return new SalonResponse(summary.salonId(), summary.organizationId(), summary.name(), summary.address(),
                 summary.postalCode(), summary.city(), summary.country(), summary.phone(), summary.timezone());
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<SalonListItemResponse>> listSalons(@AuthenticationPrincipal UUID accountId,
+            @PageableDefault(size = 20) Pageable pageable) {
+
+        Page<SalonListItem> page = salonListQueryService.findAccessibleSalons(accountId, pageable);
+        List<SalonListItemResponse> content = page.getContent().stream().map(SalonController::toListItemResponse)
+                .toList();
+
+        return ResponseEntity.ok(new PageResponse<>(content, page.getNumber(), page.getSize(), page.getTotalElements(),
+                page.getTotalPages()));
+    }
+
+    private static SalonListItemResponse toListItemResponse(SalonListItem item) {
+        return new SalonListItemResponse(item.salonId(), item.organizationId(), item.name(), item.address(),
+                item.postalCode(), item.city(), item.country(), item.phone(), item.timezone(), item.role());
     }
 }
