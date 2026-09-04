@@ -1,11 +1,11 @@
 package com.apontaja.back.account.application;
 
 import com.apontaja.back.account.domain.AccessTokenIssuer;
-import com.apontaja.back.account.domain.IdGenerator;
 import com.apontaja.back.account.domain.OpaqueTokenGenerator;
 import com.apontaja.back.account.domain.RefreshToken;
 import com.apontaja.back.account.domain.RefreshTokenRepository;
 import com.apontaja.back.account.domain.TokenHasher;
+import com.apontaja.back.shared.domain.IdGenerator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +31,8 @@ public class RefreshTokenService {
     private final Clock clock;
     private final Duration refreshTokenTtl;
 
-    RefreshTokenService(
-            RefreshTokenRepository refreshTokenRepository,
-            AccessTokenIssuer accessTokenIssuer,
-            OpaqueTokenGenerator opaqueTokenGenerator,
-            TokenHasher tokenHasher,
-            IdGenerator idGenerator,
-            Clock clock,
+    RefreshTokenService(RefreshTokenRepository refreshTokenRepository, AccessTokenIssuer accessTokenIssuer,
+            OpaqueTokenGenerator opaqueTokenGenerator, TokenHasher tokenHasher, IdGenerator idGenerator, Clock clock,
             @Value("${apontaja.security.refresh-token.ttl:30d}") Duration refreshTokenTtl) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.accessTokenIssuer = accessTokenIssuer;
@@ -49,11 +44,11 @@ public class RefreshTokenService {
     }
 
     /**
-     * Rotation à chaque appel : l'ancien token est révoqué, un nouveau est
-     * émis. Si le token présenté est déjà révoqué (donc déjà utilisé une
-     * fois), c'est un signal de vol probable — toute la famille de tokens
-     * du compte est invalidée (granularité compte, pas device, cf. note de
-     * tranche 5 dans le contexte projet).
+     * Rotation à chaque appel : l'ancien token est révoqué, un nouveau est émis. Si
+     * le token présenté est déjà révoqué (donc déjà utilisé une fois), c'est un
+     * signal de vol probable — toute la famille de tokens du compte est invalidée
+     * (granularité compte, pas device, cf. note de tranche 5 dans le contexte
+     * projet).
      */
     @Transactional(noRollbackFor = RefreshTokenReuseDetectedException.class)
     public RefreshResult refresh(String rawRefreshToken) {
@@ -63,10 +58,8 @@ public class RefreshTokenService {
         Instant now = clock.instant();
 
         if (token.isRevoked()) {
-            log.warn(
-                    "Réutilisation détectée d'un refresh token déjà révoqué (accountId={}) "
-                            + "— invalidation de toute la famille de tokens.",
-                    token.getAccountId());
+            log.warn("Réutilisation détectée d'un refresh token déjà révoqué (accountId={}) "
+                    + "— invalidation de toute la famille de tokens.", token.getAccountId());
             revokeAllActiveForAccount(token.getAccountId(), now);
             throw new RefreshTokenReuseDetectedException();
         }
@@ -80,13 +73,8 @@ public class RefreshTokenService {
 
         String newRawRefreshToken = opaqueTokenGenerator.generate();
         Instant expiresAt = now.plus(refreshTokenTtl);
-        RefreshToken newToken = new RefreshToken(
-                idGenerator.generate(),
-                token.getAccountId(),
-                tokenHasher.hash(newRawRefreshToken),
-                token.getDeviceInfo(),
-                expiresAt,
-                now);
+        RefreshToken newToken = new RefreshToken(idGenerator.generate(), token.getAccountId(),
+                tokenHasher.hash(newRawRefreshToken), token.getDeviceInfo(), expiresAt, now);
         refreshTokenRepository.save(newToken);
 
         String accessToken = accessTokenIssuer.issue(token.getAccountId());
@@ -100,8 +88,7 @@ public class RefreshTokenService {
      */
     @Transactional
     public void logout(String rawRefreshToken) {
-        refreshTokenRepository.findByTokenHash(tokenHasher.hash(rawRefreshToken))
-                .filter(token -> !token.isRevoked())
+        refreshTokenRepository.findByTokenHash(tokenHasher.hash(rawRefreshToken)).filter(token -> !token.isRevoked())
                 .ifPresent(token -> {
                     token.revoke(clock.instant());
                     refreshTokenRepository.save(token);
@@ -109,10 +96,9 @@ public class RefreshTokenService {
     }
 
     private void revokeAllActiveForAccount(UUID accountId, Instant now) {
-        refreshTokenRepository.findActiveByAccountId(accountId)
-                .forEach(token -> {
-                    token.revoke(now);
-                    refreshTokenRepository.save(token);
-                });
+        refreshTokenRepository.findActiveByAccountId(accountId).forEach(token -> {
+            token.revoke(now);
+            refreshTokenRepository.save(token);
+        });
     }
 }

@@ -56,19 +56,16 @@ public class SecurityConfig {
                                                 "/api/auth/reset-password")
                                 .permitAll().anyRequest().authenticated())
                                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                                // Handler simple (pas le Xor par défaut) : CookieCsrfTokenRepository
-                                                // expose la valeur BRUTE du token dans le cookie pour que le JS la lise
-                                                // ;
-                                                // avec le handler Xor par défaut, cette valeur ne correspond pas à ce
-                                                // que
-                                                // le serveur attend en comparaison. Cf. doc Spring Security, section
-                                                // SPA.
                                                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                                                .ignoringRequestMatchers("/api/auth/register", "/api/auth/login",
-                                                                "/api/auth/confirm-email",
-                                                                "/api/auth/resend-verification-email",
-                                                                "/api/auth/forgot-password",
-                                                                "/api/auth/reset-password"))
+                                                // Inversion (Phase 2) : CSRF n'a de sens que pour l'auth cookie-driven
+                                                // (refresh/logout). Tout le reste est authentifié par Bearer JWT en
+                                                // mémoire JS,
+                                                // jamais envoyé automatiquement cross-site par le navigateur — donc
+                                                // CSRF-exempt
+                                                // par construction, y compris tout futur endpoint de domaine (salons,
+                                                // staff...).
+                                                .ignoringRequestMatchers(request -> !isCsrfProtectedPath(
+                                                                request.getRequestURI())))
                                 // Force la résolution du token différé à CHAQUE requête, sinon le cookie
                                 // XSRF-TOKEN n'est jamais réellement écrit dans une API REST pure (rien
                                 // ne "consomme" le token différé comme le ferait un template serveur).
@@ -79,6 +76,10 @@ public class SecurityConfig {
                                 .formLogin(formLogin -> formLogin.disable());
 
                 return http.build();
+        }
+
+        private static boolean isCsrfProtectedPath(String uri) {
+                return "/api/auth/refresh".equals(uri) || "/api/auth/logout".equals(uri);
         }
 
         private static final class CsrfCookieFilter extends OncePerRequestFilter {

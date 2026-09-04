@@ -2,7 +2,7 @@ package com.apontaja.back.account.web;
 
 import com.apontaja.back.account.domain.Account;
 import com.apontaja.back.account.domain.AccountRepository;
-import com.apontaja.back.account.domain.IdGenerator;
+import com.apontaja.back.shared.domain.IdGenerator;
 import com.apontaja.back.testsupport.PostgresTestcontainersConfiguration;
 
 import jakarta.servlet.http.Cookie;

@@ -1,6 +1,6 @@
-package com.apontaja.back.account.infrastructure;
+package com.apontaja.back.shared.infrastructure;
 
-import com.apontaja.back.account.domain.IdGenerator;
+import com.apontaja.back.shared.domain.IdGenerator;
 import com.github.f4b6a3.uuid.UuidCreator;
 
 import org.springframework.stereotype.Component;
