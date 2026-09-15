@@ -61,7 +61,10 @@ async function handleSubmit() {
     title="Créer un salon"
     subtitle="Renseignez les informations de votre salon pour commencer."
   >
-    <form class="space-y-4" @submit.prevent="handleSubmit">
+    <form
+      class="space-y-4"
+      @submit.prevent="handleSubmit"
+    >
       <AuthTextField
         id="name"
         v-model="name"
@@ -108,7 +111,10 @@ async function handleSubmit() {
         :error="fieldErrors.phone"
       />
 
-      <p v-if="generalError" class="text-sm text-danger">
+      <p
+        v-if="generalError"
+        class="text-sm text-danger"
+      >
         {{ generalError }}
       </p>
 
