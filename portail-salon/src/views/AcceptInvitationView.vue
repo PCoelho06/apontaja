@@ -122,13 +122,24 @@ async function handleRegisterThenLogin() {
     class="flex min-h-screen items-center justify-center bg-paper px-6 py-12"
   >
     <div class="w-full max-w-sm">
-      <p v-if="step === 'loading'" class="text-sm text-ink/70">Chargement...</p>
+      <p
+        v-if="step === 'loading'"
+        class="text-sm text-ink/70"
+      >
+        Chargement...
+      </p>
 
-      <p v-else-if="step === 'invalid'" class="text-sm text-danger">
+      <p
+        v-else-if="step === 'invalid'"
+        class="text-sm text-danger"
+      >
         Ce lien d'invitation est invalide ou a expiré.
       </p>
 
-      <p v-else-if="step === 'mismatch'" class="text-sm text-danger">
+      <p
+        v-else-if="step === 'mismatch'"
+        class="text-sm text-danger"
+      >
         Cette invitation a été envoyée à {{ lookup?.email }}, une adresse
         différente de votre compte connecté ({{ auth.account?.email }}).
         Déconnectez-vous puis réessayez avec le bon compte.
@@ -159,17 +170,18 @@ async function handleRegisterThenLogin() {
           Connectez-vous avec {{ lookup?.email }} pour accepter cette
           invitation.
         </p>
-        <form class="mt-4 space-y-4" @submit.prevent="handleLogin">
+        <form
+          class="mt-4 space-y-4"
+          @submit.prevent="handleLogin"
+        >
           <div>
-            <label class="block text-sm font-medium text-ink"
-              >Mot de passe</label
-            >
+            <label class="block text-sm font-medium text-ink">Mot de passe</label>
             <input
               v-model="password"
               type="password"
               autocomplete="current-password"
               class="mt-1.5 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-ink focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine"
-            />
+            >
           </div>
           <button
             type="submit"
@@ -189,17 +201,18 @@ async function handleRegisterThenLogin() {
           Créez un compte avec {{ lookup?.email }} pour accepter cette
           invitation.
         </p>
-        <form class="mt-4 space-y-4" @submit.prevent="handleRegisterThenLogin">
+        <form
+          class="mt-4 space-y-4"
+          @submit.prevent="handleRegisterThenLogin"
+        >
           <div>
-            <label class="block text-sm font-medium text-ink"
-              >Mot de passe (12 caractères minimum)</label
-            >
+            <label class="block text-sm font-medium text-ink">Mot de passe (12 caractères minimum)</label>
             <input
               v-model="password"
               type="password"
               autocomplete="new-password"
               class="mt-1.5 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-ink focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine"
-            />
+            >
           </div>
           <button
             type="submit"
@@ -211,15 +224,24 @@ async function handleRegisterThenLogin() {
         </form>
       </template>
 
-      <p v-else-if="step === 'success'" class="text-sm text-ink">
+      <p
+        v-else-if="step === 'success'"
+        class="text-sm text-ink"
+      >
         Invitation acceptée ! Vous pouvez maintenant accéder à ce salon depuis
         votre espace.
-        <RouterLink :to="{ name: 'home' }" class="text-wine hover:underline">
+        <RouterLink
+          :to="{ name: 'home' }"
+          class="text-wine hover:underline"
+        >
           Retour à l'accueil
         </RouterLink>
       </p>
 
-      <p v-else-if="step === 'error'" class="text-sm text-danger">
+      <p
+        v-else-if="step === 'error'"
+        class="text-sm text-danger"
+      >
         {{ errorMessage }}
       </p>
     </div>
