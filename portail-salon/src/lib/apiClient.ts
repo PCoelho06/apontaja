@@ -88,3 +88,18 @@ export function apiPostWithCsrf<T>(
     headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
   });
 }
+
+export function apiPatch<T>(path: string, payload?: unknown, accessToken?: string): Promise<T> {
+  return request<T>(path, {
+    method: 'PATCH',
+    body: payload !== undefined ? JSON.stringify(payload) : undefined,
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  })
+}
+
+export function apiDelete<T>(path: string, accessToken?: string): Promise<T> {
+  return request<T>(path, {
+    method: 'DELETE',
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  })
+}

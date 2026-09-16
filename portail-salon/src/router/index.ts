@@ -48,6 +48,17 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/salons/:salonId",
+      name: "salon-detail",
+      component: () => import("@/views/SalonDetailView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/invitations/accepter",
+      name: "accept-invitation",
+      component: () => import("@/views/AcceptInvitationView.vue"),
+    },
+    {
       path: "/",
       name: "home",
       component: () => import("@/views/HomeView.vue"),
