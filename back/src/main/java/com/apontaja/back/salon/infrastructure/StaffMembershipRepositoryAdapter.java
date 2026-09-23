@@ -33,6 +33,11 @@ class StaffMembershipRepositoryAdapter implements StaffMembershipRepository {
     }
 
     @Override
+    public List<StaffMembership> findAliveBySalonIdForUpdate(UUID salonId) {
+        return jpaRepository.findAliveBySalonIdForUpdate(salonId);
+    }
+
+    @Override
     public List<StaffMembership> findAliveByAccountId(UUID accountId) {
         return jpaRepository.findByAccountIdAndDeletedAtIsNull(accountId);
     }

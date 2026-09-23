@@ -12,6 +12,8 @@ public interface StaffMembershipRepository {
 
     List<StaffMembership> findAliveBySalonId(UUID salonId);
 
+    List<StaffMembership> findAliveBySalonIdForUpdate(UUID salonId);
+
     List<StaffMembership> findAliveByAccountId(UUID accountId);
 
     Optional<StaffMembership> findAliveById(UUID id);

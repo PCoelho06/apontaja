@@ -70,7 +70,7 @@ public class StaffMembershipManagementService {
      * validée pour cette tranche).
      */
     private boolean isLastOwner(UUID salonId, UUID excludingMembershipId) {
-        return staffMembershipRepository.findAliveBySalonId(salonId).stream()
+        return staffMembershipRepository.findAliveBySalonIdForUpdate(salonId).stream()
                 .filter(m -> m.getRole() == StaffRole.OWNER).filter(m -> !m.getId().equals(excludingMembershipId))
                 .findAny().isEmpty();
     }
