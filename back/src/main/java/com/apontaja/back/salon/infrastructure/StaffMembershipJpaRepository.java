@@ -1,7 +1,11 @@
 package com.apontaja.back.salon.infrastructure;
 
 import com.apontaja.back.salon.domain.StaffMembership;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +16,10 @@ interface StaffMembershipJpaRepository extends JpaRepository<StaffMembership, UU
     Optional<StaffMembership> findByAccountIdAndSalonIdAndDeletedAtIsNull(UUID accountId, UUID salonId);
 
     List<StaffMembership> findBySalonIdAndDeletedAtIsNull(UUID salonId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM StaffMembership m WHERE m.salonId = :salonId AND m.deletedAt IS NULL")
+    List<StaffMembership> findAliveBySalonIdForUpdate(@Param("salonId") UUID salonId);
 
     List<StaffMembership> findByAccountIdAndDeletedAtIsNull(UUID accountId);
 

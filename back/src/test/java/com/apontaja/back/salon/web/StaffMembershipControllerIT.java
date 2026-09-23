@@ -22,7 +22,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -209,5 +217,108 @@ class StaffMembershipControllerIT {
         UUID salonId = createSalon();
 
         mockMvc.perform(get("/api/salons/{salonId}/staff", salonId)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void empeche_deux_owner_de_se_retrograder_simultanement() throws Exception {
+        UUID salonId = createSalon();
+
+        UUID firstOwnerId = createAccount();
+        UUID firstOwnerMembershipId = addStaff(firstOwnerId, salonId, StaffRole.OWNER);
+
+        UUID secondOwnerId = createAccount();
+        UUID secondOwnerMembershipId = addStaff(secondOwnerId, salonId, StaffRole.OWNER);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            Future<Integer> firstResult = executor.submit(() -> {
+                start.await();
+
+                return mockMvc
+                        .perform(patch("/api/salons/{salonId}/staff/{id}", salonId, firstOwnerMembershipId)
+                                .header("Authorization", bearerTokenFor(firstOwnerId))
+                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
+                        .andReturn().getResponse().getStatus();
+            });
+
+            Future<Integer> secondResult = executor.submit(() -> {
+                start.await();
+
+                return mockMvc
+                        .perform(patch("/api/salons/{salonId}/staff/{id}", salonId, secondOwnerMembershipId)
+                                .header("Authorization", bearerTokenFor(secondOwnerId))
+                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
+                        .andReturn().getResponse().getStatus();
+            });
+
+            start.countDown();
+
+            int firstStatus = firstResult.get(10, TimeUnit.SECONDS);
+            int secondStatus = secondResult.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(204, 409);
+
+            StaffRole firstRole = staffMembershipRepository.findAliveById(firstOwnerMembershipId).orElseThrow()
+                    .getRole();
+
+            StaffRole secondRole = staffMembershipRepository.findAliveById(secondOwnerMembershipId).orElseThrow()
+                    .getRole();
+
+            assertThat(List.of(firstRole, secondRole)).containsExactlyInAnyOrder(StaffRole.OWNER, StaffRole.MANAGER);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void empeche_deux_owner_de_se_supprimer_simultanement() throws Exception {
+        UUID salonId = createSalon();
+
+        UUID firstOwnerId = createAccount();
+        UUID firstOwnerMembershipId = addStaff(firstOwnerId, salonId, StaffRole.OWNER);
+
+        UUID secondOwnerId = createAccount();
+        UUID secondOwnerMembershipId = addStaff(secondOwnerId, salonId, StaffRole.OWNER);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            Future<Integer> firstResult = executor.submit(() -> {
+                start.await();
+
+                return mockMvc
+                        .perform(delete("/api/salons/{salonId}/staff/{id}", salonId, firstOwnerMembershipId)
+                                .header("Authorization", bearerTokenFor(firstOwnerId)))
+                        .andReturn().getResponse().getStatus();
+            });
+
+            Future<Integer> secondResult = executor.submit(() -> {
+                start.await();
+
+                return mockMvc
+                        .perform(delete("/api/salons/{salonId}/staff/{id}", salonId, secondOwnerMembershipId)
+                                .header("Authorization", bearerTokenFor(secondOwnerId)))
+                        .andReturn().getResponse().getStatus();
+            });
+
+            start.countDown();
+
+            int firstStatus = firstResult.get(10, TimeUnit.SECONDS);
+            int secondStatus = secondResult.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(204, 409);
+
+            long aliveOwnerCount = Stream
+                    .of(staffMembershipRepository.findAliveById(firstOwnerMembershipId),
+                            staffMembershipRepository.findAliveById(secondOwnerMembershipId))
+                    .flatMap(Optional::stream).filter(membership -> membership.getRole() == StaffRole.OWNER).count();
+
+            assertThat(aliveOwnerCount).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 }

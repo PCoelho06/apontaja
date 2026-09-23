@@ -14,14 +14,21 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.transaction.TestTransaction;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -33,6 +40,9 @@ class StaffMembershipJpaRepositoryIT {
 
         @Autowired
         private TestEntityManager entityManager;
+
+        @Autowired
+        private TransactionTemplate transactionTemplate;
 
         private UUID createAccount() {
                 Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash",
@@ -111,5 +121,68 @@ class StaffMembershipJpaRepositoryIT {
                                 .findByAccountIdAndDeletedAtIsNull(accountId);
 
                 assertThat(result).hasSize(2);
+        }
+
+        @Test
+        void verrouille_les_staff_memberships_du_salon_pendant_la_transaction() throws Exception {
+                UUID accountId = createAccount();
+                UUID salonId = createSalon();
+
+                staffMembershipJpaRepository.saveAndFlush(new StaffMembership(UUID.randomUUID(), accountId, salonId,
+                                StaffRole.OWNER, Instant.now()));
+
+                TestTransaction.flagForCommit();
+                TestTransaction.end();
+                TestTransaction.start();
+
+                CountDownLatch firstTransactionStarted = new CountDownLatch(1);
+                CountDownLatch releaseFirstTransaction = new CountDownLatch(1);
+                AtomicBoolean secondTransactionCompleted = new AtomicBoolean(false);
+
+                Thread firstTransaction = new Thread(() -> transactionTemplate.executeWithoutResult(status -> {
+                        staffMembershipJpaRepository.findAliveBySalonIdForUpdate(salonId);
+
+                        firstTransactionStarted.countDown();
+
+                        try {
+                                if (!releaseFirstTransaction.await(5, TimeUnit.SECONDS)) {
+                                        throw new AssertionError("La première transaction n'a pas été libérée à temps");
+                                }
+                        } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new AssertionError(e);
+                        }
+                }));
+
+                Thread secondTransaction = new Thread(() -> transactionTemplate.executeWithoutResult(status -> {
+                        try {
+                                firstTransactionStarted.await();
+                        } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new AssertionError(e);
+                        }
+
+                        staffMembershipJpaRepository.findAliveBySalonIdForUpdate(salonId);
+
+                        secondTransactionCompleted.set(true);
+                }));
+
+                firstTransaction.start();
+
+                assertThat(firstTransactionStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+                secondTransaction.start();
+
+                await().atMost(Duration.ofSeconds(1))
+                                .untilAsserted(() -> assertThat(secondTransactionCompleted).isFalse());
+
+                releaseFirstTransaction.countDown();
+
+                firstTransaction.join(5_000);
+                secondTransaction.join(5_000);
+
+                assertThat(firstTransaction.isAlive()).isFalse();
+                assertThat(secondTransaction.isAlive()).isFalse();
+                assertThat(secondTransactionCompleted).isTrue();
         }
 }
