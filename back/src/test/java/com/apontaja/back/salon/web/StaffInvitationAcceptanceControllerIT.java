@@ -9,6 +9,7 @@ import com.apontaja.back.salon.domain.Salon;
 import com.apontaja.back.salon.domain.SalonRepository;
 import com.apontaja.back.salon.domain.StaffInvitation;
 import com.apontaja.back.salon.domain.StaffInvitationRepository;
+import com.apontaja.back.salon.domain.StaffMembership;
 import com.apontaja.back.salon.domain.StaffMembershipRepository;
 import com.apontaja.back.salon.domain.StaffRole;
 import com.apontaja.back.shared.domain.IdGenerator;
@@ -114,6 +115,31 @@ class StaffInvitationAcceptanceControllerIT {
                 Optional<StaffInvitation> invitation = staffInvitationRepository
                                 .findByTokenHash(tokenHasher.hash(rawToken));
                 assertThat(invitation).hasValueSatisfying(inv -> assertThat(inv.isAccepted()).isTrue());
+        }
+
+        @Test
+        void refuse_l_acceptation_si_le_compte_est_deja_membre_du_salon() throws Exception {
+                UUID salonId = createSalon("Salon Test");
+                String email = "invite-" + UUID.randomUUID() + "@example.com";
+                String rawToken = "raw-token-" + UUID.randomUUID();
+                UUID accountId = createAccountWithEmail(email);
+
+                staffMembershipRepository.save(new StaffMembership(idGenerator.generate(), accountId, salonId,
+                                StaffRole.EMPLOYEE, Instant.now()));
+
+                createPendingInvitation(salonId, email, StaffRole.MANAGER, rawToken);
+
+                mockMvc.perform(post("/api/staff-invitations/accept").header("Authorization", bearerTokenFor(accountId))
+                                .contentType(MediaType.APPLICATION_JSON).content("""
+                                                {"token":"%s"}
+                                                """.formatted(rawToken))).andExpect(status().isConflict());
+
+                assertThat(staffMembershipRepository.findAliveByAccountIdAndSalonId(accountId, salonId))
+                                .hasValueSatisfying(membership -> assertThat(membership.getRole())
+                                                .isEqualTo(StaffRole.EMPLOYEE));
+
+                assertThat(staffInvitationRepository.findByTokenHash(tokenHasher.hash(rawToken)))
+                                .hasValueSatisfying(invitation -> assertThat(invitation.isAccepted()).isFalse());
         }
 
         @Test
