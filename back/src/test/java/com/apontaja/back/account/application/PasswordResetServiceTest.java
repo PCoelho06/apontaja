@@ -81,9 +81,38 @@ class PasswordResetServiceTest {
         }
 
         @Test
+        void requestReset_invalide_les_anciens_tokens_de_reset_actifs() {
+                Account account = new Account(accountId, "bob@example.com", "hash", fixedNow);
+
+                AccountToken existingToken = new AccountToken(UUID.randomUUID(), accountId,
+                                AccountTokenType.PASSWORD_RESET, "old-hashed-token",
+                                fixedNow.plus(30, ChronoUnit.MINUTES), fixedNow.minus(10, ChronoUnit.MINUTES));
+
+                when(accountRepository.findAliveByEmail("bob@example.com")).thenReturn(Optional.of(account));
+                when(accountTokenRepository.findActiveByAccountIdAndType(accountId, AccountTokenType.PASSWORD_RESET))
+                                .thenReturn(List.of(existingToken));
+                when(opaqueTokenGenerator.generate()).thenReturn("new-raw-token");
+                when(tokenHasher.hash("new-raw-token")).thenReturn("new-hashed-token");
+
+                service.requestReset("bob@example.com");
+
+                assertThat(existingToken.isUsed()).isTrue();
+
+                verify(accountTokenRepository).save(existingToken);
+                verify(accountTokenRepository).save(org.mockito.ArgumentMatchers
+                                .argThat(token -> token.getType() == AccountTokenType.PASSWORD_RESET
+                                                && token.getTokenHash().equals("new-hashed-token")));
+                verify(emailSender).send(org.mockito.ArgumentMatchers.eq("bob@example.com"), anyString(),
+                                org.mockito.ArgumentMatchers.contains("new-raw-token"));
+        }
+
+        @Test
         void requestReset_cree_un_token_et_envoie_le_lien_si_le_compte_existe() {
                 Account account = new Account(accountId, "bob@example.com", "hash", fixedNow);
+
                 when(accountRepository.findAliveByEmail("bob@example.com")).thenReturn(Optional.of(account));
+                when(accountTokenRepository.findActiveByAccountIdAndType(accountId, AccountTokenType.PASSWORD_RESET))
+                                .thenReturn(List.of());
                 when(opaqueTokenGenerator.generate()).thenReturn("raw-token");
                 when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
 
