@@ -89,7 +89,7 @@ public class AccountToken implements Persistable<UUID> {
     }
 
     public boolean isExpired(Instant now) {
-        return now.isAfter(expiresAt);
+        return !now.isBefore(expiresAt);
     }
 
     public boolean isUsable(Instant now) {
