@@ -17,6 +17,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -98,5 +103,46 @@ class SalonControllerIT {
                 mockMvc.perform(post("/api/salons").header("Authorization", token)
                                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
                                 .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void deux_creations_concurrentes_du_meme_compte_partagent_la_meme_organisation() throws Exception {
+                String token = bearerTokenForNewAccount();
+
+                CyclicBarrier barrier = new CyclicBarrier(2);
+                ExecutorService executor = Executors.newFixedThreadPool(2);
+
+                try {
+                        Future<String> first = executor.submit(() -> {
+                                barrier.await(10, TimeUnit.SECONDS);
+
+                                return mockMvc.perform(post("/api/salons").header("Authorization", token)
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(salonPayload("Salon Concurrent A")))
+                                                .andExpect(status().isCreated()).andReturn().getResponse()
+                                                .getContentAsString();
+                        });
+
+                        Future<String> second = executor.submit(() -> {
+                                barrier.await(10, TimeUnit.SECONDS);
+
+                                return mockMvc.perform(post("/api/salons").header("Authorization", token)
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(salonPayload("Salon Concurrent B")))
+                                                .andExpect(status().isCreated()).andReturn().getResponse()
+                                                .getContentAsString();
+                        });
+
+                        String firstBody = first.get(30, TimeUnit.SECONDS);
+                        String secondBody = second.get(30, TimeUnit.SECONDS);
+
+                        String firstOrganizationId = objectMapper.readTree(firstBody).get("organizationId").asText();
+
+                        String secondOrganizationId = objectMapper.readTree(secondBody).get("organizationId").asText();
+
+                        assertThat(firstOrganizationId).isEqualTo(secondOrganizationId);
+                } finally {
+                        executor.shutdownNow();
+                }
         }
 }

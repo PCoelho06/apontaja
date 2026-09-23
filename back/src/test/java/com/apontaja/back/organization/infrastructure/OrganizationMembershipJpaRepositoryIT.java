@@ -14,13 +14,16 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -32,6 +35,9 @@ class OrganizationMembershipJpaRepositoryIT {
 
         @Autowired
         private OrganizationMembershipJpaRepository membershipJpaRepository;
+
+        private final Instant fixedNow = Instant.parse("2026-09-23T10:00:00Z");
+        private final Clock clock = Clock.fixed(fixedNow, ZoneOffset.UTC);
 
         // AccountJpaRepository est package-private dans
         // com.apontaja.back.account.infrastructure,
@@ -110,5 +116,39 @@ class OrganizationMembershipJpaRepositoryIT {
                                 .findByOrganizationIdAndDeletedAtIsNull(org.getId());
 
                 assertThat(result).hasSize(2);
+        }
+
+        @Test
+        void refuse_deux_memberships_vivants_pour_un_meme_compte() {
+                UUID accountId = createAccount();
+                Organization organization1 = createOrganization();
+                Organization organization2 = createOrganization();
+
+                membershipJpaRepository.saveAndFlush(new OrganizationMembership(UUID.randomUUID(), accountId,
+                                organization1.getId(), OrganizationRole.OWNER, clock.instant()));
+
+                assertThatThrownBy(() -> membershipJpaRepository
+                                .saveAndFlush(new OrganizationMembership(UUID.randomUUID(), accountId,
+                                                organization2.getId(), OrganizationRole.OWNER, clock.instant())))
+                                                                .isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        void autorise_un_nouveau_membership_apres_suppression_du_precedent() {
+                UUID accountId = createAccount();
+                Organization organization1 = createOrganization();
+                Organization organization2 = createOrganization();
+
+                OrganizationMembership membership = new OrganizationMembership(UUID.randomUUID(), accountId,
+                                organization1.getId(), OrganizationRole.OWNER, clock.instant());
+
+                membershipJpaRepository.saveAndFlush(membership);
+
+                membership.softDelete(clock.instant());
+                membershipJpaRepository.saveAndFlush(membership);
+
+                assertThatCode(() -> membershipJpaRepository.saveAndFlush(new OrganizationMembership(UUID.randomUUID(),
+                                accountId, organization2.getId(), OrganizationRole.OWNER, clock.instant())))
+                                                .doesNotThrowAnyException();
         }
 }

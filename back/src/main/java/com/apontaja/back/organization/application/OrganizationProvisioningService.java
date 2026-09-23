@@ -1,6 +1,7 @@
 package com.apontaja.back.organization.application;
 
 import com.apontaja.back.organization.domain.Organization;
+import com.apontaja.back.organization.domain.OrganizationAccountLock;
 import com.apontaja.back.organization.domain.OrganizationMembership;
 import com.apontaja.back.organization.domain.OrganizationMembershipRepository;
 import com.apontaja.back.organization.domain.OrganizationRepository;
@@ -27,13 +28,16 @@ public class OrganizationProvisioningService {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationMembershipRepository organizationMembershipRepository;
+    private final OrganizationAccountLock organizationAccountLock;
     private final IdGenerator idGenerator;
     private final Clock clock;
 
     OrganizationProvisioningService(OrganizationRepository organizationRepository,
-            OrganizationMembershipRepository organizationMembershipRepository, IdGenerator idGenerator, Clock clock) {
+            OrganizationMembershipRepository organizationMembershipRepository,
+            OrganizationAccountLock organizationAccountLock, IdGenerator idGenerator, Clock clock) {
         this.organizationRepository = organizationRepository;
         this.organizationMembershipRepository = organizationMembershipRepository;
+        this.organizationAccountLock = organizationAccountLock;
         this.idGenerator = idGenerator;
         this.clock = clock;
     }
@@ -44,6 +48,8 @@ public class OrganizationProvisioningService {
      */
     @Transactional
     public UUID ensureOrganizationForAccount(UUID accountId) {
+        organizationAccountLock.lock(accountId);
+
         return organizationMembershipRepository.findAliveByAccountId(accountId).stream().findFirst()
                 .map(OrganizationMembership::getOrganizationId).orElseGet(() -> createOrganization(accountId));
     }
