@@ -63,6 +63,13 @@ public class PasswordResetService {
     public void requestReset(String email) {
         accountRepository.findAliveByEmail(email.trim()).ifPresent(account -> {
             Instant now = clock.instant();
+
+            accountTokenRepository.findActiveByAccountIdAndType(account.getId(), AccountTokenType.PASSWORD_RESET)
+                    .forEach(existingToken -> {
+                        existingToken.markUsed(now);
+                        accountTokenRepository.save(existingToken);
+                    });
+
             String rawToken = opaqueTokenGenerator.generate();
 
             AccountToken token = new AccountToken(idGenerator.generate(), account.getId(),
