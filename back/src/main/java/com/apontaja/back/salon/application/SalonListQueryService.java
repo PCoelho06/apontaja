@@ -58,7 +58,7 @@ public class SalonListQueryService {
         }
 
         List<Salon> salons = salonRepository.findAliveByIds(roleBySalonId.keySet()).stream()
-                .sorted(Comparator.comparing(Salon::getCreatedAt)).toList();
+                .sorted(Comparator.comparing(Salon::getCreatedAt).thenComparing(Salon::getId)).toList();
 
         int total = salons.size();
         int fromIndex = Math.min((int) pageable.getOffset(), total);
