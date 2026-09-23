@@ -1,6 +1,11 @@
 import { defineStore } from "pinia";
 
-import { apiGet, apiPost, apiPostWithCsrf } from "@/lib/apiClient";
+import {
+  apiGet,
+  apiPost,
+  apiPostWithCsrf,
+  configureAuthClient,
+} from "@/lib/apiClient";
 
 interface AuthAccount {
   accountId: string;
@@ -26,8 +31,6 @@ interface MeResponse {
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
-    // Volontairement en mémoire uniquement (jamais localStorage/sessionStorage) —
-    // décision actée dans le contexte projet.
     accessToken: null as string | null,
     account: null as AuthAccount | null,
   }),
@@ -42,14 +45,19 @@ export const useAuthStore = defineStore("auth", {
         email,
         password,
       });
+
       this.accessToken = result.accessToken;
-      this.account = { accountId: result.accountId, email: result.email };
+      this.account = {
+        accountId: result.accountId,
+        email: result.email,
+      };
     },
 
     async register(email: string, password: string) {
-      // Pas de connexion automatique après l'inscription : le backend ne
-      // délivre pas de tokens sur /register (uniquement sur /login).
-      await apiPost<void>("/api/auth/register", { email, password });
+      await apiPost<void>("/api/auth/register", {
+        email,
+        password,
+      });
     },
 
     async requestPasswordReset(email: string) {
@@ -57,7 +65,10 @@ export const useAuthStore = defineStore("auth", {
     },
 
     async resetPassword(token: string, newPassword: string) {
-      await apiPost<void>("/api/auth/reset-password", { token, newPassword });
+      await apiPost<void>("/api/auth/reset-password", {
+        token,
+        newPassword,
+      });
     },
 
     async confirmEmail(token: string) {
@@ -77,25 +88,40 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
-    /** Appelée une seule fois au boot de l'app (voir main.ts), avant le montage du router.
-     * S'appuie sur le cookie refresh_token httpOnly s'il existe et est valide — silencieux dans
-     * tous les cas d'échec (pas de session préexistante, cookie expiré, etc.), c'est le
-     * comportement normal d'un visiteur non connecté, pas une erreur à afficher. */
     async restoreSession() {
       try {
         const refreshResult =
           await apiPostWithCsrf<RefreshResponse>("/api/auth/refresh");
+
         this.accessToken = refreshResult.accessToken;
 
         const me = await apiGet<MeResponse>(
           "/api/account/me",
           this.accessToken,
         );
-        this.account = { accountId: me.accountId, email: me.email };
+
+        this.account = {
+          accountId: me.accountId,
+          email: me.email,
+        };
       } catch {
         this.accessToken = null;
         this.account = null;
       }
     },
+  },
+});
+
+configureAuthClient({
+  getAccessToken: () => useAuthStore().accessToken,
+
+  setAccessToken: (accessToken) => {
+    useAuthStore().accessToken = accessToken;
+  },
+
+  clearSession: () => {
+    const store = useAuthStore();
+    store.accessToken = null;
+    store.account = null;
   },
 });
