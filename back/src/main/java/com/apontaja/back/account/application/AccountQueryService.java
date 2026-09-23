@@ -22,7 +22,7 @@ public class AccountQueryService {
      * pour le rationnel.
      */
     public Optional<AccountSummary> findAliveById(UUID accountId) {
-        return accountRepository.findById(accountId).filter(account -> !account.isDeleted())
+        return accountRepository.findAliveById(accountId)
                 .map(account -> new AccountSummary(account.getId(), account.getEmail(), account.isEmailVerified()));
     }
 

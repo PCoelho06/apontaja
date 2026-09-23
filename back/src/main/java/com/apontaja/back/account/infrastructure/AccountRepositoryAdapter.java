@@ -23,8 +23,8 @@ class AccountRepositoryAdapter implements AccountRepository {
     }
 
     @Override
-    public Optional<Account> findById(UUID id) {
-        return jpaRepository.findById(id);
+    public Optional<Account> findAliveById(UUID id) {
+        return jpaRepository.findAliveById(id);
     }
 
     @Override

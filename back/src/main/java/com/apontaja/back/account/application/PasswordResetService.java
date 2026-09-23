@@ -99,7 +99,7 @@ public class PasswordResetService {
             throw new InvalidOrExpiredTokenException();
         }
 
-        Account account = accountRepository.findById(token.getAccountId())
+        Account account = accountRepository.findAliveById(token.getAccountId())
                 .orElseThrow(InvalidOrExpiredTokenException::new);
 
         account.changePassword(passwordEncoder.encode(newRawPassword));
