@@ -1,6 +1,5 @@
 package com.apontaja.back.salon.web;
 
-import com.apontaja.back.salon.application.AccountAlreadyStaffMemberException;
 import com.apontaja.back.salon.application.CreateStaffInvitationCommand;
 import com.apontaja.back.salon.application.CreateStaffInvitationResult;
 import com.apontaja.back.salon.application.InvalidStaffRoleException;
@@ -59,12 +58,6 @@ class StaffInvitationController {
 
     @ExceptionHandler(StaffInvitationAlreadyPendingException.class)
     ResponseEntity<ProblemDetail> handleAlreadyPending(StaffInvitationAlreadyPendingException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
-    }
-
-    @ExceptionHandler(AccountAlreadyStaffMemberException.class)
-    ResponseEntity<ProblemDetail> handleAlreadyMember(AccountAlreadyStaffMemberException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
     }
