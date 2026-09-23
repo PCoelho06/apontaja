@@ -15,13 +15,13 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Session / device. {@code accountId} en UUID brut (pas de relation JPA
- * vers {@link Account}) volontairement : évite le lazy-loading sur le
- * chemin chaud de validation d'un refresh token (tranche 5).
+ * Session / device. {@code accountId} en UUID brut (pas de relation JPA vers
+ * {@link Account}) volontairement : évite le lazy-loading sur le chemin chaud
+ * de validation d'un refresh token (tranche 5).
  *
  * <p>
- * Implémente {@link Persistable} pour la même raison que {@link Account}
- * (ID UUIDv7 assigné côté application).
+ * Implémente {@link Persistable} pour la même raison que {@link Account} (ID
+ * UUIDv7 assigné côté application).
  */
 @Entity
 @Table(name = "refresh_token")
@@ -56,12 +56,7 @@ public class RefreshToken implements Persistable<UUID> {
         // requis par Hibernate
     }
 
-    public RefreshToken(
-            UUID id,
-            UUID accountId,
-            String tokenHash,
-            String deviceInfo,
-            Instant expiresAt,
+    public RefreshToken(UUID id, UUID accountId, String tokenHash, String deviceInfo, Instant expiresAt,
             Instant createdAt) {
         this.id = Objects.requireNonNull(id, "id");
         this.accountId = Objects.requireNonNull(accountId, "accountId");
@@ -92,7 +87,7 @@ public class RefreshToken implements Persistable<UUID> {
     }
 
     public boolean isExpired(Instant now) {
-        return now.isAfter(expiresAt);
+        return !now.isBefore(expiresAt);
     }
 
     public boolean isUsable(Instant now) {
