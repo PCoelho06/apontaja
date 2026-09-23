@@ -49,7 +49,7 @@ d'un nouveau repo, en conservant ce qui a de la valeur (modèle métier, écrans
 | Lint back (Java) | Checkstyle, ruleset custom (`back/checkstyle.xml`) volontairement resserré (pas de `google_checks.xml`/`sun_checks.xml` complets — conflit d'indentation avec `.editorconfig` et risque de faux positifs sur le module `Indentation`). Lié à la phase Maven `verify` | `[DECIDED]` |
 | Hébergement Git / CI | GitHub (GitHub Actions). `.github/workflows/ci.yml` : job `back` (`mvn -B clean verify`, couvre build + tests + ArchUnit + Checkstyle) et job `front` (pnpm install/lint/build/test), sur chaque PR + push `main` + déclenchement manuel | `[DECIDED]` |
 | Gestion des secrets — dev local | Profil Spring `local` : `application.yml` (commité, jamais de secret) + `application-local.yml.example` (commité, template) + `application-local.yml` (réel, ignoré par Git). Activation via `SPRING_PROFILES_ACTIVE=local`. Portée volontairement limitée au dev local | `[DECIDED]` |
-| Migrations DB — implémentation | Flyway via `spring-boot-starter-flyway` + `flyway-database-postgresql` (modularisation Spring Boot 4 : `flyway-core` seul ne suffit pas). `apontaja-schema.sql` (racine `back/`) dupliqué verbatim dans `src/main/resources/db/migration/V1__initial_schema.sql` (contrainte de nommage Flyway). `spring.jpa.hibernate.ddl-auto=validate` : Flyway seul gère le schéma | `[DECIDED]` |
+| Migrations DB — implémentation | Flyway via `spring-boot-starter-flyway` + `flyway-database-postgresql` (modularisation Spring Boot 4 : `flyway-core` seul ne suffit pas). `spring.jpa.hibernate.ddl-auto=validate` : Flyway seul gère le schéma | `[DECIDED]` |
 | Tests d'intégration — implémentation | Testcontainers (`spring-boot-testcontainers` + `@ServiceConnection`), image `postgres:16-alpine` épinglée (pas `latest` : bug connu, Flyway sous Spring Boot 4.0.x ne supporte pas encore PostgreSQL 18). Config partagée : `PostgresTestcontainersConfiguration`, importée par tout `@SpringBootTest`. Nécessite Docker actif en local et en CI (déjà présent sur les runners GitHub-hosted) | `[DECIDED]` |
 | Gestionnaire de workspace front | pnpm workspaces. Pas de Turborepo pour l'instant (introduit plus tard si le temps de build/test incrémental le justifie) | `[DECIDED]` |
 | Auth — mécanisme | JWT access token courte durée + refresh token opaque, hashé en base, en cookie httpOnly + Secure + SameSite=Strict | `[DECIDED]` |
@@ -172,17 +172,16 @@ Toutes les PK exposées en UUIDv7. Soft-delete + index uniques partiels sur `Org
 - `AppointmentResource.resourceId` doit **obligatoirement** appartenir au même salon que
   `Appointment.salonId`. Garanti au niveau service applicatif (validation systématique avant
   écriture) **et** renforcé au niveau base de données via une contrainte d'exclusion PostgreSQL
-  (`EXCLUDE` + extension `btree_gist`, voir `apontaja-schema.sql`) qui empêche mécaniquement
+  (`EXCLUDE` + extension `btree_gist`, voir `V1__initial_schema.sql`) qui empêche mécaniquement
   tout chevauchement de réservation sur une même ressource — ce mécanisme ferme définitivement
   la classe de bug "double-booking non détecté" identifiée dans l'ancien projet (§3.3).
 
 ### Schéma relationnel complet
 
-Le détail exhaustif (PK, FK, `NOT NULL`, `UNIQUE`, index, `CHECK`, index uniques partiels pour le
-soft-delete, contraintes d'exclusion anti-chevauchement) est maintenant spécifié dans
-`apontaja-schema.sql`, à conserver à la racine du dossier `back/` du futur repo comme référence
-canonique du modèle. Ce fichier fait foi en cas de divergence avec le tableau ci-dessus (qui reste
-volontairement une vue simplifiée).
+Les migrations Flyway `src/main/resources/db/migration` sont la seule source de vérité du schéma.
+Le schéma courant est la somme ordonnée des migrations V1, V2, V3, etc.
+Aucun fichier SQL miroir n'est maintenu manuellement.
+Hibernate utilise `ddl-auto=validate` et ne modifie jamais le schéma.
 
 ### Règle d'accès à un salon (autorisation)
 

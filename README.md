@@ -8,7 +8,7 @@ complet des décisions, l'audit de l'ancien projet, le modèle de données et la
 
 ```
 apontaja/
-├── back/                     # Backend Spring Boot 3.x / Java 21 (Gradle, module unique)
+├── back/                     # Backend Spring Boot 4.1.1 / Java 21 / Maven, module unique
 ├── portail-salon/            # Frontend Vue 3 — écrans staff (login, agenda, carnet client...)
 ├── portail-client/           # Frontend Vue 3 — inscription, réservation, historique
 ├── packages/
@@ -17,7 +17,7 @@ apontaja/
 └── package.json                # Scripts racine (dev, build, lint, test sur tout le workspace)
 ```
 
-`back/` n'est **pas** géré par pnpm (c'est un projet Gradle indépendant) mais vit dans le même
+`back/` n'est **pas** géré par pnpm (c'est un projet Maven indépendant) mais vit dans le même
 repo pour permettre le développement en tranches verticales (backend + frontend d'une
 fonctionnalité ensemble).
 
@@ -34,12 +34,15 @@ fonctionnalité ensemble).
 ## CI/CD (GitHub Actions)
 
 `.github/workflows/ci.yml` — deux jobs indépendants, déclenchés sur chaque PR (+ push sur `main`,
-+ déclenchement manuel) :
-- **back** : `mvn -B clean verify` (build, tests unitaires/intégration, y compris `ArchitectureTest`)
-- **front** : `pnpm install --frozen-lockfile` puis lint/build/test sur tous les packages du
+
+- déclenchement manuel) :
+
+* **back** : `mvn -B clean verify` (build, tests unitaires/intégration, y compris `ArchitectureTest`)
+* **front** : `pnpm install --frozen-lockfile` puis lint/build/test sur tous les packages du
   workspace (`--if-present`, tant que `portail-salon`/`portail-client` restent des placeholders)
 
 **⚠️ Deux préalables avant que la CI puisse passer, ni l'un ni l'autre encore fait par Claude** :
+
 1. **`pnpm-lock.yaml` doit exister et être commité** — je n'ai ni réseau ni `pnpm` dans mon
    environnement de génération, donc je n'ai jamais pu exécuter `pnpm install` réellement. Lance-le
    une fois en local à la racine du repo (ça validera aussi que tous les `package.json` sont
