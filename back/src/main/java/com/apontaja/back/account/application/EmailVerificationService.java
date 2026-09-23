@@ -78,7 +78,7 @@ public class EmailVerificationService {
             throw new InvalidOrExpiredTokenException();
         }
 
-        Account account = accountRepository.findById(token.getAccountId())
+        Account account = accountRepository.findAliveById(token.getAccountId())
                 .orElseThrow(InvalidOrExpiredTokenException::new);
 
         account.markEmailVerified(now);

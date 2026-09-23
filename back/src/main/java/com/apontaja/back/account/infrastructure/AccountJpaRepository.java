@@ -11,6 +11,9 @@ import java.util.UUID;
 
 interface AccountJpaRepository extends JpaRepository<Account, UUID> {
 
+    @Query("SELECT a FROM Account a WHERE a.id = :id AND a.deletedAt IS NULL")
+    Optional<Account> findAliveById(@Param("id") UUID id);
+
     @Query("SELECT a FROM Account a WHERE a.email = :email AND a.deletedAt IS NULL")
     Optional<Account> findAliveByEmail(@Param("email") String email);
 

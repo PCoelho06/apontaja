@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -134,7 +135,7 @@ class PasswordResetServiceTest {
                                 fixedNow.minus(10, ChronoUnit.MINUTES));
                 when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
                 when(accountTokenRepository.findByTokenHash("hashed-token")).thenReturn(Optional.of(token));
-                when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+                when(accountRepository.findAliveById(accountId)).thenReturn(Optional.of(account));
                 when(passwordEncoder.encode("nouveau-mot-de-passe-suffisant")).thenReturn("new-hash");
 
                 RefreshToken activeSession = new RefreshToken(UUID.randomUUID(), accountId, "session-hash", "device-1",
@@ -147,6 +148,25 @@ class PasswordResetServiceTest {
                 assertThat(token.isUsed()).isTrue();
                 assertThat(activeSession.isRevoked()).isTrue();
                 verify(refreshTokenRepository).save(activeSession);
+        }
+
+        @Test
+        void resetPassword_rejette_un_token_associe_a_un_compte_supprime() {
+                AccountToken token = new AccountToken(UUID.randomUUID(), accountId, AccountTokenType.PASSWORD_RESET,
+                                "hashed-deleted-account", fixedNow.plus(1, ChronoUnit.HOURS),
+                                fixedNow.minus(10, ChronoUnit.MINUTES));
+
+                when(tokenHasher.hash("raw-deleted-account")).thenReturn("hashed-deleted-account");
+                when(accountTokenRepository.findByTokenHash("hashed-deleted-account")).thenReturn(Optional.of(token));
+                when(accountRepository.findAliveById(accountId)).thenReturn(Optional.empty());
+
+                assertThatThrownBy(() -> service.resetPassword("raw-deleted-account", "nouveau-mot-de-passe-suffisant"))
+                                .isInstanceOf(InvalidOrExpiredTokenException.class);
+
+                verify(accountRepository).findAliveById(accountId);
+                verify(accountRepository, never()).save(any(Account.class));
+                verify(passwordEncoder, never()).encode(anyString());
+                verify(refreshTokenRepository, never()).findActiveByAccountId(accountId);
         }
 
         @Test

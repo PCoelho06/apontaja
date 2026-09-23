@@ -11,7 +11,7 @@ public interface AccountRepository {
 
     Account save(Account account);
 
-    Optional<Account> findById(UUID id);
+    Optional<Account> findAliveById(UUID id);
 
     /**
      * Compte "vivant" (non soft-deleted) par email — unicité applicative + login.

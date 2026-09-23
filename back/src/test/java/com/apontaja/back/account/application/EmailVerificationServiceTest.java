@@ -26,8 +26,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,7 +91,7 @@ class EmailVerificationServiceTest {
         when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
         when(accountTokenRepository.findByTokenHash("hashed-token")).thenReturn(Optional.of(token));
         Account account = unverifiedAccount();
-        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+        when(accountRepository.findAliveById(accountId)).thenReturn(Optional.of(account));
 
         service.confirm("raw-token");
 
@@ -98,6 +99,23 @@ class EmailVerificationServiceTest {
         assertThat(token.isUsed()).isTrue();
         verify(accountRepository).save(account);
         verify(accountTokenRepository).save(token);
+    }
+
+    @Test
+    void confirm_rejette_un_token_associe_a_un_compte_supprime() {
+        AccountToken token = new AccountToken(UUID.randomUUID(), accountId, AccountTokenType.EMAIL_VERIFICATION,
+                "hashed-deleted-account", fixedNow.plus(1, ChronoUnit.DAYS), fixedNow.minus(1, ChronoUnit.HOURS));
+
+        when(tokenHasher.hash("raw-deleted-account")).thenReturn("hashed-deleted-account");
+        when(accountTokenRepository.findByTokenHash("hashed-deleted-account")).thenReturn(Optional.of(token));
+        when(accountRepository.findAliveById(accountId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.confirm("raw-deleted-account"))
+                .isInstanceOf(InvalidOrExpiredTokenException.class);
+
+        verify(accountRepository).findAliveById(accountId);
+        verify(accountRepository, never()).save(any(Account.class));
+        verify(accountTokenRepository, never()).save(any(AccountToken.class));
     }
 
     @Test

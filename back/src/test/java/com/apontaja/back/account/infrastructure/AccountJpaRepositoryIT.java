@@ -51,8 +51,31 @@ class AccountJpaRepositoryIT {
         accountJpaRepository.save(second);
         accountJpaRepository.flush();
 
-        assertThat(accountJpaRepository.findAliveByEmail("bob@example.com"))
-                .contains(second);
+        assertThat(accountJpaRepository.findAliveByEmail("bob@example.com")).contains(second);
+    }
+
+    @Test
+    void find_alive_by_id_retourne_un_compte_vivant() {
+        Instant now = Instant.now();
+        Account account = new Account(UUID.randomUUID(), "david@example.com", "hash", now);
+
+        accountJpaRepository.save(account);
+        accountJpaRepository.flush();
+
+        assertThat(accountJpaRepository.findAliveById(account.getId())).contains(account);
+    }
+
+    @Test
+    void find_alive_by_id_ignore_les_comptes_supprimes() {
+        Instant now = Instant.now();
+        Account deleted = new Account(UUID.randomUUID(), "eric@example.com", "hash", now);
+
+        deleted.softDelete(now);
+
+        accountJpaRepository.save(deleted);
+        accountJpaRepository.flush();
+
+        assertThat(accountJpaRepository.findAliveById(deleted.getId())).isEmpty();
     }
 
     @Test
