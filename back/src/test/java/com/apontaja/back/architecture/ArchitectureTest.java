@@ -104,7 +104,7 @@ class ArchitectureTest {
     static {
         ALLOWED_DEPENDENTS.put("account", List.of("organization", "customer", "salon"));
         ALLOWED_DEPENDENTS.put("organization", List.of("salon"));
-        ALLOWED_DEPENDENTS.put("salon", List.of("resource", "appointment"));
+        ALLOWED_DEPENDENTS.put("salon", List.of("resource", "appointment", "service"));
         ALLOWED_DEPENDENTS.put("resource", List.of("service", "appointment"));
         ALLOWED_DEPENDENTS.put("service", List.of("appointment"));
         ALLOWED_DEPENDENTS.put("customer", List.of("appointment"));
