@@ -1,5 +1,6 @@
 package com.apontaja.back.resource.web;
 
+import com.apontaja.back.resource.application.ClosureBlockedByAppointmentsException;
 import com.apontaja.back.resource.application.ClosureCommand;
 import com.apontaja.back.resource.application.ClosureManagementService;
 import com.apontaja.back.resource.application.ClosureNotFoundException;
@@ -121,6 +122,15 @@ class ClosureController {
     ResponseEntity<ProblemDetail> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
+    @ExceptionHandler(ClosureBlockedByAppointmentsException.class)
+    ResponseEntity<ProblemDetail> handleBlockedByAppointments(ClosureBlockedByAppointmentsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setProperty("count", ex.count());
+        problem.setProperty("appointments",
+                ex.appointments().stream().map(BlockingAppointmentResponse::from).toList());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
     private static ResponseEntity<ClosureResponse> created(ClosureSummary summary) {
