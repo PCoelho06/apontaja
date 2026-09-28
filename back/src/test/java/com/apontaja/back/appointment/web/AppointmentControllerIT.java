@@ -198,7 +198,7 @@ class AppointmentControllerIT {
                                                 .content(bookingBody(setup.customerProfileId(), setup.serviceId(),
                                                                 setup.resourceId(), "2026-09-24T10:00:00+02:00")))
                                 .andExpect(status().isCreated()).andExpect(jsonPath("$.appointmentId").exists())
-                                .andExpect(jsonPath("$.status").value("SCHEDULED"))
+                                .andExpect(jsonPath("$.status").value("CONFIRMED"))
                                 .andExpect(jsonPath("$.priceAtBookingCents").value(2500))
                                 .andExpect(jsonPath("$.durationAtBookingMinutes").value(60))
                                 .andExpect(jsonPath("$.resourceId").value(setup.resourceId().toString()))

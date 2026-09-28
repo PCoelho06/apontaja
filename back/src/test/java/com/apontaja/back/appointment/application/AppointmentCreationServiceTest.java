@@ -186,7 +186,7 @@ class AppointmentCreationServiceTest {
         assertThat(result.durationAtBookingMinutes()).isEqualTo(45);
         assertThat(result.startAt()).isEqualTo(EXPECTED_START);
         assertThat(result.endAt()).isEqualTo(EXPECTED_START.plusSeconds(45 * 60L));
-        assertThat(result.status()).isEqualTo("SCHEDULED");
+        assertThat(result.status()).isEqualTo("CONFIRMED");
         assertThat(result.resourceId()).isEqualTo(resourceId);
 
         ArgumentCaptor<AppointmentResource> linkCaptor = ArgumentCaptor.forClass(AppointmentResource.class);
