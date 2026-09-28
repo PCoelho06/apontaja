@@ -23,11 +23,10 @@ import java.util.UUID;
  * supporte plusieurs ressources par conception, non exploité en v1.
  *
  * <p>
- * Colonnes {@code cancelled_at}/{@code cancelled_by}/{@code
- * cancellation_reason} du schéma volontairement non mappées ici : rien ne les
- * renseigne avant la Phase 3 tranche 7 (annulation). Aucune mutation exposée
- * en tranche 6 (création uniquement) — {@code status} est toujours
- * {@code SCHEDULED} à la construction.
+ * Transitions de statut (Phase 3 tranche 7) : voir {@link #confirm()},
+ * {@link #cancel}, {@link #complete()}, {@link #markNoShow()} — mutateurs
+ * inconditionnels, l'éligibilité de chaque transition est vérifiée par
+ * {@code AppointmentStatusService}, pas ici.
  *
  * <p>
  * Implémente {@link Persistable} pour la même raison que {@code Account}.
@@ -66,6 +65,15 @@ public class Appointment implements Persistable<UUID> {
     @Column(name = "duration_at_booking_minutes", nullable = false)
     private int durationAtBookingMinutes;
 
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @Column(name = "cancelled_by")
+    private UUID cancelledBy;
+
+    @Column(name = "cancellation_reason")
+    private String cancellationReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -79,6 +87,16 @@ public class Appointment implements Persistable<UUID> {
         // requis par Hibernate
     }
 
+    /**
+     * Toujours CONFIRMED à la création en Phase 3 : la seule voie de création
+     * existante est ce backend, utilisé exclusivement par le staff pour une
+     * réservation prise par téléphone ou directement au salon — il n'y a pas de
+     * scénario "en attente de confirmation" à ce stade. SCHEDULED reste dans
+     * AppointmentStatus et {@link #confirm()} reste implémenté : ils
+     * redeviendront atteignables quand la Phase 4 ajoutera l'auto-réservation en
+     * ligne par le client, qui devra elle rester en attente jusqu'à validation du
+     * salon.
+     */
     public Appointment(UUID id, UUID salonId, UUID customerProfileId, UUID serviceId, Instant startAt, Instant endAt,
             int priceAtBookingCents, int durationAtBookingMinutes, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "id");
@@ -99,7 +117,34 @@ public class Appointment implements Persistable<UUID> {
         this.priceAtBookingCents = priceAtBookingCents;
         this.durationAtBookingMinutes = durationAtBookingMinutes;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
-        this.status = AppointmentStatus.SCHEDULED;
+        this.status = AppointmentStatus.CONFIRMED;
+    }
+
+    /**
+     * SCHEDULED -> CONFIRMED. Aucune validation ici (mutateur inconditionnel) :
+     * l'éligibilité de la transition est vérifiée en amont par
+     * AppointmentStatusService, même principe que StaffMembership.changeRole.
+     */
+    public void confirm() {
+        this.status = AppointmentStatus.CONFIRMED;
+    }
+
+    /** SCHEDULED/CONFIRMED -> CANCELLED. Mutateur inconditionnel, voir {@link #confirm()}. */
+    public void cancel(Instant at, UUID cancelledBy, String reason) {
+        this.status = AppointmentStatus.CANCELLED;
+        this.cancelledAt = Objects.requireNonNull(at, "at");
+        this.cancelledBy = cancelledBy;
+        this.cancellationReason = reason;
+    }
+
+    /** CONFIRMED -> COMPLETED. Mutateur inconditionnel, voir {@link #confirm()}. */
+    public void complete() {
+        this.status = AppointmentStatus.COMPLETED;
+    }
+
+    /** SCHEDULED/CONFIRMED -> NO_SHOW. Mutateur inconditionnel, voir {@link #confirm()}. */
+    public void markNoShow() {
+        this.status = AppointmentStatus.NO_SHOW;
     }
 
     @Override
@@ -160,5 +205,17 @@ public class Appointment implements Persistable<UUID> {
 
     public Instant getDeletedAt() {
         return deletedAt;
+    }
+
+    public Instant getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public UUID getCancelledBy() {
+        return cancelledBy;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
     }
 }

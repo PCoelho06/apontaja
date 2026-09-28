@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ interface AppointmentResourceJpaRepository extends JpaRepository<AppointmentReso
 
     @Query("SELECT ar FROM AppointmentResource ar WHERE ar.id.appointmentId = :appointmentId")
     List<AppointmentResource> findByAppointmentId(@Param("appointmentId") UUID appointmentId);
+
+    @Query("SELECT ar FROM AppointmentResource ar WHERE ar.id.appointmentId IN :appointmentIds")
+    List<AppointmentResource> findByAppointmentIds(@Param("appointmentIds") Collection<UUID> appointmentIds);
 
     /**
      * is_active n'est pas mappé côté JPA (piloté par trigger, voir

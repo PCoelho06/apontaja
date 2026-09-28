@@ -1,5 +1,6 @@
 package com.apontaja.back.appointment.domain;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,4 +17,7 @@ public interface AppointmentResourceRepository {
 
     /** v1 : toujours au plus une ressource par RDV (invariant applicatif, pas une contrainte DB). */
     List<UUID> findResourceIdsByAppointmentId(UUID appointmentId);
+
+    /** Version en lot de findResourceIdsByAppointmentId, pour éviter le N+1 sur une liste (agenda). */
+    List<AppointmentResource> findByAppointmentIds(Collection<UUID> appointmentIds);
 }

@@ -5,6 +5,7 @@ import com.apontaja.back.appointment.domain.AppointmentResourceRepository;
 
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,5 +32,10 @@ class AppointmentResourceRepositoryAdapter implements AppointmentResourceReposit
     public List<UUID> findResourceIdsByAppointmentId(UUID appointmentId) {
         return jpaRepository.findByAppointmentId(appointmentId).stream().map(AppointmentResource::getResourceId)
                 .toList();
+    }
+
+    @Override
+    public List<AppointmentResource> findByAppointmentIds(Collection<UUID> appointmentIds) {
+        return jpaRepository.findByAppointmentIds(appointmentIds);
     }
 }
