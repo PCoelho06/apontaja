@@ -1,369 +1,201 @@
 # Apontaja — Reboot du projet (anciennement "Marquei", Symfony/Vue → Spring Boot/Vue)
 
-> **Comment utiliser ce fichier** : à chaque nouvelle session avec Claude, colle ce fichier
-> (ou upload-le) et demande de continuer le travail à partir de la section "État d'avancement".
-> À la fin de chaque session, demande explicitement à Claude de **mettre à jour ce fichier**
-> puis retélécharge-le pour la prochaine fois.
+> **Comment utiliser ce fichier** : à chaque nouvelle session avec Claude, fournis ce fichier (project
+> files ou collé) et demande de continuer à partir de "État d'avancement" (§7). En fin de session,
+> demande à Claude de le **mettre à jour**, puis remplace l'ancien.
 >
-> **Principe important** : on ne réinjecte plus le gitingest de l'ancien repo dans le contexte
-> des sessions suivantes. L'audit initial a rempli son rôle ; ce fichier capture les *décisions*
-> et les *enseignements*, pas le code source d'origine.
+> **Principe** : on ne réinjecte JAMAIS un gitingest complet (coût en tokens à chaque message). Ce
+> fichier capture les *décisions*, les *enseignements* et une *carte des composants* (§9). Si Claude a
+> besoin du code exact d'un fichier, il le demande et tu le colles.
 >
-> **Statuts de décision** — chaque choix technique est marqué :
-> - `[DECIDED]` — tranché, ne pas rouvrir sauf demande explicite
-> - `[PROVISIONAL]` — direction retenue mais pas encore validée en profondeur (revue technique,
->   implémentation, ou confirmation utilisateur en attente) — à traiter avec prudence, peut
->   encore changer
-> - `[OPEN]` — question non tranchée, à trancher avant que ça devienne bloquant
+> **Statuts** : `[DECIDED]` tranché, ne pas rouvrir sauf demande · `[PROVISIONAL]` direction retenue,
+> à traiter avec prudence · `[OPEN]` non tranché, à trancher avant qu'il bloque.
 
-Dernière mise à jour : session 8 (Phase 0 déroulée intégralement, des 7 étapes jusqu'à Flyway +
-Testcontainers). Prêt à démarrer le vertical slice "Authentification" (Phase 1).
+Dernière mise à jour : session 11. **Phase 3 ("Rendez-vous") : back tranches 1 à 7 terminées, `mvn
+clean verify` vert.** Reste : tranche 8 (modification d'un RDV), tranches 9-10 (front).
 
 ---
 
 ## 1. Objectif du projet
 
-Reprendre "Apontaja" (SaaS de gestion de rendez-vous pour salons — coiffure/beauté) en repartant
-d'un nouveau repo, en conservant ce qui a de la valeur (modèle métier, écrans, UX globale) mais en :
-
-- migrant le backend **Symfony (PHP) → Spring Boot (Java)**
-- **durcissant la sécurité** (authentification, autorisation, gestion des secrets)
-- ajoutant une **vraie stratégie de tests** (unitaires + intégration), absente aujourd'hui
-- corrigeant les **bugs de logique métier** identifiés dans l'ancien code
-- refondant en profondeur le **frontend**, désormais scindé en deux portails distincts
-  (portail salon / portail client)
-- la partie paiement (Stripe) est **repoussée à plus tard**
+Reprendre "Apontaja" (SaaS de gestion de rendez-vous pour salons de coiffure/beauté) dans un nouveau
+repo : migrer le backend Symfony → **Spring Boot**, **durcir la sécurité**, ajouter une **vraie
+stratégie de tests**, corriger les **bugs de logique métier** de l'ancien code, refondre le
+**frontend** en deux portails (salon / client). Paiement (Stripe) repoussé.
 
 ## 2. Décisions techniques
 
+### 2.1 Fondations, auth, salon (Phases 0-2)
+
 | Sujet | Décision | Statut |
 |---|---|---|
-| Backend | Spring Boot 3.x, Java 21 | `[DECIDED]` |
-| Base de données | PostgreSQL | `[DECIDED]` |
-| Migrations DB | Flyway | `[DECIDED]` |
-| Frontend | Vue 3 + TypeScript + Pinia + Tailwind 4 | `[DECIDED]` |
-| Structure repo | Mono-repo : `back/`, `portail-salon/`, `portail-client/` | `[DECIDED]` |
-| Design system partagé entre portails | Partagé via un package `packages/ui-kit`, repart entièrement de zéro (pas de portage des composants `Coelho*` de l'ancien projet) — récupération ponctuelle d'éléments seulement si un besoin précis se présente | `[DECIDED]` |
-| Structure de `back/` | Module unique **Maven** (choix entre Gradle/Maven laissé ouvert dans la version initiale, tranché en session : Maven). Package **par domaine métier** (`account`, `organization`, `salon`, `resource`, `service`, `appointment`, `customer`, `audit`), et **au sein de chaque domaine**, sous-packages par couche : `web` (controllers + DTO request/response), `application` (services/cas d'usage), `domain` (entités, value objects, règles métier), `infrastructure` (repositories JPA, adapters). DTO obligatoires à **toutes** les frontières : HTTP (web ↔ application) et inter-domaines (jamais un domaine n'expose ses entités JPA à un autre). Graphe de dépendances autorisées entre domaines (vérifié mécaniquement par `ArchitectureTest`, ArchUnit, depuis la Phase 0 étape 4) : `account` (racine, aucune dépendance) → `organization` → `salon` → `resource` → `service` ; `customer` → `account` ; `appointment` → `salon`, `resource`, `service`, `customer` (sommet du graphe, rien n'en dépend) ; `audit` est un utilitaire transverse que tous les domaines peuvent appeler en écriture, sans dépendre de personne. Règle de couches : `web` → `application` → `domain`, `infrastructure` → `domain` (implémente les ports définis par le domaine), jamais l'inverse. Migration vers multi-module possible plus tard si un vrai besoin apparaît | `[DECIDED]` |
-| Backend — version | **Spring Boot 4.1** (Spring Framework 7), pas 3.x comme indiqué plus bas dans la table "Décision" initiale : la ligne 3.x est passée EOL le 30/06/2026, en cours de projet, tranché en session pour repartir directement sur la ligne actuelle. Java 21 inchangé (compatible) | `[DECIDED]` |
-| Lint back (Java) | Checkstyle, ruleset custom (`back/checkstyle.xml`) volontairement resserré (pas de `google_checks.xml`/`sun_checks.xml` complets — conflit d'indentation avec `.editorconfig` et risque de faux positifs sur le module `Indentation`). Lié à la phase Maven `verify` | `[DECIDED]` |
-| Hébergement Git / CI | GitHub (GitHub Actions). `.github/workflows/ci.yml` : job `back` (`mvn -B clean verify`, couvre build + tests + ArchUnit + Checkstyle) et job `front` (pnpm install/lint/build/test), sur chaque PR + push `main` + déclenchement manuel | `[DECIDED]` |
-| Gestion des secrets — dev local | Profil Spring `local` : `application.yml` (commité, jamais de secret) + `application-local.yml.example` (commité, template) + `application-local.yml` (réel, ignoré par Git). Activation via `SPRING_PROFILES_ACTIVE=local`. Portée volontairement limitée au dev local | `[DECIDED]` |
-| Migrations DB — implémentation | Flyway via `spring-boot-starter-flyway` + `flyway-database-postgresql` (modularisation Spring Boot 4 : `flyway-core` seul ne suffit pas). `spring.jpa.hibernate.ddl-auto=validate` : Flyway seul gère le schéma | `[DECIDED]` |
-| Tests d'intégration — implémentation | Testcontainers (`spring-boot-testcontainers` + `@ServiceConnection`), image `postgres:16-alpine` épinglée (pas `latest` : bug connu, Flyway sous Spring Boot 4.0.x ne supporte pas encore PostgreSQL 18). Config partagée : `PostgresTestcontainersConfiguration`, importée par tout `@SpringBootTest`. Nécessite Docker actif en local et en CI (déjà présent sur les runners GitHub-hosted) | `[DECIDED]` |
-| Gestionnaire de workspace front | pnpm workspaces. Pas de Turborepo pour l'instant (introduit plus tard si le temps de build/test incrémental le justifie) | `[DECIDED]` |
-| Auth — mécanisme | JWT access token courte durée + refresh token opaque, hashé en base, en cookie httpOnly + Secure + SameSite=Strict | `[DECIDED]` |
-| Auth — access token côté front | En mémoire JS uniquement, jamais dans localStorage/sessionStorage | `[DECIDED]` |
-| Auth — CSRF | `SameSite=Strict` + vérification d'un header custom sur les endpoints sensibles (`/auth/refresh` notamment) ; pas de système de token CSRF complet en v1 (API JSON pure, vecteur CSRF classique via formulaire HTML non applicable) | `[PROVISIONAL]` — dépend encore de l'architecture finale de déploiement front/back |
-| Autorisation | Centralisée via `@PreAuthorize` / method security, jamais de checks ad hoc dispersés | `[DECIDED]` |
-| Tests | JUnit5 + Testcontainers (PostgreSQL réel) côté back, Vitest (+ éventuellement Playwright) côté front, incluant une matrice de tests d'autorisation systématique | `[DECIDED]` |
-| Paiement | Stripe conservé mais repoussé hors périmètre v1 | `[DECIDED]` |
-| Clés primaires | UUID v7 partout côté entités exposées à l'API | `[DECIDED]` |
-| Suppression | Soft-delete (`deletedAt`) + index uniques partiels PostgreSQL (`WHERE deleted_at IS NULL`) pour éviter qu'un élément supprimé bloque la réutilisation d'une valeur unique | `[DECIDED]` |
-| RGPD | Compliance requise dès la conception | `[DECIDED]` |
-| Audit log | Jamais de copie automatique de données personnelles/sensibles dans `before`/`after` ; whitelist explicite de champs traçables | `[DECIDED]` |
-| Permissions | Rôle simple (OWNER/MANAGER/EMPLOYEE) suffisant pour la v1 | `[DECIDED]` |
-| Organisation | Regroupement "société" au-dessus des salons, créé automatiquement même pour un salon unique. Règle explicite : l'appartenance à l'organisation (OWNER) donne une capacité **administrative** sur ses salons, mais **toute opération métier reste systématiquement scopée au salon** (jamais de requête/permission qui traverse l'organisation sans passer par le salon) | `[DECIDED]` |
-| Horaires & fermetures polymorphiques | Rejet du pattern `ownerType`/`ownerId` (perte d'intégrité référentielle côté PostgreSQL) au profit de `salonId` nullable + `resourceId` nullable + `CHECK` garantissant qu'exactement un des deux est renseigné | `[DECIDED]` |
-| Multi-ressource par service | Pas de besoin fonctionnel en v1, modèle conçu pour le supporter (table de jointure `AppointmentResource` avec contraintes dès maintenant) | `[DECIDED]` |
-| Client multi-salons | Un compte client peut réserver dans plusieurs salons différents | `[DECIDED]` |
-| Matching automatique `CustomerProfile` à l'inscription | Simplifié : **pas de fusion/consolidation rétroactive automatique** en v1 (trop risqué : faux positifs sur email partagé/erreur de saisie). On garde uniquement le sens simple : un salon créant un client manuellement dont l'email correspond à un `CustomerProfile` déjà "réclamé" (avec `accountId`) le relie directement. La fusion rétroactive de l'historique devient une fonctionnalité v2 explicite, pilotée par l'utilisateur | `[DECIDED]` |
-| Employés & portail salon | Accès prévu pour gérer leur propre planning, mais pas prioritaire en v1 | `[DECIDED]` (report) |
-| Stats client (visites, etc.) | Calculées à la volée en v1, pas de dénormalisation | `[DECIDED]` |
-| Roadmap | Développement en tranches verticales (backend + frontend d'une fonctionnalité en même temps) plutôt que "tout le backend puis tout le frontend" | `[DECIDED]` |
-| Gestion du temps | RDV : `TIMESTAMPTZ` en DB / `Instant` en Java. Horaires récurrents : `LocalTime` + `DayOfWeek` (09:00 n'est pas un instant). Affichage : conversion `Instant → Salon.timezone → ZonedDateTime` | `[DECIDED]` |
+| Backend | Spring Boot 4.1 (Framework 7), Java 21, Maven | `[DECIDED]` |
+| BDD / migrations | PostgreSQL, Flyway. **Les migrations Flyway sont la seule source de vérité du schéma** (`apontaja-schema.sql` n'existe plus dans le repo). V1 = schéma initial complet (toutes les tables, y compris Phase 3), V2 `account_token`, V3 `staff_invitation`, V4 unicité `organization_membership(account_id)` vivant. **Phase 3 n'a ajouté aucune migration.** `ddl-auto=validate` | `[DECIDED]` |
+| Frontend | Vue 3 + TypeScript + Pinia + Tailwind 4 ; mono-repo `back/`, `portail-salon/`, `portail-client/`, `packages/ui-kit` ; pnpm workspaces sans Turborepo | `[DECIDED]` |
+| Structure `back/` | Module Maven unique, package par domaine (`account`, `organization`, `salon`, `resource`, `service`, `appointment`, `customer`, `audit`) + `shared`; sous-packages `web/application/domain/infrastructure`. Règle `web → application → domain`, `infrastructure → domain`, vérifiée par ArchUnit **y compris au sein d'un domaine** (ex. `web` ne peut pas importer `domain`) | `[DECIDED]` |
+| Graphe ArchUnit (`ALLOWED_DEPENDENTS`, cible → dépendants autorisés de sa couche `.application`) | account→[organization,customer,salon] · organization→[salon] · salon→[resource,appointment,service] · resource→[service,appointment] · service→[appointment] · customer→[appointment] · appointment→[] · audit→tous. Seule la couche `.application` d'un domaine est visible des autres | `[DECIDED]` |
+| `shared` | Ports techniques transverses : `IdGenerator`, `EmailSender`, `OpaqueTokenGenerator`, `TokenHasher` (+ impl. dans `shared.infrastructure`). Vérifier s'il existe avant d'en créer un | `[DECIDED]` |
+| Lint / CI | Checkstyle (ruleset custom, **lignes ≤ 120, imports inutilisés interdits**), GitHub Actions (job `back` = `mvn -B clean verify`, job `front` pnpm) | `[DECIDED]` |
+| Secrets dev | Profil Spring `local` (`application-local.yml` gitignoré) | `[DECIDED]` |
+| Tests d'intégration | Testcontainers `postgres:16-alpine` + failsafe (`*IT.java`). Tests touchant un `*JpaRepository` package-privé : dans le package `infrastructure`, `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` + `@Import(PostgresTestcontainersConfiguration.class)`. Entité d'un autre domaine en fixture : `TestEntityManager.persistAndFlush` | `[DECIDED]` |
+| Packages test Boot 4.1 | `DataJpaTest` → `org.springframework.boot.data.jpa.test.autoconfigure` ; `AutoConfigureTestDatabase` → `org.springframework.boot.jdbc.test.autoconfigure` ; `TestEntityManager` → `org.springframework.boot.jpa.test.autoconfigure` ; `AutoConfigureMockMvc` → `org.springframework.boot.webmvc.test.autoconfigure`. Toujours vérifier | `[DECIDED]` |
+| Auth | JWT HS256 15 min (mémoire JS) + refresh opaque SHA-256 30 j (cookie httpOnly/Secure/SameSite=Strict, path `/api/auth`), rotation + détection de réutilisation (granularité compte). Restauration de session au boot (`restoreSession()` avant `app.use(router)`) | `[DECIDED]` |
+| CSRF | Exempt partout **sauf `/api/auth/refresh` et `/api/auth/logout`** (seuls endpoints cookie-driven). Front : `apiPostWithCsrf` réservé à refresh/logout ; tout endpoint Bearer utilise `apiGet/apiPost/apiPatch/apiDelete` avec `accessToken` (un mauvais choix → 403 silencieux) | `[DECIDED]` |
+| Autorisation | Method security (`@PreAuthorize`) + guards nommés. **Pièges** : (1) `@PreAuthorize` ignoré silencieusement sur méthode non `public` ; (2) `AccessDeniedException` interceptée par le catch-all de `GlobalExceptionHandler` sauf handler explicite (déjà présent). Les handlers d'exceptions métier sont **locaux à chaque contrôleur** (pas de `@RestControllerAdvice` séparé, risque d'être court-circuité par le catch-all) | `[DECIDED]` |
+| Entités à ID applicatif (UUIDv7) | `Persistable<UUID>` (`@Transient isNew` + `@PostPersist @PostLoad markNotNew()`), `createdAt` passé en paramètre (jamais `Instant.now()` dans l'entité). Clé composite : `@EmbeddedId` + `Persistable<XxxId>` | `[DECIDED]` |
+| Mutateurs d'entité | Mutateurs **inconditionnels** dans l'entité ; les règles d'éligibilité (transitions, dernier OWNER…) vivent dans le service applicatif | `[DECIDED]` |
+| Divers | Filtres Spring Security custom : `FilterRegistrationBean.setEnabled(false)` ; colonnes `citext` : `columnDefinition = "citext"` ; soft-delete `deletedAt` + index uniques partiels ; suppression physique pour les tables sans `deleted_at` ; UUID v7 côté app ; RGPD dès la conception ; `PageResponse<T>` maison (jamais `Page` Spring Data dans un DTO) | `[DECIDED]` |
+| Permissions staff | OWNER/MANAGER/EMPLOYEE. OWNER (staff direct ou `OrganizationMembership` OWNER) gère tout ; MANAGER gère EMPLOYEE ; EMPLOYEE lecture seule ; jamais retirer/rétrograder le dernier OWNER. Un compte = une organisation (règle applicative + index V4) | `[DECIDED]` |
+| Rattachement staff | Invitation email à token usage unique (TTL 7 j), pas de fusion auto compte↔invitation | `[DECIDED]` |
+| Design portail salon | Palette lie-de-vin/papier/laiton, Fraunces + Inter. Non prioritaire, ne pas retoucher sans demande (branche `wip/design-and-geo-exploration` jamais mergée) | `[PROVISIONAL]` |
+| Géolocalisation / timezone auto | Non retenu : `Salon.timezone` = texte libre saisi à la main | `[OPEN]` |
+| Dette JS/TS, Spotless | Versions pinnées / transition TS7 ; pas de Spotless | `[OPEN]` non prioritaires |
+| Paiement | Stripe hors périmètre v1 | `[DECIDED]` |
 
-## 3. Audit du repo existant — résumé
+### 2.2 Phase 3 — Rendez-vous (décisions actées)
 
-### 3.1 Sécurité — Critique (P0)
-- Mot de passe loggé en clair dans `confirmPassword`
-- IDOR massif sur les rendez-vous (get/update/delete/create sans vérification d'appartenance)
-- IDOR sur `getUserById` (accès à n'importe quel profil)
-- Création de client sans vérification de propriété du salon
-- Recherche publique de salons cassée (réutilise le filtre "salons de l'utilisateur connecté")
-- Refresh tokens en clair en base, logout qui révoque le mauvais token
-- Tokens en `localStorage` côté front
-- Fuite d'infos via l'exception listener (messages bruts renvoyés au client)
-- Regex de mot de passe buggée (intervalle de caractères non voulu, pas d'ancrage complet)
-- CORS incohérent (override en dur sur localhost)
-- Secret applicatif commité en clair
+| Sujet | Décision | Statut |
+|---|---|---|
+| RBAC catalogue | **Écriture** (ressources, prestations, associations, horaires, fermetures) : OWNER/MANAGER (staff direct) ou OWNER d'organisation, via `catalogManagementGuard.canManageCatalog`. **Lecture** : tout le staff (`salonAccessGuard`). EMPLOYEE = lecture seule. ⚠️ Un test qui supprime une ressource/prestation doit donc s'authentifier en OWNER/MANAGER, pas EMPLOYEE | `[DECIDED]` |
+| RBAC clients et RDV | **Tout le staff** (EMPLOYEE inclus) via `salonAccessGuard` : créer/lire des clients ; créer, lire, lister (agenda), confirmer/annuler/terminer/no-show des RDV | `[DECIDED]` |
+| Nommage | Entité `SalonService` pour la table `service` (évite la collision avec `@Service`) | `[DECIDED]` |
+| Jours de semaine | En base `schedule.day_of_week` : 0 = dimanche … 6 = samedi ; en Java/API : `DayOfWeek`/`"MONDAY"…`. **`DayOfWeekCodes` est le seul point de conversion** | `[DECIDED]` |
+| Horaires | Remplacement complet de la semaine (`PUT`), plusieurs plages/jour, adjacentes OK, chevauchement refusé (400). Liste vide : sur une ressource = "suit le salon" ; sur le salon = jamais ouvert. Concurrence sérialisée par `pg_advisory_xact_lock` (pas de contrainte d'exclusion sur `schedule`) | `[DECIDED]` |
+| Fermetures | Instants ISO 8601 **avec offset** (normalisés UTC) ; chevauchements entre fermetures autorisés ; suppression physique ; liste filtrable `?from&to` par recouvrement | `[DECIDED]` |
+| Disponibilité (Q3) | Salon ouvert ∩ ressource disponible. Le créneau doit tenir **début ET fin** dans une plage (plages contiguës fusionnées, une pause n'est pas traversable). Ressource avec horaires propres : bornée par le salon, fermée les jours non listés. Fermeture salon bloque tout, fermeture ressource bloque la ressource ; recouvrement même partiel refuse, bornes adjacentes non. Moteur pur `AvailabilityEngine` (aucun accès base, ne regarde PAS les autres RDV) | `[DECIDED]` |
+| DST / fuseau | Plages en heure locale du salon ; heure inexistante (saut de printemps) → instant de la transition ; heure ambiguë (retour d'automne) → première occurrence ; une plage a sa durée réelle du jour (00:00-06:00 = 5 h/7 h). Plage jamais à cheval sur minuit (**limite : pas de "24:00", max 23:59**). Fuseau invalide → `InvalidSalonTimezoneException` | `[DECIDED]` |
+| Prestations | `ServiceResource` (clé composite) avec surcharges prix/durée ; `resolveTerms` = surcharge sinon défaut ; associations supprimées physiquement (DELETE idempotent) ; liste = seulement ressources vivantes | `[DECIDED]` |
+| Suppression ressource/prestation (Q5) | Autorisée seulement si **aucun RDV actif** (ni annulé ni supprimé), sinon 409. Points d'extension `ResourceDeletionCheck` / `ServiceDeletionCheck` (définis dans `resource.application`/`service.application`, implémentés dans `appointment.application`). Côté ressource : colonne `is_active` d'`appointment_resource` (pilotée par trigger) | `[DECIDED]` |
+| Clients (Q1) | `CustomerProfile` + `SalonCustomerLink` minimal (`source = MANUAL`), **aucun matching ni fusion** (chaque création = nouveau profil), pas d'update/delete (report Phase 4). Consentement marketing et dates de visite non mappés dans l'entité | `[DECIDED]` |
+| Création de RDV | Corps : `customerProfileId, serviceId, resourceId, startAt` (ISO avec offset). **`endAt` jamais fourni** : `startAt + durée effective`. Snapshot `priceAtBooking`/`durationAtBooking`. v1 = une seule ressource par RDV. Ordre des vérifs : ressource (404) → prestation (404) → client (404) → association service/ressource (400) → disponibilité (409 + `issues[]`) → insertion `Appointment` puis `AppointmentResource` (contrainte d'exclusion PG 23P01 → `DataIntegrityViolationException` → 409 `AppointmentConflictException`) | `[DECIDED]` |
+| `AppointmentResource` | Ne mappe QUE la clé composite. `starts_at/ends_at/is_active/during` sont pilotés par les triggers SQL (BEFORE INSERT sur la table, AFTER UPDATE sur `appointment`) : l'`Appointment` doit être inséré/flushé AVANT | `[DECIDED]` |
+| Statuts (Q4) | `SCHEDULED, CONFIRMED, COMPLETED, CANCELLED, NO_SHOW`. **Statut initial = CONFIRMED** (en Phase 3 toute réservation est prise par le staff, téléphone/comptoir). `SCHEDULED` + `confirm()` conservés pour la réservation en ligne de la Phase 4. Transitions : confirm SCHEDULED→CONFIRMED ; cancel SCHEDULED/CONFIRMED→CANCELLED (trace `cancelledAt/By/reason`) ; **complete CONFIRMED uniquement** ; no-show SCHEDULED/CONFIRMED et seulement si `now ≥ startAt`. Déplacement (tranche 8) : seulement SCHEDULED/CONFIRMED. Transition interdite → 409 | `[DECIDED]` |
+| Agenda | `GET …/appointments?resourceId=&from=&to=` : recouvrement (bornes adjacentes exclues), tous statuts (annulés inclus), trié par début, ressources résolues en lot, **sans pagination**. Deux requêtes JPQL distinctes selon `resourceId` (éviter le paramètre nul non typé `:p IS NULL OR …` sur PostgreSQL) | `[DECIDED]` |
+| Divers Q6/Q7 | Option (a) ArchUnit (`salon → service` ajouté). Pas de délai minimum de réservation ni de granularité de créneau en v1 | `[DECIDED]` |
 
-### 3.2 Sécurité — Important (P1)
-- Pas de rate limiting, pas de vérification d'email, pas de "mot de passe oublié"
-- Pas de plafond sur la pagination
-- Entité `User` unique pour staff et clients (clients sans mot de passe)
-- `getRoles()` toujours `['ROLE_USER']`, RBAC géré à la main de façon incohérente
-- Pas de headers de sécurité (CSP, HSTS)
+## 3. Audit de l'ancien repo — résumé
 
-### 3.3 Logique métier
-- Détection de double-booking incomplète (pas de borne de fin de journée, limite de 100 résultats)
-- Aucune revalidation à la mise à jour d'un RDV
-- Seule l'heure de début du RDV est vérifiée par rapport aux horaires (jamais la fin)
-- Méthodes de repository appelées mais inexistantes (crash garanti)
-- Syntaxe invalide + null pointer sur la récupération d'abonnement salon
-- Annulation d'abonnement non transactionnelle (suppression locale avant appel Stripe)
-- Pas de vérification de cohérence ressource ↔ salon ↔ service à la création d'un RDV
-- Pas de contrôle anti-chevauchement sur les horaires enregistrés
-- Suppression de ressource/salon avec RDV liés → 500 brut probable
-- Incohérence DB entre environnements (MySQL dev / config Postgres prod)
-- Dates en string plutôt qu'ISO-8601/UTC
-
-### 3.4 Dette technique générale
-- Zéro test (back et front)
-- Auto-mapper générique par réflexion → risque de mass-assignment
-- Composants dupliqués, fichiers morts
-- `baseURL` API en dur
-- Race condition sur le refresh token côté front
-- Pas de CI/CD, pas de lint enforcé
-
----
+Tous les points P0 sécurité sont fermés (Phase 1). Le bug historique de **double-booking / borne de fin
+manquante** est fermé côté création (moteur de disponibilité + contrainte d'exclusion PG) ; **reste la
+revalidation à la mise à jour** (tranche 8). Détail exhaustif : versions antérieures de ce fichier.
 
 ## 4. Modèle de données
 
-### Principe directeur
+Principe : séparer identité technique (`Account`), rattachement staff (salon/organisation) et identité
+client (`CustomerProfile`, indépendante d'un compte). Temps : RDV/fermetures en `TIMESTAMPTZ`/`Instant` ;
+horaires récurrents en `LocalTime`/`DayOfWeek`.
 
-Séparer **identité technique** (`Account`), **rattachement staff** (par salon et par
-organisation), et **identité client** (`CustomerProfile`, indépendante d'un compte).
+| Domaine | Entités implémentées |
+|---|---|
+| `account` | `Account`, `RefreshToken`, `ConsentRecord`, `AccountToken` |
+| `organization` | `Organization`, `OrganizationMembership` |
+| `salon` | `Salon`, `StaffMembership`, `StaffInvitation` |
+| `resource` | `Resource` (`ResourceType` EMPLOYEE/MACHINE), `Schedule`, `Closure` |
+| `service` | `SalonService`, `ServiceResource` |
+| `customer` | `CustomerProfile`, `SalonCustomerLink` |
+| `appointment` | `Appointment`, `AppointmentResource` |
+| `audit` | schéma SQL seulement (aucune plomberie d'écriture) |
 
-### Règle de matching client `[DECIDED]`
+Règles de scoping : accès à un salon = `StaffMembership` actif **OU** `OrganizationMembership` OWNER de
+l'organisation propriétaire. Toute opération métier est filtrée par `salonId`. Une entité d'un autre
+salon accédée via le chemin d'un salon donne **404**, un salon inaccessible ou inexistant donne **403**
+uniforme. `Schedule`/`Closure` de ressource se résolvent via `Resource → Salon`.
 
-- Un salon créant un client manuellement ne déclenche **jamais** de matching avec un profil créé
-  manuellement par un **autre** salon.
-- **Exception** : si le `CustomerProfile` trouvé a déjà un `accountId` (compte "réclamé"), le
-  matching automatique est autorisé et on relie directement.
-- **Pas de fusion/consolidation rétroactive automatique** à la création de compte en v1 (voir §2)
-  — un nouveau `CustomerProfile` est simplement créé, lié au compte. La fusion de l'historique
-  pré-existant est reportée à une fonctionnalité v2 explicite et pilotée par l'utilisateur.
-- Cloisonnement strict : seules les données d'**identité** (nom/email/téléphone) sont partagées
-  via le `CustomerProfile` commun. Les données propres à la relation (notes internes, consentement
-  marketing, historique de visite) restent sur `SalonCustomerLink`, jamais visibles d'un autre
-  salon. Les requêtes de RDV restent toujours scopées par `salonId`.
+## 5. Plan d'action
 
-### Dictionnaire des entités
-
-| Entité | Champs clés | Notes |
-|---|---|---|
-| `Account` | id (UUIDv7), email, emailVerifiedAt, passwordHash, createdAt, deletedAt | Identité technique pure |
-| `Organization` | id, name, createdAt, deletedAt | Créée automatiquement à l'inscription. Donne une capacité **administrative** sur ses salons uniquement — jamais de bypass du scoping salon pour les opérations métier |
-| `OrganizationMembership` | accountId, organizationId, role=OWNER | |
-| `Salon` | id, organizationId, name, address, lat/lng, timezone, phone, createdAt, deletedAt | `timezone` explicite (IANA, ex: `Europe/Lisbon`) |
-| `StaffMembership` | accountId, salonId, role (OWNER/MANAGER/EMPLOYEE), createdAt, deletedAt | "Cette personne travaille dans ce salon et a un rôle" |
-| `CustomerProfile` | id, accountId (nullable), firstName, lastName, email, phone, createdAt, deletedAt | Identité personne, "réclamable" par un compte |
-| `SalonCustomerLink` | id, salonId, customerProfileId, source (MANUAL/SELF), internalNotes, marketingConsentAt, marketingConsentRevokedAt, firstVisitAt, lastVisitAt, createdAt, deletedAt | Carnet client, strictement propre au salon. `UNIQUE(salonId, customerProfileId) WHERE deleted_at IS NULL` |
-| `Resource` | id, salonId, type (EMPLOYEE/MACHINE), name, staffMembershipId (nullable, v2), createdAt, deletedAt | "Cette ressource peut être réservée dans le planning" — distinct de `StaffMembership`, lié optionnellement |
-| `Service` | id, salonId, name, description, defaultDuration, defaultPrice, createdAt, deletedAt | |
-| `ServiceResource` | serviceId, resourceId, overridePrice (nullable), overrideDuration (nullable) | |
-| `Schedule` | id, salonId (nullable), resourceId (nullable), dayOfWeek, startTime, endTime | `CHECK ((salon_id IS NOT NULL AND resource_id IS NULL) OR (salon_id IS NULL AND resource_id IS NOT NULL))` — remplace le pattern `ownerType/ownerId` |
-| `Closure` | id, salonId (nullable), resourceId (nullable), startAt, endAt, reason | Même `CHECK` que `Schedule` |
-| `Appointment` | id, salonId, customerProfileId, serviceId, startAt (`TIMESTAMPTZ`), endAt (`TIMESTAMPTZ`), status, priceAtBooking, durationAtBooking, cancelledAt, cancelledBy, cancellationReason, createdAt, deletedAt | Snapshot prix/durée |
-| `AppointmentResource` | appointmentId, resourceId | `UNIQUE(appointment_id, resource_id)`, index sur `resource_id` et `appointment_id`. Règle métier : un RDV n'est valide que si **toutes** ses ressources sont disponibles sur toute la période |
-| `RefreshToken` | id, accountId, tokenHash, deviceInfo, expiresAt, revokedAt, createdAt | Un par session/device |
-| `ConsentRecord` | id, accountId, type (TOS/PRIVACY/MARKETING_PLATFORM), version, acceptedAt | Consentement plateforme, distinct du consentement marketing par salon |
-| `AuditLog` | id, actorAccountId, action, entityType, entityId, before (JSON whitelisté), after (JSON whitelisté), createdAt | Jamais de PII brute copiée — voir règle §2 |
-
-Toutes les PK exposées en UUIDv7. Soft-delete + index uniques partiels sur `Organization`,
-`Salon`, `Resource`, `Service`, `CustomerProfile`, `SalonCustomerLink`, `Appointment`.
-
-### Règles de scoping explicites `[DECIDED]`
-
-- Une `Schedule`/`Closure` de type ressource (`resourceId` renseigné, `salonId` null) est **toujours**
-  résolue via `Resource → Salon` pour déterminer son périmètre réel. Elle ne peut jamais être
-  utilisée seule pour contourner le scoping par salon.
-- `AppointmentResource.resourceId` doit **obligatoirement** appartenir au même salon que
-  `Appointment.salonId`. Garanti au niveau service applicatif (validation systématique avant
-  écriture) **et** renforcé au niveau base de données via une contrainte d'exclusion PostgreSQL
-  (`EXCLUDE` + extension `btree_gist`, voir `V1__initial_schema.sql`) qui empêche mécaniquement
-  tout chevauchement de réservation sur une même ressource — ce mécanisme ferme définitivement
-  la classe de bug "double-booking non détecté" identifiée dans l'ancien projet (§3.3).
-
-### Schéma relationnel complet
-
-Les migrations Flyway `src/main/resources/db/migration` sont la seule source de vérité du schéma.
-Le schéma courant est la somme ordonnée des migrations V1, V2, V3, etc.
-Aucun fichier SQL miroir n'est maintenu manuellement.
-Hibernate utilise `ddl-auto=validate` et ne modifie jamais le schéma.
-
-### Règle d'accès à un salon (autorisation)
-
-Accès à un salon si `StaffMembership` actif sur ce salon **OU** `OrganizationMembership` OWNER
-sur l'organisation propriétaire — mais toute logique métier (recherche, modification, suppression
-de RDV/ressources/clients...) reste toujours filtrée par `salonId`, jamais par organisation
-directement.
-
----
-
-## 5. Plan d'action (roadmap en tranches verticales)
-
-### Phase 0 — Fondations (à dérouler dans cet ordre, pas en un seul bloc) — ✅ TERMINÉE
-1. [x] Squelette du mono-repo pnpm workspaces : `back/`, `portail-salon/`, `portail-client/`,
-       `packages/ui-kit/`, `pnpm-workspace.yaml`
-2. [x] Spring Boot minimal (Web, Security, Data JPA, Validation) — un simple `/health` qui répond
-3. [x] Mise en place de l'architecture de packages (§2 : domaine → couches web/application/
-       domain/infrastructure), sans encore de logique métier dedans
-4. [x] Écriture des règles ArchUnit correspondant au graphe de dépendances défini en §2, **avant**
-       tout code métier — elles doivent échouer sur un projet vide de sens si mal câblées, puis
-       passer une fois la structure en place
-5. [x] CI de base : build + tests (y compris ArchUnit) + lint sur chaque PR
-6. [x] Stratégie de gestion des secrets (dev local — production reste `[OPEN]`, voir §6)
-7. [x] Application du schéma `apontaja-schema.sql` via Flyway (première migration)
-
-Phase 0 validée dans son ensemble. Démarrage du vertical slice "Authentification" (Phase 1) prêt
-à être lancé à la prochaine session.
-
-### Phase 1 — Vertical slice "Authentification" (back + front ensemble)
-- [ ] Implémentation `Account`, `RefreshToken`, `ConsentRecord`
-- [ ] JWT access (mémoire JS) + refresh (cookie httpOnly, rotation, détection de réutilisation)
-- [ ] Rate limiting login/register/refresh/confirm-password
-- [ ] Vérification d'email + mot de passe oublié
-- [ ] Portail salon : écran login/register/mot de passe oublié fonctionnel de bout en bout
-- [ ] Tests : unitaires + intégration (Testcontainers) + matrice d'autorisation dès ce stade
-
-### Phase 2 — Vertical slice "Salon & organisation"
-- [ ] `Organization`, `OrganizationMembership`, `Salon`, `StaffMembership`
-- [ ] Autorisation centralisée (method security)
-- [ ] Portail salon : création de salon, gestion du staff
-- [ ] Tests d'autorisation systématiques (OWNER salon A vs salon B, MANAGER, EMPLOYEE, etc.)
-
-### Phase 3 — Vertical slice "Rendez-vous" (le cœur du produit)
-- [ ] `Resource`, `Service`, `Schedule`, `Closure`, `Appointment`, `AppointmentResource`
-- [ ] Règles complètes : conflit de créneau (borné correctement), horaires d'ouverture,
-      disponibilité ressource, fermetures — vérifiées sur toute la plage (début ET fin)
-- [ ] Revalidation complète à la mise à jour d'un RDV, snapshot prix/durée
-- [ ] Tests unitaires exhaustifs (chevauchement partiel, adjacent, DST, changement de fuseau)
-- [ ] Portail salon : agenda fonctionnel de bout en bout
-
-### Phase 4 — Vertical slice "Client & carnet client"
-- [ ] `CustomerProfile`, `SalonCustomerLink`
-- [ ] Portail salon : carnet client
-- [ ] Portail client : inscription, réservation, historique multi-salons
-
-### Phase 5 — Durcissement final
-- [ ] Audit sécurité de repasse (headers, CSP, dépendances)
-- [ ] Observabilité : logs structurés, jamais de données sensibles loggées
-- [ ] Tests de charge basiques sur les endpoints critiques
-- [ ] Politique de rétention `AuditLog` (durée de conservation, qui peut consulter, quels
-      événements) — non bloquant pour la Phase 0, à traiter avant l'ouverture au public
-
-### Phase 6 — Paiement (reportée, hors périmètre v1)
-- [ ] Intégration Stripe revue : flux transactionnel, webhook comme source de vérité, idempotence
-
----
+- **Phases 0, 1, 2** ✅ terminées.
+- **Phase 3 — Rendez-vous** :
+  1. [x] Resource (CRUD, RBAC catalogue)
+  2. [x] Service + ServiceResource (+ ArchUnit `salon → service`)
+  3. [x] Schedule + Closure
+  4. [x] Moteur de disponibilité (pur, DST/fuseau)
+  5. [x] CustomerProfile + SalonCustomerLink minimal
+  6. [x] Création de RDV (snapshot, exclusion PG → 409, hooks de suppression)
+  7. [x] Agenda (liste) + transitions de statut
+  8. [ ] **Modification (déplacement) d'un RDV avec revalidation complète** — branche `feature/phase3-appointment-update`
+  9. [ ] Front : catalogue (ressources, prestations, horaires, fermetures) — `feature/phase3-frontend-catalog`
+  10. [ ] Front : agenda (vue, création, déplacement, annulation) — `feature/phase3-frontend-agenda` (avant de choisir FullCalendar ou un composant maison : recherche web sur la version/compatibilité Vue 3)
+- **Phase 4** — Client & carnet client : `CustomerProfile` complet (update/delete, matching profil réclamé, fusion pilotée par l'utilisateur), consentement marketing, dates de visite, portail client, **réservation en ligne (statut initial SCHEDULED)**.
+- **Phase 5** — Durcissement : headers CSP/HSTS, logs structurés, tests de charge, rétention `AuditLog`, secrets en production, vrai provider d'email (remplace `LoggingEmailSender`), reprise du design si nécessaire, CORS si origines séparées.
+- **Phase 6** — Paiement (reporté).
 
 ## 6. Questions ouvertes
 
-- **Gestion des secrets en production `[OPEN]`** — aucun hébergement choisi pour l'instant (dev
-  local uniquement pour la Phase 0, confirmé explicitement en session). Pas de secrets manager
-  cloud (Vault, AWS Secrets Manager...) mis en place tant que ce choix n'est pas fait. Non
-  bloquant pour la Phase 0 (aucun secret de production à gérer avant un déploiement réel), mais
-  à trancher avant toute mise en production — au plus tard en Phase 5 (durcissement).
-
-Aucune autre question bloquante en attente pour la suite immédiate de la Phase 0.
-
----
+- **Tranche 8 — points de conception à soumettre AVANT de coder** : (a) déplacement seul (date/heure) ou aussi changement de ressource/prestation/client ? (b) snapshot prix/durée conservé ou recalculé si la ressource/prestation change ? (c) contrainte d'exclusion lors d'un déplacement (le RDV ne doit pas entrer en conflit avec lui-même ; l'exception 23P01 remontera de l'`UPDATE appointment` via le trigger AFTER UPDATE, pas d'un insert d'`AppointmentResource`) ; (d) revalidation = même pipeline que la création (disponibilité + résolution des termes) ; (e) statuts éligibles : SCHEDULED/CONFIRMED.
+- **Fermeture créée par-dessus des RDV existants `[OPEN]`** : refuser, ou autoriser et signaler ? À traiter en tranche 8 ou plus tard.
+- **`HttpMessageNotReadableException` `[OPEN]`** : un JSON syntaxiquement invalide donne un 500 (avalé par le catch-all de `GlobalExceptionHandler`) ; correctif d'un handler 400 proposé, non demandé.
+- **`AppointmentResponse` sans champs d'annulation `[OPEN]`** : `cancelledAt/By/reason` non exposés ; à ajouter si le front (tranche 10) en a besoin.
+- **Plages jusqu'à 24:00 `[OPEN]`** : impossible (limite `LocalTime`).
+- **Doublons de clients `[OPEN]`** : deux créations avec le même email produisent deux profils (décision Q1, à revoir en Phase 4).
+- **Endpoint de résolution d'identité (email) du staff `[OPEN]`** : `GET …/staff` ne renvoie que `accountId` (le front affiche l'UUID tronqué).
+- **Annulation d'une invitation staff en attente `[OPEN]`** : `StaffInvitation.revoke()` existe, aucun endpoint.
+- **CGU/consentement sur l'inscription via invitation `[OPEN]`** : mention absente d'`AcceptInvitationView`.
+- **Gestion des secrets en production `[OPEN]`**, dette TypeScript `[OPEN]`, Spotless `[OPEN]`, géolocalisation `[OPEN]`.
 
 ## 7. État d'avancement
 
-**Session 1** : analyse complète de l'ancien repo (sécurité, logique métier, dette technique).
+**Sessions 1-10** : Phases 0, 1, 2 (fondations, authentification, salon & organisation, back + front).
 
-**Session 2** : renommage en "Apontaja", décision de ne plus réinjecter le gitingest,
-confirmation des choix techniques de base, structure mono-repo actée, première proposition de
-modèle de données.
+**Session 11 — Phase 3, back tranches 1 à 7, `mvn clean verify` vert à chaque tranche.**
 
-**Session 3** : modèle de données finalisé (première version) — organisation, matching client
-avec consolidation automatique, ConsentRecord, UUIDv7, soft-delete.
+- **T1 Resource** : CRUD `/api/salons/{id}/resources`, `CatalogManagementGuard`, point d'extension `ResourceDeletionCheck`.
+- **T2 Service** : CRUD prestations + association ressource↔prestation (upsert de surcharges), `resolveTerms`, `ServiceDeletionCheck`, ArchUnit `salon → service`.
+- **T3 Schedule/Closure** : horaires hebdomadaires en remplacement complet sous verrou consultatif, fermetures en instants.
+- **T4 Disponibilité** : `AvailabilityEngine` pur + `AvailabilityService` ; tests exhaustifs DST Europe/Paris et changements de fuseau (les valeurs attendues ont été recalculées à la main).
+- **T5 Clients** : profil + lien minimal, create/list/get.
+- **T6 Création de RDV** : enchaînement de vérifications, snapshot, contrainte d'exclusion PG mappée en 409, test de concurrence réelle (un 201 + un 409), hooks de suppression implémentés.
+- **T7 Agenda + statuts** : liste filtrée, confirm/cancel/complete/no-show, tour complet "annulation → créneau libéré → suppression autorisée".
+- **Incidents/enseignements** : (1) faux `IdGenerator` constant (`new UUID(0,1)`) → doit produire des ids distincts quand un test crée plusieurs entités ; (2) Mockito strict : un stub inutilisé échoue (`lenient()` si un test sort tôt) ; (3) un test qui supprime du catalogue doit s'authentifier en OWNER/MANAGER ; (4) FK réelle sur `customer_profile.account_id` → un test d'index unique doit persister un vrai `Account` ; (5) **j'ai écrasé une correction locale de l'utilisateur** en renvoyant un fichier entier issu de ma copie de la tranche précédente → voir §8, règle 13 ; (6) le nom de branche de la tranche 7 n'a pas été fourni avant de commencer → §8, règle 7.
+- **Front** : inchangé depuis la session 10 (auth, accueil = liste des salons, création de salon, détail salon = équipe/invitations, acceptation d'invitation). Stores `auth`/`salon`/`staff`, `lib/apiClient.ts`. Aucun écran Phase 3 encore.
 
-**Session 4** : revue architecturale croisée (analyse de ChatGPT sur le document de session 3).
-Corrections adoptées : remplacement du pattern `ownerType/ownerId` par des FK nullables + CHECK,
-contraintes explicites sur `AppointmentResource`, politique PII sur `AuditLog`, stratégie d'index
-uniques partiels pour le soft-delete, clarification `Resource` vs `StaffMembership`, règles de
-gestion du temps explicites, décision sur l'emplacement de l'access token + CSRF, passage à une
-roadmap en tranches verticales, choix définitif de Flyway. Introduction du système de statuts
-`[DECIDED]`/`[PROVISIONAL]`/`[OPEN]`. Simplification du matching `CustomerProfile` proposée,
-en attente de confirmation explicite.
-
-**Session 5** : confirmation définitive de la simplification du matching `CustomerProfile`
-(`[DECIDED]`). Décision sur le partage d'UI entre portails : `packages/ui-kit` commun, repart
-entièrement de zéro (aucun portage des composants `Coelho*` de l'ancien projet, récupération
-ponctuelle possible si besoin). Outillage retenu : pnpm workspaces, sans Turborepo pour l'instant.
-
-**Session 6** : dernière question ouverte tranchée — structure du backend en module unique
-Gradle/Maven avec discipline de package par domaine métier, frontières imposées via des tests
-ArchUnit plutôt qu'un vrai multi-module dès le départ. Plus aucune décision structurante en
-attente.
-
-**Session 7** : traitement de la deuxième revue croisée (ChatGPT). Statut CSRF corrigé en
-`[PROVISIONAL]` (contradiction relevée). Structure de packages précisée avec sous-couches
-`web`/`application`/`domain`/`infrastructure` par domaine et graphe explicite de dépendances
-autorisées entre domaines (vérifié par ArchUnit). Règles de scoping explicites ajoutées
-(`Schedule`/`Closure` de ressource toujours résolus via `Resource → Salon` ;
-`AppointmentResource.resourceId` doit appartenir au même salon que `Appointment.salonId`).
-Phase 0 découpée en 7 étapes séquentielles. Politique de rétention `AuditLog` ajoutée en Phase 5.
-**Livrable majeur : schéma relationnel PostgreSQL complet produit dans `apontaja-schema.sql`**
-(PK/FK, `NOT NULL`, `UNIQUE`, index, `CHECK`, index uniques partiels pour le soft-delete, et une
-contrainte d'exclusion PostgreSQL avec triggers de synchronisation qui ferme au niveau base de
-données le bug historique de double-booking non détecté).
-
-**Session suivante — prochaine étape suggérée** : dérouler concrètement les 7 étapes de la
-Phase 0 (§5), en s'appuyant sur `apontaja-schema.sql` pour la première migration Flyway.
-
-**Session 8** : déroulement complet des 7 étapes de la Phase 0, une par une avec validation
-explicite à chaque étape.
-- **Étapes 1-4** : squelette mono-repo pnpm, projet Maven Spring Boot 4.1 minimal (`/health`),
-  structure de packages par domaine (§2), `ArchitectureTest` (ArchUnit, module cœur plutôt que
-  `archunit-junit5`). Plusieurs corrections de compatibilité Spring Boot 4 (modularisation de
-  `spring-boot-autoconfigure` postérieure à la connaissance de Claude — packages déplacés pour
-  `DataSourceAutoConfiguration`, `HibernateJpaAutoConfiguration`, `AutoConfigureMockMvc` ;
-  `spring-boot-starter-web` → `spring-boot-starter-webmvc`) trouvées via des `mvn clean verify`
-  réels exécutés par l'utilisateur, Claude n'ayant ni réseau ni `mvn` dans son environnement.
-- **Étape 5** : CI GitHub Actions (confirmé après clarification — `[DECIDED]`), Checkstyle choisi
-  comme linter Java (`[OPEN]` fermé, ruleset custom pour éviter le conflit d'indentation avec
-  `.editorconfig` et les faux positifs du module `Indentation`). Bug de placement de `LineLength`
-  (doit être enfant de `Checker`, pas de `TreeWalker`) et versions front pariées à l'aveugle
-  (pnpm, ESLint) corrigées par l'utilisateur. Incident de premier push : deux commits nécessaires
-  car des fichiers cachés (`.github/`, `.nvmrc`, `.gitignore`, `.editorconfig`) n'avaient pas
-  suivi lors d'une copie locale (masqués par défaut dans le Finder macOS). CI confirmée verte
-  après ajustement de `.nvmrc` (Node 20 → 22, requis par pnpm 11).
-- **Étape 6** : stratégie de secrets volontairement limitée au dev local (profil Spring `local`,
-  `application-local.yml.example`) — gestion des secrets en production actée comme `[OPEN]`
-  explicite, aucun hébergement choisi.
-- **Étape 7** : Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql` — la
-  modularisation Spring Boot 4 touche aussi Flyway, recherché en amont cette fois plutôt que
-  découvert après coup) appliquant `apontaja-schema.sql` (dupliqué verbatim en
-  `V1__initial_schema.sql`, contrainte de nommage Flyway). Tests d'intégration désormais réels
-  via Testcontainers (`postgres:16-alpine`, épinglé pour éviter un bug connu de Flyway avec
-  PostgreSQL 18 sous Spring Boot 4.0.x). `ddl-auto=validate` : Flyway seul gère le schéma.
-  **Non exécuté par Claude** (ni réseau, ni `mvn`, ni Docker disponibles) — à valider par
-  l'utilisateur, changement le plus risqué de la Phase 0 à ce stade.
-- **Nouvelle instruction permanente actée** (§8, point 7) : fournir systématiquement un nom de
-  branche avant chaque tranche de travail et un message de commit à la fin, sauf pour le tout
-  premier commit du repo (fait directement sur `main`).
-
-**Phase 0 terminée dans son intégralité.**
-
-**Session suivante — prochaine étape suggérée** : valider le dernier `mvn clean verify` de
-l'étape 7 (Flyway + Testcontainers, Docker requis), puis démarrer le vertical slice
-"Authentification" (Phase 1, §5) : `Account`, `RefreshToken`, `ConsentRecord`, JWT access/refresh,
-rate limiting, écrans login/register/mot de passe oublié du portail salon.
-
----
+**Prochaine étape** : tranche 8. Soumettre d'abord les points de conception de §6, puis coder.
 
 ## 8. Instructions pour Claude en début de session suivante
 
-1. Lire ce fichier en entier avant de répondre.
-2. Reprendre à partir de la section "État d'avancement" (§7) et du plan de la section 5.
-3. Respecter les statuts de décision : ne jamais traiter une entrée `[PROVISIONAL]` comme
-   définitivement actée sans confirmation explicite de l'utilisateur ; signaler les `[OPEN]`
-   qui deviennent bloquants pour la tâche en cours plutôt que de trancher à sa place.
-4. Ne pas re-proposer une analyse déjà faite (section 3) ni redemander les décisions déjà
-   actées (`[DECIDED]`) sauf si l'utilisateur souhaite les revisiter.
-5. Ne pas réclamer/réinjecter le gitingest de l'ancien repo — s'appuyer sur ce fichier.
-6. En fin de session, mettre à jour ce fichier : faire évoluer les statuts de décision, ajouter
-   les nouveaux problèmes/questions découverts, et compléter la section 7.
-7. **Fournir systématiquement, pour chaque tranche de travail livrée** :
-   - le nom de la branche Git à créer avant de commencer le travail (convention à affiner à
-     l'usage — pour l'instant, un préfixe simple type `phase0/etape-X-description` ou
-     `feat/description` selon le contexte, à choisir de manière cohérente d'une session à l'autre) ;
-   - le message de commit correspondant à la fin du travail, une fois celui-ci validé.
-   Exception explicitement actée en session : le tout premier commit du repo a été fait
-   directement sur `main` (création initiale du repo GitHub), donc pas de nom de branche fourni
-   pour ce commit-là.
+1. Lire ce fichier en entier ; reprendre à §7 et §5.
+2. Respecter les statuts : jamais un `[PROVISIONAL]` comme acté ; signaler les `[OPEN]` qui deviennent bloquants au lieu de trancher.
+3. Ne pas re-proposer d'analyse ni redemander une décision `[DECIDED]`.
+4. **Ne pas réclamer le gitingest** ; si un fichier précis est nécessaire, le demander.
+5. En fin de session, mettre à jour ce fichier (statuts, nouveautés, §7, §9).
+6. Aucune exécution possible côté Claude (pas de réseau, mvn, pnpm ni Docker) : tout est validé par l'utilisateur, qui redonne les résultats bruts (`mvn clean verify`).
+7. **Pour chaque tranche : donner le nom de branche AVANT d'écrire du code**, puis le message de commit une fois la tranche validée.
+8. Avant de coder du Spring Boot 4.1, du JS/TS ou toute dépendance dont l'API a pu changer : **vérifier par recherche web**.
+9. Tout contrôleur passe par la couche `application` (jamais un repository ni une entité du domaine).
+10. Toute entité UUID implémente `Persistable<UUID>` avec `createdAt` en paramètre.
+11. Avant un port technique transverse, vérifier `shared.domain`.
+12. Rester strictement dans le scope de la tranche ; ne rien initier (design, fonctionnalité) sans proposition et accord.
+13. **Fichiers déjà livrés puis modifiés par l'utilisateur** : ne JAMAIS renvoyer un fichier entier issu d'une copie interne de Claude (il écrase les corrections locales). Pour modifier un fichier existant : donner des **patchs** (avant/après). Pour une tranche : un zip ne contenant que les fichiers **nouveaux** ; les fichiers existants modifiés en patchs. Pour un correctif : uniquement les morceaux à changer.
+14. Avant de livrer : vérifier à la main **lignes ≤ 120 caractères** et **imports inutilisés** (Checkstyle casse la CI sinon), fakes `IdGenerator` à ids distincts, stubs Mockito tous utilisés (ou `lenient()`).
+15. Les valeurs de tests liées au temps utilisent des dates fixes (2099 = toujours futur, 2020 = toujours passé), jamais l'horloge réelle.
+16. Pour une tranche à décisions ouvertes : présenter les hypothèses/choix par défaut, puis coder ; ne poser une question que si le défaut est risqué.
+
+## 9. Annexe — carte des composants (signatures utiles)
+
+### Guards (SpEL, par nom de bean, méthodes `public`, signatures primitives)
+`@salonAccessGuard.hasAccessToSalon(authentication.principal, #salonId)` · `@catalogManagementGuard.canManageCatalog(authentication.principal, #salonId)` · `@staffManagementGuard.canManageRole / canManageMembership / canChangeStaffRole`.
+
+### Services applicatifs réutilisables
+- `resource.application` : `ResourceQueryService.findAliveBySalonId(salonId)`, `.findAliveInSalon(salonId, resourceId): Optional<ResourceSummary>` · `ResourceSummary(resourceId, salonId, name, type, createdAt)` · `AvailabilityService.check(salonId, resourceId, Instant start, Instant end): AvailabilityCheck(boolean available, List<AvailabilityIssue> issues)` (issues : `OUTSIDE_SALON_HOURS, OUTSIDE_RESOURCE_HOURS, SALON_CLOSED, RESOURCE_CLOSED`) · `ResourceDeletionCheck.hasBlockingAppointments(resourceId)` · exceptions `ResourceNotFoundException`, `InvalidTimeRangeException(msg)`, `InvalidSalonTimezoneException`.
+- `service.application` : `ServiceQueryService.findAliveInSalon(salonId, serviceId): Optional<ServiceSummary>`, `.resolveTerms(salonId, serviceId, resourceId): Optional<ServiceTerms(priceCents, durationMinutes)>` (vide si service/ressource absent du salon ou non associé) · `ServiceNotFoundException` · `ServiceDeletionCheck`.
+- `customer.application` : `CustomerQueryService.findAliveInSalon(salonId, customerProfileId): Optional<CustomerSummary>`, `.findAliveBySalonId(salonId)`.
+- `salon.application` : `SalonQueryService.findAliveById(salonId): Optional<SalonSummary(salonId, organizationId, name, address, postalCode, city, country, phone, timezone)>`.
+
+### Domaine `appointment`
+- `Appointment(id, salonId, customerProfileId, serviceId, startAt, endAt, priceAtBookingCents, durationAtBookingMinutes, createdAt)` → statut `CONFIRMED`. Champs mappés : `start_at, end_at` (modifiables), `status`, `cancelled_at/by`, `cancellation_reason`, `deleted_at` (jamais renseigné). Mutateurs inconditionnels : `confirm()`, `cancel(Instant at, UUID by, String reason)`, `complete()`, `markNoShow()`. **Pas encore de mutateur pour changer `startAt/endAt`** (tranche 8).
+- `AppointmentResource(appointmentId, resourceId)` (clé seule).
+- Ports : `AppointmentRepository` (`save` = saveAndFlush, `findAliveById`, `existsActiveByServiceId`, `findOverlappingBySalonId(salonId, resourceId|null, from, to)`), `AppointmentResourceRepository` (`save`, `existsActiveByResourceId` [SQL natif], `findResourceIdsByAppointmentId`, `findByAppointmentIds`).
+- Application : `AppointmentCreationService.create(CreateAppointmentCommand(salonId, customerProfileId, serviceId, resourceId, String startAt))` · `AppointmentQueryService.findAliveInSalon(salonId, appointmentId)`, `.list(salonId, resourceId|null, String from|null, String to|null)` · `AppointmentStatusService.confirm/cancel(…, cancelledBy, reason)/complete/markNoShow(salonId, appointmentId)` · `AppointmentSummary(appointmentId, salonId, customerProfileId, serviceId, resourceId, startAt, endAt, status, priceAtBookingCents, durationAtBookingMinutes, createdAt)` · adaptateurs `ResourceDeletionCheckAdapter`, `ServiceDeletionCheckAdapter`.
+- Exceptions → HTTP : `ResourceNotFoundException/ServiceNotFoundException/CustomerNotFoundException/AppointmentNotFoundException` → 404 ; `ServiceResourceNotAssociatedException/InvalidTimeRangeException` → 400 ; `AppointmentNotAvailableException` (avec `issues()`) / `AppointmentConflictException` / `InvalidAppointmentTransitionException` → 409.
+
+### Endpoints (tous sous `/api/salons/{salonId}`)
+- `resources` POST/GET, `resources/{id}` GET/PUT/DELETE, `resources/{rid}/schedule` GET/PUT, `resources/{rid}/closures` POST/GET + `/{id}` PUT/DELETE
+- `schedule` GET/PUT, `closures` POST/GET + `/{id}` PUT/DELETE
+- `services` POST/GET, `services/{id}` GET/PUT/DELETE, `services/{id}/resources` GET, `services/{id}/resources/{rid}` PUT/DELETE
+- `customers` POST/GET, `customers/{customerProfileId}` GET
+- `appointments` POST/GET(agenda), `appointments/{id}` GET, `appointments/{id}/confirm|cancel|complete|no-show` PATCH (`cancel` : corps `{}` ou `{"reason":"…"}`)
+
+### Conventions de tests (à respecter)
+- ITs web : `@SpringBootTest(webEnvironment = MOCK, properties = "apontaja.security.rate-limiting.enabled=false") @AutoConfigureMockMvc @Import(PostgresTestcontainersConfiguration.class)` ; données créées via les repositories du domaine, assertions via `MockMvc` ; id extrait d'une réponse via `new ObjectMapper().readTree(...)` (pas JsonPath).
+- Chaque nouveau domaine expose : test repository IT, tests unitaires des services (Mockito), IT contrôleur, et une **matrice d'autorisation** (OWNER d'organisation sans staff direct, cross-organisation, cross-salon même organisation, sans authentification, salon inexistant).
+- États inatteignables par l'API publique (statut, `deletedAt`, `accountId`) : posés **par réflexion** dans le test, avec un commentaire qui le justifie.
+- Concurrence : deux threads + `CountDownLatch`, statuts attendus `containsExactlyInAnyOrder(…)`.

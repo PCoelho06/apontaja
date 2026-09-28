@@ -24,7 +24,7 @@ import java.util.UUID;
  *
  * <p>
  * Transitions de statut (Phase 3 tranche 7) : voir {@link #confirm()},
- * {@link #cancel}, {@link #complete()}, {@link #markNoShow()} — mutateurs
+ * {@link #cancel}, {@link #complete()}, {@link #markNoShow()}, {@link #reschedule} — mutateurs
  * inconditionnels, l'éligibilité de chaque transition est vérifiée par
  * {@code AppointmentStatusService}, pas ici.
  *
@@ -145,6 +145,22 @@ public class Appointment implements Persistable<UUID> {
     /** SCHEDULED/CONFIRMED -> NO_SHOW. Mutateur inconditionnel, voir {@link #confirm()}. */
     public void markNoShow() {
         this.status = AppointmentStatus.NO_SHOW;
+    }
+
+    /**
+     * Déplacement : change début et fin, conserve le snapshot prix/durée.
+     * Mutateur inconditionnel (voir {@link #confirm()}) ; seul l'invariant
+     * fin &gt; début est gardé ici, l'éligibilité l'est par
+     * AppointmentRescheduleService.
+     */
+    public void reschedule(Instant startAt, Instant endAt) {
+        Objects.requireNonNull(startAt, "startAt");
+        Objects.requireNonNull(endAt, "endAt");
+        if (!endAt.isAfter(startAt)) {
+            throw new IllegalArgumentException("La fin doit être postérieure au début");
+        }
+        this.startAt = startAt;
+        this.endAt = endAt;
     }
 
     @Override

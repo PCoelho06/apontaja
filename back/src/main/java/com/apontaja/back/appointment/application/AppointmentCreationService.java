@@ -98,7 +98,7 @@ public class AppointmentCreationService {
         return AppointmentSummary.of(appointment, command.resourceId());
     }
 
-    private static Instant parseStartAt(String value) {
+    static Instant parseStartAt(String value) {
         try {
             return OffsetDateTime.parse(value.trim()).toInstant();
         } catch (DateTimeParseException | NullPointerException e) {

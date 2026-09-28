@@ -4,7 +4,9 @@ import com.apontaja.back.appointment.application.AppointmentConflictException;
 import com.apontaja.back.appointment.application.AppointmentCreationService;
 import com.apontaja.back.appointment.application.AppointmentNotAvailableException;
 import com.apontaja.back.appointment.application.AppointmentNotFoundException;
+import com.apontaja.back.appointment.application.AppointmentNotReschedulableException;
 import com.apontaja.back.appointment.application.AppointmentQueryService;
+import com.apontaja.back.appointment.application.AppointmentRescheduleService;
 import com.apontaja.back.appointment.application.AppointmentStatusService;
 import com.apontaja.back.appointment.application.AppointmentSummary;
 import com.apontaja.back.appointment.application.CreateAppointmentCommand;
@@ -37,11 +39,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Création, détail, agenda et transitions de statut d'un RDV (Phase 3,
- * tranches 6-7). Modification (déplacement) : tranche 8. Accès : tout le
- * staff du salon ({@code salonAccessGuard}) pour toutes les opérations,
- * conforme à Q2 — prendre, consulter, confirmer ou annuler un RDV sont des
- * opérations quotidiennes, pas une configuration du salon.
+ * Création, détail, agenda et transitions de statut d'un RDV (Phase 3, tranches
+ * 6-7). Déplacement : tranche 8.. Accès : tout le staff du salon
+ * ({@code salonAccessGuard}) pour toutes les opérations, conforme à Q2 —
+ * prendre, consulter, confirmer ou annuler un RDV sont des opérations
+ * quotidiennes, pas une configuration du salon.
  */
 @RestController
 @RequestMapping("/api/salons/{salonId}/appointments")
@@ -52,12 +54,14 @@ class AppointmentController {
     private final AppointmentCreationService creationService;
     private final AppointmentQueryService queryService;
     private final AppointmentStatusService statusService;
+    private final AppointmentRescheduleService rescheduleService;
 
     AppointmentController(AppointmentCreationService creationService, AppointmentQueryService queryService,
-            AppointmentStatusService statusService) {
+            AppointmentStatusService statusService, AppointmentRescheduleService rescheduleService) {
         this.creationService = creationService;
         this.queryService = queryService;
         this.statusService = statusService;
+        this.rescheduleService = rescheduleService;
     }
 
     @PostMapping
@@ -74,9 +78,8 @@ class AppointmentController {
     public ResponseEntity<List<AppointmentResponse>> list(@P("salonId") @PathVariable UUID salonId,
             @RequestParam(required = false) UUID resourceId, @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        return ResponseEntity
-                .ok(queryService.list(salonId, resourceId, from, to).stream().map(AppointmentController::toResponse)
-                        .toList());
+        return ResponseEntity.ok(queryService.list(salonId, resourceId, from, to).stream()
+                .map(AppointmentController::toResponse).toList());
     }
 
     @GetMapping("/{appointmentId}")
@@ -85,6 +88,13 @@ class AppointmentController {
             @PathVariable UUID appointmentId) {
         return queryService.findAliveInSalon(salonId, appointmentId).map(AppointmentController::toResponse)
                 .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @PatchMapping("/{appointmentId}/reschedule")
+    @PreAuthorize(CAN_BOOK)
+    public ResponseEntity<AppointmentResponse> reschedule(@P("salonId") @PathVariable UUID salonId,
+            @PathVariable UUID appointmentId, @Valid @RequestBody RescheduleAppointmentRequest request) {
+        return ResponseEntity.ok(toResponse(rescheduleService.reschedule(salonId, appointmentId, request.startAt())));
     }
 
     @PatchMapping("/{appointmentId}/confirm")
@@ -99,8 +109,7 @@ class AppointmentController {
     public ResponseEntity<AppointmentResponse> cancel(@P("salonId") @PathVariable UUID salonId,
             @PathVariable UUID appointmentId, @Valid @RequestBody CancelAppointmentRequest request,
             @AuthenticationPrincipal UUID accountId) {
-        return ResponseEntity
-                .ok(toResponse(statusService.cancel(salonId, appointmentId, accountId, request.reason())));
+        return ResponseEntity.ok(toResponse(statusService.cancel(salonId, appointmentId, accountId, request.reason())));
     }
 
     @PatchMapping("/{appointmentId}/complete")
@@ -117,14 +126,14 @@ class AppointmentController {
         return ResponseEntity.ok(toResponse(statusService.markNoShow(salonId, appointmentId)));
     }
 
-    @ExceptionHandler({ResourceNotFoundException.class, ServiceNotFoundException.class,
-            CustomerNotFoundException.class, AppointmentNotFoundException.class})
+    @ExceptionHandler({ ResourceNotFoundException.class, ServiceNotFoundException.class,
+            CustomerNotFoundException.class, AppointmentNotFoundException.class })
     ResponseEntity<ProblemDetail> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
-    @ExceptionHandler({ServiceResourceNotAssociatedException.class, InvalidTimeRangeException.class})
+    @ExceptionHandler({ ServiceResourceNotAssociatedException.class, InvalidTimeRangeException.class })
     ResponseEntity<ProblemDetail> handleBadRequest(RuntimeException ex) {
         return ResponseEntity.badRequest()
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
@@ -137,7 +146,8 @@ class AppointmentController {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
-    @ExceptionHandler({AppointmentConflictException.class, InvalidAppointmentTransitionException.class})
+    @ExceptionHandler({ AppointmentConflictException.class, InvalidAppointmentTransitionException.class,
+            AppointmentNotReschedulableException.class })
     ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
