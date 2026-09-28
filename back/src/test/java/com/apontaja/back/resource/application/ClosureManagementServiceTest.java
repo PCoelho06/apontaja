@@ -37,6 +37,9 @@ class ClosureManagementServiceTest {
     @Mock
     private ResourceRepository resourceRepository;
 
+    @Mock
+    private ClosureConflictCheck closureConflictCheck;
+
     private ClosureManagementService service;
 
     private final UUID salonId = UUID.randomUUID();
@@ -44,7 +47,7 @@ class ClosureManagementServiceTest {
     @BeforeEach
     void setUp() {
         service = new ClosureManagementService(closureRepository, resourceRepository, UUID::randomUUID,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC), closureConflictCheck);
     }
 
     private void resourceExistsInSalon(UUID resourceId) {

@@ -20,6 +20,9 @@ import java.util.UUID;
  * Fermetures d'un salon (paramètre {@code resourceId} null) ou d'une ressource
  * de ce salon. Le périmètre est toujours revérifié : une fermeture n'est
  * accessible que via son propre salon / sa propre ressource.
+ * 
+ * Création et modification sont refusées (409) si la période recouvre un RDV
+ * actif ; la suppression n'est jamais bloquée.
  */
 @Service
 public class ClosureManagementService {
@@ -31,13 +34,15 @@ public class ClosureManagementService {
     private final ResourceRepository resourceRepository;
     private final IdGenerator idGenerator;
     private final Clock clock;
+    private final ClosureConflictCheck closureConflictCheck;
 
     ClosureManagementService(ClosureRepository closureRepository, ResourceRepository resourceRepository,
-            IdGenerator idGenerator, Clock clock) {
+            IdGenerator idGenerator, Clock clock, ClosureConflictCheck closureConflictCheck) {
         this.closureRepository = closureRepository;
         this.resourceRepository = resourceRepository;
         this.idGenerator = idGenerator;
         this.clock = clock;
+        this.closureConflictCheck = closureConflictCheck;
     }
 
     @Transactional
@@ -46,6 +51,7 @@ public class ClosureManagementService {
         Instant end = parseInstant(command.endAt());
         requireValidPeriod(start, end);
         requireScope(salonId, resourceId);
+        requireNoBlockingAppointments(salonId, resourceId, start, end);
 
         String reason = normalizeReason(command.reason());
         Instant now = clock.instant();
@@ -61,6 +67,7 @@ public class ClosureManagementService {
         Instant end = parseInstant(command.endAt());
         requireValidPeriod(start, end);
         Closure closure = requireClosure(salonId, resourceId, closureId);
+        requireNoBlockingAppointments(salonId, resourceId, start, end);
 
         closure.reschedule(start, end, normalizeReason(command.reason()));
         return ClosureSummary.from(closureRepository.save(closure));
@@ -89,6 +96,15 @@ public class ClosureManagementService {
         if (resourceId != null) {
             resourceRepository.findAliveById(resourceId).map(Resource::getSalonId).filter(salonId::equals)
                     .orElseThrow(ResourceNotFoundException::new);
+        }
+    }
+
+    /** Refuse la période si elle recouvre un RDV actif (SCHEDULED/CONFIRMED) du périmètre. */
+    private void requireNoBlockingAppointments(UUID salonId, UUID resourceId, Instant start, Instant end) {
+        List<BlockingAppointment> blocking = closureConflictCheck.findBlockingAppointments(salonId, resourceId,
+                start, end);
+        if (!blocking.isEmpty()) {
+            throw new ClosureBlockedByAppointmentsException(blocking);
         }
     }
 
