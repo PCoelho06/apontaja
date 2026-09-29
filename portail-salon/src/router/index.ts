@@ -54,6 +54,30 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/salons/:salonId/catalogue",
+      component: () => import("@/views/catalog/CatalogLayoutView.vue"),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: "",
+          redirect: (to) => ({
+            name: "catalog-resources",
+            params: to.params,
+          }),
+        },
+        {
+          path: "ressources",
+          name: "catalog-resources",
+          component: () => import("@/views/catalog/ResourcesView.vue"),
+        },
+        {
+          path: "prestations",
+          name: "catalog-services",
+          component: () => import("@/views/catalog/ServicesView.vue"),
+        },
+      ],
+    },
+    {
       path: "/invitations/accepter",
       name: "accept-invitation",
       component: () => import("@/views/AcceptInvitationView.vue"),

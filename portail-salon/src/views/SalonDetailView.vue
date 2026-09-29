@@ -128,6 +128,10 @@ async function handleRemove(staffMembershipId: string) {
           {{ salonStore.currentSalon.country }}
         </p>
 
+        <RouterLink :to="{ name: 'catalog-resources', params: { salonId } }">
+          Catalogue
+        </RouterLink>
+
         <!-- Équipe -->
         <section class="mt-8">
           <h2 class="text-lg font-medium text-ink">
