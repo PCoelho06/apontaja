@@ -3,7 +3,7 @@ package com.apontaja.back.resource.application;
 import com.apontaja.back.resource.domain.Resource;
 import com.apontaja.back.resource.domain.ResourceRepository;
 import com.apontaja.back.resource.domain.ResourceType;
-
+import com.apontaja.back.salon.application.StaffMemberQueryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +37,9 @@ class ResourceManagementServiceTest {
     @Mock
     private ResourceDeletionCheck deletionCheck;
 
+    @Mock
+    private StaffMemberQueryService staffMemberQueryService;
+
     private ResourceManagementService service;
 
     private final Instant fixedNow = Instant.parse("2026-09-24T10:00:00Z");
@@ -45,7 +48,7 @@ class ResourceManagementServiceTest {
     @BeforeEach
     void setUp() {
         service = new ResourceManagementService(resourceRepository, () -> new UUID(0, 1),
-                Clock.fixed(fixedNow, ZoneOffset.UTC), deletionChecks);
+                Clock.fixed(fixedNow, ZoneOffset.UTC), deletionChecks, staffMemberQueryService);
     }
 
     private Resource existing(String name) {

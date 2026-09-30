@@ -1,14 +1,16 @@
 package com.apontaja.back.resource.web;
 
 import com.apontaja.back.resource.application.CreateResourceCommand;
+import com.apontaja.back.resource.application.InvalidResourceStaffLinkException;
 import com.apontaja.back.resource.application.InvalidResourceTypeException;
+import com.apontaja.back.resource.application.LinkedStaffMemberNotFoundException;
 import com.apontaja.back.resource.application.ResourceInUseException;
 import com.apontaja.back.resource.application.ResourceManagementService;
 import com.apontaja.back.resource.application.ResourceNameAlreadyUsedException;
 import com.apontaja.back.resource.application.ResourceNotFoundException;
 import com.apontaja.back.resource.application.ResourceQueryService;
 import com.apontaja.back.resource.application.ResourceSummary;
-
+import com.apontaja.back.resource.application.StaffMemberAlreadyLinkedException;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -30,10 +32,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Écriture : OWNER/MANAGER (ou OWNER d'organisation) via catalogManagementGuard.
- * Lecture : tout le staff du salon via salonAccessGuard. Toutes les méthodes
- * gardées sont {@code public} (sinon @PreAuthorize est ignoré silencieusement).
- * 403 uniforme si le salon n'existe pas ou n'est pas accessible.
+ * Écriture : OWNER/MANAGER (ou OWNER d'organisation) via
+ * catalogManagementGuard. Lecture : tout le staff du salon via
+ * salonAccessGuard. Toutes les méthodes gardées sont {@code public}
+ * (sinon @PreAuthorize est ignoré silencieusement). 403 uniforme si le salon
+ * n'existe pas ou n'est pas accessible.
  */
 @RestController
 @RequestMapping("/api/salons/{salonId}/resources")
@@ -51,16 +54,16 @@ class ResourceController {
     @PreAuthorize("@catalogManagementGuard.canManageCatalog(authentication.principal, #salonId)")
     public ResponseEntity<ResourceResponse> create(@P("salonId") @PathVariable UUID salonId,
             @Valid @RequestBody CreateResourceRequest request) {
-        ResourceSummary created = managementService
-                .create(new CreateResourceCommand(salonId, request.name(), request.type()));
+        ResourceSummary created = managementService.create(
+                new CreateResourceCommand(salonId, request.name(), request.type()), request.staffMembershipId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
     @GetMapping
     @PreAuthorize("@salonAccessGuard.hasAccessToSalon(authentication.principal, #salonId)")
     public ResponseEntity<List<ResourceResponse>> list(@P("salonId") @PathVariable UUID salonId) {
-        return ResponseEntity.ok(
-                queryService.findAliveBySalonId(salonId).stream().map(ResourceController::toResponse).toList());
+        return ResponseEntity
+                .ok(queryService.findAliveBySalonId(salonId).stream().map(ResourceController::toResponse).toList());
     }
 
     @GetMapping("/{resourceId}")
@@ -75,8 +78,8 @@ class ResourceController {
     @PreAuthorize("@catalogManagementGuard.canManageCatalog(authentication.principal, #salonId)")
     public ResponseEntity<ResourceResponse> update(@P("salonId") @PathVariable UUID salonId,
             @PathVariable UUID resourceId, @Valid @RequestBody UpdateResourceRequest request) {
-        return ResponseEntity
-                .ok(toResponse(managementService.update(salonId, resourceId, request.name(), request.type())));
+        return ResponseEntity.ok(toResponse(managementService.update(salonId, resourceId, request.name(),
+                request.type(), request.staffMembershipId())));
     }
 
     @DeleteMapping("/{resourceId}")
@@ -86,7 +89,7 @@ class ResourceController {
         return ResponseEntity.noContent().build();
     }
 
-    @ExceptionHandler({ResourceNameAlreadyUsedException.class, ResourceInUseException.class})
+    @ExceptionHandler({ ResourceNameAlreadyUsedException.class, ResourceInUseException.class })
     ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
@@ -104,7 +107,26 @@ class ResourceController {
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
+        @ExceptionHandler(InvalidResourceStaffLinkException.class)
+    ResponseEntity<ProblemDetail> handleInvalidStaffLink(InvalidResourceStaffLinkException ex) {
+        return ResponseEntity.badRequest()
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(LinkedStaffMemberNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleStaffMemberNotFound(LinkedStaffMemberNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
+    @ExceptionHandler(StaffMemberAlreadyLinkedException.class)
+    ResponseEntity<ProblemDetail> handleStaffMemberAlreadyLinked(StaffMemberAlreadyLinkedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
+    }
+
     private static ResourceResponse toResponse(ResourceSummary s) {
-        return new ResourceResponse(s.resourceId(), s.salonId(), s.name(), s.type(), s.createdAt());
+        return new ResourceResponse(s.resourceId(), s.salonId(), s.name(), s.type(), s.staffMembershipId(),
+                s.createdAt());
     }
 }
