@@ -2,7 +2,8 @@ package com.apontaja.back.salon.web;
 
 import com.apontaja.back.salon.application.InvalidStaffRoleException;
 import com.apontaja.back.salon.application.LastOwnerProtectionException;
-import com.apontaja.back.salon.application.StaffMemberSummary;
+import com.apontaja.back.salon.application.StaffMemberDetails;
+import com.apontaja.back.salon.application.StaffMemberQueryService;
 import com.apontaja.back.salon.application.StaffMembershipManagementService;
 import com.apontaja.back.salon.application.StaffMembershipNotFoundException;
 
@@ -30,15 +31,18 @@ import java.util.UUID;
 class StaffMembershipController {
 
     private final StaffMembershipManagementService staffMembershipManagementService;
+    private final StaffMemberQueryService staffMemberQueryService;
 
-    StaffMembershipController(StaffMembershipManagementService staffMembershipManagementService) {
+    StaffMembershipController(StaffMembershipManagementService staffMembershipManagementService,
+            StaffMemberQueryService staffMemberQueryService) {
         this.staffMembershipManagementService = staffMembershipManagementService;
+        this.staffMemberQueryService = staffMemberQueryService;
     }
 
     @GetMapping
     @PreAuthorize("@salonAccessGuard.hasAccessToSalon(authentication.principal, #salonId)")
     public ResponseEntity<List<StaffMemberResponse>> listMembers(@P("salonId") @PathVariable UUID salonId) {
-        List<StaffMemberResponse> body = staffMembershipManagementService.listMembers(salonId).stream()
+        List<StaffMemberResponse> body = staffMemberQueryService.listMembersWithEmail(salonId).stream()
                 .map(StaffMembershipController::toResponse).toList();
         return ResponseEntity.ok(body);
     }
@@ -79,8 +83,8 @@ class StaffMembershipController {
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
-    private static StaffMemberResponse toResponse(StaffMemberSummary summary) {
-        return new StaffMemberResponse(summary.staffMembershipId(), summary.accountId(), summary.role(),
-                summary.since());
+    private static StaffMemberResponse toResponse(StaffMemberDetails details) {
+        return new StaffMemberResponse(details.staffMembershipId(), details.accountId(), details.email(),
+                details.role(), details.since());
     }
 }

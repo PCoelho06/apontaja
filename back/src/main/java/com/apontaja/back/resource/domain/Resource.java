@@ -18,9 +18,10 @@ import java.util.UUID;
 
 /**
  * Employé ou équipement réservable dans le planning. {@code salonId} en UUID
- * brut (pas de relation JPA vers Salon). Le lien optionnel vers un
- * StaffMembership ({@code staff_membership_id}) est reporté en v2 : colonne
- * non mappée volontairement.
+ * brut (pas de relation JPA vers Salon). Lien optionnel vers un StaffMembership
+ * ({@code staff_membership_id}) : réservé aux ressources EMPLOYEE, un membre
+ * n'est lié qu'à une ressource vivante (index unique partiel V5). Ces règles
+ * vivent dans ResourceManagementService, pas ici.
  *
  * <p>
  * Implémente {@link Persistable} pour la même raison que {@code Account}.
@@ -41,6 +42,9 @@ public class Resource implements Persistable<UUID> {
 
     @Column(nullable = false)
     private String name;
+
+    @Column(name = "staff_membership_id")
+    private UUID staffMembershipId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -84,6 +88,14 @@ public class Resource implements Persistable<UUID> {
         this.type = Objects.requireNonNull(newType, "newType");
     }
 
+    /**
+     * Lie un membre de l'équipe, ou délie avec null. Mutateur inconditionnel (voir
+     * update).
+     */
+    public void linkToStaff(UUID staffMembershipId) {
+        this.staffMembershipId = staffMembershipId;
+    }
+
     public void softDelete(Instant at) {
         this.deletedAt = Objects.requireNonNull(at, "at");
     }
@@ -102,6 +114,10 @@ public class Resource implements Persistable<UUID> {
 
     public String getName() {
         return name;
+    }
+
+    public UUID getStaffMembershipId() {
+        return staffMembershipId;
     }
 
     public Instant getCreatedAt() {
