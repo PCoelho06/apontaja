@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 export interface StaffMember {
   staffMembershipId: string;
   accountId: string;
+  email: string | null;
   role: string;
   since: string;
 }

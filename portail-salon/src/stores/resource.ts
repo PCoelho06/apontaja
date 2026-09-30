@@ -10,12 +10,15 @@ export interface SalonResource {
   salonId: string;
   name: string;
   type: ResourceType;
+  staffMembershipId: string | null;
   createdAt: string;
 }
 
+/** PUT = remplacement complet : staffMembershipId null délie la ressource. */
 export interface ResourcePayload {
   name: string;
   type: ResourceType;
+  staffMembershipId: string | null;
 }
 
 export const useResourceStore = defineStore("resource", {

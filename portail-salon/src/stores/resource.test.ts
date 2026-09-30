@@ -28,11 +28,12 @@ describe("resource store", () => {
     await useResourceStore().createResource("s1", {
       name: "Léa",
       type: "EMPLOYEE",
+      staffMembershipId: "m1",
     });
 
     expect(apiPost).toHaveBeenCalledWith(
       "/api/salons/s1/resources",
-      { name: "Léa", type: "EMPLOYEE" },
+      { name: "Léa", type: "EMPLOYEE", staffMembershipId: "m1" },
       "tok",
     );
     expect(apiGet).toHaveBeenCalledWith("/api/salons/s1/resources", "tok");
@@ -41,15 +42,22 @@ describe("resource store", () => {
   it("met à jour en PUT et supprime en DELETE", async () => {
     const store = useResourceStore();
 
-    await store.updateResource("s1", "r1", { name: "Four", type: "MACHINE" });
+    await store.updateResource("s1", "r1", {
+      name: "Four",
+      type: "MACHINE",
+      staffMembershipId: null,
+    });
     await store.removeResource("s1", "r1");
 
     expect(apiPut).toHaveBeenCalledWith(
       "/api/salons/s1/resources/r1",
-      { name: "Four", type: "MACHINE" },
+      { name: "Four", type: "MACHINE", staffMembershipId: null },
       "tok",
     );
-    expect(apiDelete).toHaveBeenCalledWith("/api/salons/s1/resources/r1", "tok");
+    expect(apiDelete).toHaveBeenCalledWith(
+      "/api/salons/s1/resources/r1",
+      "tok",
+    );
   });
 
   it("refuse d'appeler l'API sans jeton", async () => {

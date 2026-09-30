@@ -85,7 +85,9 @@ function startEdit(link: ServiceResourceLink) {
   editing.value = true;
   selectedResourceId.value = link.resourceId;
   priceInput.value =
-    link.overridePriceCents === null ? "" : centsToInput(link.overridePriceCents);
+    link.overridePriceCents === null
+      ? ""
+      : centsToInput(link.overridePriceCents);
   durationInput.value =
     link.overrideDurationMinutes === null
       ? ""
@@ -271,7 +273,13 @@ async function remove(link: ServiceResourceLink) {
         </button>
       </div>
     </form>
-
+    <p
+      v-if="canManage && !editing && selectableResources.length === 0"
+      class="text-sm text-gray-500"
+    >
+      Aucune ressource à associer : créez-en une dans l'onglet Ressources, ou
+      toutes sont déjà associées à cette prestation.
+    </p>
     <p
       v-if="error"
       role="alert"
