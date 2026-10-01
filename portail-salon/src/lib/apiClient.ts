@@ -1,15 +1,19 @@
 export class ApiError extends Error {
   readonly status: number;
   readonly fieldErrors?: Record<string, string>;
+  /** Corps complet du ProblemDetail (propriétés libres : issues, count, appointments…). */
+  readonly problem?: Record<string, unknown>;
 
   constructor(
     status: number,
     message: string,
     fieldErrors?: Record<string, string>,
+    problem?: Record<string, unknown>,
   ) {
     super(message);
     this.status = status;
     this.fieldErrors = fieldErrors;
+    this.problem = problem;
   }
 }
 
@@ -79,6 +83,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
       response.status,
       problem?.detail ?? "Une erreur est survenue.",
       problem?.fieldErrors,
+      body as Record<string, unknown> | undefined,
     );
   }
 

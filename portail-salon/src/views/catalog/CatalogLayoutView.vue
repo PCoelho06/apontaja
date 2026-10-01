@@ -64,6 +64,20 @@ const activeTabClass = "!bg-gray-900 !text-white";
         >
           Prestations
         </RouterLink>
+        <RouterLink
+          :to="{ name: 'catalog-schedule', params: { salonId } }"
+          :class="tabClass"
+          :active-class="activeTabClass"
+        >
+          Horaires
+        </RouterLink>
+        <RouterLink
+          :to="{ name: 'catalog-closures', params: { salonId } }"
+          :class="tabClass"
+          :active-class="activeTabClass"
+        >
+          Fermetures
+        </RouterLink>
       </nav>
     </header>
 
