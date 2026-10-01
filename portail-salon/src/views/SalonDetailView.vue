@@ -137,10 +137,6 @@ async function handleRemove(staffMembershipId: string) {
           <h2 class="text-lg font-medium text-ink">
             Équipe
           </h2>
-          <p class="mt-1 text-xs text-ink/50">
-            L'identité complète des membres n'est pas encore disponible ici —
-            identifiant technique affiché en attendant.
-          </p>
 
           <ul
             class="mt-3 divide-y divide-border rounded-md border border-border bg-white"
@@ -151,7 +147,9 @@ async function handleRemove(staffMembershipId: string) {
               class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <span class="block text-sm text-ink">Compte {{ shortId(member.accountId) }}…</span>
+                <span class="block text-sm text-ink">{{
+                  member.email ?? `Compte ${shortId(member.accountId)}…`
+                }}</span>
                 <span class="block text-xs text-ink/50">Membre depuis
                   {{ new Date(member.since).toLocaleDateString() }}</span>
               </div>
