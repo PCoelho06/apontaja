@@ -13,6 +13,7 @@
     "dev:client": "pnpm --filter portail-client dev",
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test"
   }
 }

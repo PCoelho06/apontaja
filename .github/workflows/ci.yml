@@ -69,6 +69,9 @@ jobs:
       - name: Lint
         run: pnpm -r --if-present lint
 
+      - name: Typecheck
+        run: pnpm -r --if-present typecheck
+
       - name: Build
         run: pnpm -r --if-present build
 
