@@ -75,6 +75,16 @@ const router = createRouter({
           name: "catalog-services",
           component: () => import("@/views/catalog/ServicesView.vue"),
         },
+        {
+          path: "horaires",
+          name: "catalog-schedule",
+          component: () => import("@/views/catalog/ScheduleView.vue"),
+        },
+        {
+          path: "fermetures",
+          name: "catalog-closures",
+          component: () => import("@/views/catalog/ClosuresView.vue"),
+        },
       ],
     },
     {
