@@ -26,3 +26,8 @@ export function availableActions(
       return [];
   }
 }
+
+/** Déplacement possible (PATCH …/reschedule) : RDV à confirmer ou confirmé uniquement. */
+export function canReschedule(status: AppointmentStatus): boolean {
+  return status === "SCHEDULED" || status === "CONFIRMED";
+}

@@ -9,11 +9,8 @@ import {
   UiTextarea,
 } from "@apontaja/ui-kit";
 
-import { availableActions } from "@/lib/appointmentActions";
-import {
-  STATUS_LABELS,
-  STATUS_TONES,
-} from "@/lib/appointmentStatus";
+import { availableActions, canReschedule } from "@/lib/appointmentActions";
+import { STATUS_LABELS, STATUS_TONES } from "@/lib/appointmentStatus";
 import { formatCents, formatDuration } from "@/lib/catalogFormat";
 import { errorMessage } from "@/lib/errorMessage";
 import { formatInstant, instantToZonedLocal } from "@/lib/zonedTime";
@@ -22,6 +19,7 @@ import { useAppointmentStore } from "@/stores/appointment";
 import { useCustomerStore } from "@/stores/customer";
 import { useResourceStore } from "@/stores/resource";
 import { useSalonServiceStore } from "@/stores/salonService";
+import AppointmentRescheduleForm from "@/components/agenda/AppointmentRescheduleForm.vue";
 
 const props = defineProps<{
   salonId: string;
@@ -30,7 +28,7 @@ const props = defineProps<{
 }>();
 
 const open = defineModel<boolean>("open", { default: false });
-const emit = defineEmits<{ changed: [] }>();
+const emit = defineEmits<{ changed: []; rescheduled: [startAt: string] }>();
 
 const appointmentStore = useAppointmentStore();
 const customerStore = useCustomerStore();
@@ -40,6 +38,7 @@ const serviceStore = useSalonServiceStore();
 const busy = ref(false);
 const error = ref<string | null>(null);
 const cancelling = ref(false);
+const rescheduling = ref(false);
 const reason = ref("");
 
 watch(
@@ -48,6 +47,7 @@ watch(
     busy.value = false;
     error.value = null;
     cancelling.value = false;
+    rescheduling.value = false;
     reason.value = "";
   },
 );
@@ -60,13 +60,15 @@ const customer = computed(
 );
 const resourceName = computed(
   () =>
-    resourceStore.resources.find((r) => r.resourceId === props.appointment?.resourceId)
-      ?.name ?? "Ressource inconnue",
+    resourceStore.resources.find(
+      (r) => r.resourceId === props.appointment?.resourceId,
+    )?.name ?? "Ressource inconnue",
 );
 const serviceName = computed(
   () =>
-    serviceStore.services.find((s) => s.serviceId === props.appointment?.serviceId)
-      ?.name ?? "Prestation supprimée",
+    serviceStore.services.find(
+      (s) => s.serviceId === props.appointment?.serviceId,
+    )?.name ?? "Prestation supprimée",
 );
 
 const when = computed(() => {
@@ -74,15 +76,38 @@ const when = computed(() => {
   if (!appointment) {
     return "";
   }
-  const end = instantToZonedLocal(appointment.endAt, props.timeZone).slice(11, 16);
+  const end = instantToZonedLocal(appointment.endAt, props.timeZone).slice(
+    11,
+    16,
+  );
   return `${formatInstant(appointment.startAt, props.timeZone)} → ${end}`;
 });
 
 const actions = computed(() =>
   props.appointment
-    ? availableActions(props.appointment.status, props.appointment.startAt, new Date())
+    ? availableActions(
+        props.appointment.status,
+        props.appointment.startAt,
+        new Date(),
+      )
     : [],
 );
+
+const canMove = computed(() =>
+  props.appointment ? canReschedule(props.appointment.status) : false,
+);
+
+function startReschedule() {
+  error.value = null;
+  rescheduling.value = true;
+}
+
+function onRescheduled(startAt: string) {
+  rescheduling.value = false;
+  emit("changed");
+  emit("rescheduled", startAt);
+  open.value = false;
+}
 
 async function run(action: () => Promise<unknown>) {
   busy.value = true;
@@ -124,7 +149,9 @@ function cancel() {
   if (props.appointment) {
     const id = props.appointment.appointmentId;
     const text = reason.value.trim();
-    run(() => appointmentStore.cancelAppointment(props.salonId, id, text || null));
+    run(() =>
+      appointmentStore.cancelAppointment(props.salonId, id, text || null),
+    );
   }
 }
 </script>
@@ -156,15 +183,23 @@ function cancel() {
           Client
         </dt>
         <dd>
-          {{ customer ? `${customer.firstName} ${customer.lastName}` : "Client inconnu" }}
+          {{
+            customer
+              ? `${customer.firstName} ${customer.lastName}`
+              : "Client inconnu"
+          }}
           <span
             v-if="customer?.phone"
             class="block text-ink/60"
-          >{{ customer.phone }}</span>
+          >{{
+            customer.phone
+          }}</span>
           <span
             v-if="customer?.email"
             class="block text-ink/60"
-          >{{ customer.email }}</span>
+          >{{
+            customer.email
+          }}</span>
         </dd>
         <dt class="text-ink/60">
           Prestation
@@ -215,6 +250,15 @@ function cancel() {
         </div>
       </div>
 
+      <AppointmentRescheduleForm
+        v-else-if="rescheduling"
+        :salon-id="salonId"
+        :time-zone="timeZone"
+        :appointment="appointment"
+        @back="rescheduling = false"
+        @done="onRescheduled"
+      />
+
       <div
         v-else-if="actions.length > 0"
         class="flex flex-wrap justify-end gap-2"
@@ -232,6 +276,14 @@ function cancel() {
           @click="complete"
         >
           Terminer
+        </UiButton>
+        <UiButton
+          v-if="canMove"
+          variant="secondary"
+          :disabled="busy"
+          @click="startReschedule"
+        >
+          Déplacer
         </UiButton>
         <UiButton
           v-if="actions.includes('no-show')"

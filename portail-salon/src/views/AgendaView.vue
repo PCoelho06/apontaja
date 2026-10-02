@@ -26,7 +26,7 @@ import {
   STATUS_TONES,
 } from "@/lib/appointmentStatus";
 import { errorMessage } from "@/lib/errorMessage";
-import { isValidTimeZone } from "@/lib/zonedTime";
+import { formatInstant, isValidTimeZone } from "@/lib/zonedTime";
 import { useAgendaStore } from "@/stores/agenda";
 import { useAuthStore } from "@/stores/auth";
 import { useCustomerStore } from "@/stores/customer";
@@ -52,6 +52,7 @@ const error = ref<string | null>(null);
 const date = ref("");
 const filter = ref("all"); // "all", "mine" ou l'identifiant d'une ressource
 const showCancelled = ref(false);
+const notice = ref<string | null>(null);
 
 const timeZone = computed(() => salonStore.currentSalon?.timezone ?? "");
 const timeZoneValid = computed(() => isValidTimeZone(timeZone.value));
@@ -152,6 +153,7 @@ async function loadDay() {
 }
 
 function setDate(next: string) {
+  notice.value = null;
   date.value = next;
   if (next) {
     loadDay();
@@ -192,6 +194,10 @@ function openCreate(resourceId: string | null, minutes: number | null) {
 function openDetail(appointmentId: string) {
   selectedId.value = appointmentId;
   detailOpen.value = true;
+}
+
+function onRescheduled(startAt: string) {
+  notice.value = `Rendez-vous déplacé : ${formatInstant(startAt, timeZone.value)}.`;
 }
 
 watch(
@@ -352,6 +358,13 @@ watch(
             </div>
           </div>
 
+          <UiAlert
+            v-if="notice"
+            variant="success"
+          >
+            {{ notice }}
+          </UiAlert>
+
           <UiAlert v-if="visibleResources.length === 0">
             Aucune ressource à afficher.
             <RouterLink
@@ -387,6 +400,7 @@ watch(
             :time-zone="timeZone"
             :appointment="selectedAppointment"
             @changed="loadDay"
+            @rescheduled="onRescheduled"
           />
         </template>
       </template>

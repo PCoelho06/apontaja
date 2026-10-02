@@ -69,5 +69,18 @@ export const useAppointmentStore = defineStore("appointment", {
         requireToken(),
       );
     },
+
+    /** Déplacement seul : ressource, prestation, client, durée et prix sont conservés. */
+    rescheduleAppointment(
+      salonId: string,
+      appointmentId: string,
+      startAt: string,
+    ) {
+      return apiPatch<AppointmentItem>(
+        appointmentUrl(salonId, appointmentId, "reschedule"),
+        { startAt },
+        requireToken(),
+      );
+    },
   },
 });
