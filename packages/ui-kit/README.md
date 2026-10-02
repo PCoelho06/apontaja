@@ -2,16 +2,32 @@
 
 Design system partagé entre `portail-salon` et `portail-client`.
 
-**Décision actée** : repart entièrement de zéro, aucun portage automatique des composants
-`Coelho*` de l'ancien projet. Récupération ponctuelle possible si un besoin précis se présente
-en cours de route, au cas par cas.
+**Décision actée** : repart de zéro, aucun portage des composants `Coelho*` de l'ancien projet.
 
-**État** : squelette de package uniquement (Phase 0, étape 1), `src/index.ts` vide. Les premiers
-composants seront ajoutés au fil des besoins réels des vertical slices, en commençant par
-l'authentification (Phase 1).
+## Utilisation
 
-**Lint** (Phase 0, étape 5) : ESLint 9 (flat config) + `typescript-eslint`, `eslint-plugin-vue`
-en devDependency mais pas encore branché dans la config (aucun composant `.vue` pour l'instant).
-`pnpm lint` depuis ce dossier, ou `pnpm --filter @apontaja/ui-kit lint` depuis la racine. Pas de
-`tsconfig.json` pour l'instant — pas nécessaire pour le lint de base, à ajouter avec le premier
-vrai build TypeScript en Phase 1.
+Paquet consommé **en source** (pas d'étape de build). Dans une application :
+
+- `package.json` : `"@apontaja/ui-kit": "workspace:*"`
+- CSS d'entrée : `@import "@apontaja/ui-kit/theme.css";` et `@source "<chemin relatif>/packages/ui-kit/src";`
+  (Tailwind 4 ne scanne que le dossier du CSS d'entrée : sans `@source`, les classes des composants
+  ne sont pas générées)
+- `import { UiButton } from "@apontaja/ui-kit"`
+
+## Composants
+
+`UiButton` (primaire, secondaire, danger, chargement) · `UiInput`, `UiSelect`, `UiTextarea`
+(libellé, aide, erreur, `v-model`) · `UiAlert` · `UiBadge` · `UiDialog` (`<dialog>` natif,
+`v-model:open`). Un composant n'est ajouté que lorsqu'un écran en a besoin.
+
+## Règles
+
+- **Tokens uniquement** : les composants n'utilisent que les couleurs et polices de `src/theme.css`,
+  jamais de couleur en dur. La reprise du design se fait dans ce fichier.
+- `UiDialog` : mettre `autofocus` sur le premier champ pour le focaliser à l'ouverture ; le corps
+  n'est rendu que lorsque la boîte est ouverte (un formulaire repart de zéro).
+- Pas de globales navigateur (`window`, `document`) dans les `.vue` (règle ESLint `no-undef`).
+
+## Commandes
+
+`pnpm --filter @apontaja/ui-kit lint | typecheck | test`, ou `pnpm -r …` depuis la racine.
