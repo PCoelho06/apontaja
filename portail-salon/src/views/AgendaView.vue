@@ -11,7 +11,15 @@ import {
 } from "@apontaja/ui-kit";
 
 import DayGrid from "@/components/agenda/DayGrid.vue";
-import { buildColumns, formatDay, shiftDate, todayIn } from "@/lib/agenda";
+import AppointmentCreateDialog from "@/components/agenda/AppointmentCreateDialog.vue";
+import AppointmentDetailDialog from "@/components/agenda/AppointmentDetailDialog.vue";
+import {
+  buildColumns,
+  formatDay,
+  formatMinutes,
+  shiftDate,
+  todayIn,
+} from "@/lib/agenda";
 import {
   STATUS_LABELS,
   STATUS_ORDER,
@@ -97,8 +105,10 @@ const model = computed(() => {
       startAt: a.startAt,
       endAt: a.endAt,
       status: a.status,
-      customerName: customerNames.value.get(a.customerProfileId) ?? "Client inconnu",
-      serviceName: serviceNames.value.get(a.serviceId) ?? "Prestation supprimée",
+      customerName:
+        customerNames.value.get(a.customerProfileId) ?? "Client inconnu",
+      serviceName:
+        serviceNames.value.get(a.serviceId) ?? "Prestation supprimée",
     }));
   return buildColumns({
     date: date.value,
@@ -152,6 +162,36 @@ function shift(days: number) {
   if (date.value) {
     setDate(shiftDate(date.value, days));
   }
+}
+
+const createOpen = ref(false);
+const createStart = ref("");
+const createResourceId = ref<string | null>(null);
+const detailOpen = ref(false);
+const selectedId = ref<string | null>(null);
+
+const selectedAppointment = computed(
+  () =>
+    agendaStore.appointments.find(
+      (a) => a.appointmentId === selectedId.value,
+    ) ?? null,
+);
+
+/** `minutes` null : début par défaut (ouverture de la grille). */
+function openCreate(resourceId: string | null, minutes: number | null) {
+  const start = minutes ?? model.value?.axis.start ?? 9 * 60;
+  createStart.value = `${date.value}T${formatMinutes(start)}`;
+  createResourceId.value =
+    resourceId ??
+    myResource.value?.resourceId ??
+    visibleResources.value[0]?.resourceId ??
+    null;
+  createOpen.value = true;
+}
+
+function openDetail(appointmentId: string) {
+  selectedId.value = appointmentId;
+  detailOpen.value = true;
 }
 
 watch(
@@ -282,6 +322,13 @@ watch(
               >
               Afficher les rendez-vous annulés
             </label>
+            <UiButton
+              class="ml-auto"
+              :disabled="!date || visibleResources.length === 0"
+              @click="openCreate(null, null)"
+            >
+              Nouveau rendez-vous
+            </UiButton>
           </div>
 
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -321,8 +368,26 @@ watch(
             <DayGrid
               :columns="model.columns"
               :axis="model.axis"
+              @select-slot="openCreate"
+              @select-appointment="openDetail"
             />
           </div>
+          <AppointmentCreateDialog
+            v-model:open="createOpen"
+            :salon-id="salonId"
+            :time-zone="timeZone"
+            :resources="resourceStore.resources"
+            :initial-resource-id="createResourceId"
+            :initial-start="createStart"
+            @created="loadDay"
+          />
+          <AppointmentDetailDialog
+            v-model:open="detailOpen"
+            :salon-id="salonId"
+            :time-zone="timeZone"
+            :appointment="selectedAppointment"
+            @changed="loadDay"
+          />
         </template>
       </template>
     </div>

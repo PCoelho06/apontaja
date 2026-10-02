@@ -13,6 +13,11 @@ const PX_PER_MINUTE = HOUR_HEIGHT / 60;
 
 const props = defineProps<{ columns: AgendaColumn[]; axis: Interval }>();
 
+const emit = defineEmits<{
+  "select-slot": [resourceId: string, minutes: number];
+  "select-appointment": [appointmentId: string];
+}>();
+
 const gridHeight = computed(
   () => `${(props.axis.end - props.axis.start) * PX_PER_MINUTE}px`,
 );
@@ -42,6 +47,17 @@ function blockStyle(interval: Interval & { lane?: number; lanes?: number }) {
     left: `${(lane / lanes) * 100}%`,
     width: `${100 / lanes}%`,
   };
+}
+
+const SNAP_MINUTES = 15;
+
+/** Clic sur le fond d'une colonne : n'ouvre que sur un créneau ouvert, arrondi au quart d'heure. */
+function onSlotClick(column: AgendaColumn, clientY: number, bodyTop: number) {
+  const raw = props.axis.start + (clientY - bodyTop) / PX_PER_MINUTE;
+  const minutes = Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES;
+  if (column.available.some((i) => minutes >= i.start && minutes < i.end)) {
+    emit("select-slot", column.resourceId, minutes);
+  }
 }
 </script>
 
@@ -76,8 +92,15 @@ function blockStyle(interval: Interval & { lane?: number; lanes?: number }) {
           {{ column.name }}
         </div>
         <div
-          class="relative bg-ink/5"
+          class="relative cursor-pointer bg-ink/5"
           :style="{ height: gridHeight }"
+          @click="
+            onSlotClick(
+              column,
+              $event.clientY,
+              ($event.currentTarget as HTMLElement).getBoundingClientRect().top,
+            )
+          "
         >
           <!-- Créneaux ouverts à la réservation -->
           <div
@@ -110,10 +133,14 @@ function blockStyle(interval: Interval & { lane?: number; lanes?: number }) {
           <div
             v-for="appointment in column.appointments"
             :key="appointment.appointmentId"
-            class="absolute overflow-hidden rounded border-l-4 px-1.5 py-0.5 text-xs"
+            role="button"
+            tabindex="0"
+            class="absolute cursor-pointer overflow-hidden rounded border-l-4 px-1.5 py-0.5 text-xs"
             :class="STATUS_BLOCK_CLASSES[appointment.status]"
             :style="blockStyle(appointment)"
             :title="`${formatMinutes(appointment.start)}–${formatMinutes(appointment.end)} · ${appointment.customerName} · ${appointment.serviceName} · ${STATUS_LABELS[appointment.status]}`"
+            @click.stop="emit('select-appointment', appointment.appointmentId)"
+            @keydown.enter="emit('select-appointment', appointment.appointmentId)"
           >
             <p class="truncate font-medium">
               {{ formatMinutes(appointment.start) }}–{{
