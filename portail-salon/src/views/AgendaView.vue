@@ -27,6 +27,9 @@ import {
 } from "@/lib/appointmentStatus";
 import { errorMessage } from "@/lib/errorMessage";
 import { formatInstant, isValidTimeZone } from "@/lib/zonedTime";
+import { minutesToInstant } from "@/lib/agendaDrag";
+import { describeIssues } from "@/lib/availabilityIssues";
+import { useAppointmentStore } from "@/stores/appointment";
 import { useAgendaStore } from "@/stores/agenda";
 import { useAuthStore } from "@/stores/auth";
 import { useCustomerStore } from "@/stores/customer";
@@ -45,7 +48,9 @@ const staffStore = useStaffStore();
 const customerStore = useCustomerStore();
 const serviceStore = useSalonServiceStore();
 const agendaStore = useAgendaStore();
+const appointmentStore = useAppointmentStore();
 
+const moveErrors = ref<string[]>([]);
 const ready = ref(false);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -154,6 +159,7 @@ async function loadDay() {
 
 function setDate(next: string) {
   notice.value = null;
+  moveErrors.value = [];
   date.value = next;
   if (next) {
     loadDay();
@@ -198,6 +204,32 @@ function openDetail(appointmentId: string) {
 
 function onRescheduled(startAt: string) {
   notice.value = `Rendez-vous déplacé : ${formatInstant(startAt, timeZone.value)}.`;
+}
+
+async function onReschedule(appointmentId: string, startMinutes: number) {
+  notice.value = null;
+  moveErrors.value = [];
+  try {
+    const startAt = minutesToInstant(date.value, startMinutes, timeZone.value);
+    await appointmentStore.rescheduleAppointment(
+      salonId.value,
+      appointmentId,
+      startAt,
+    );
+    onRescheduled(startAt);
+    await loadDay();
+  } catch (e) {
+    const issues = describeIssues(e);
+    moveErrors.value =
+      issues.length > 0
+        ? issues
+        : [e instanceof Error ? e.message : "Déplacement impossible."];
+  }
+}
+
+function onRescheduleBlocked(message: string) {
+  notice.value = null;
+  moveErrors.value = [message];
 }
 
 watch(
@@ -359,6 +391,23 @@ watch(
           </div>
 
           <UiAlert
+            v-if="moveErrors.length > 0"
+            variant="error"
+          >
+            <p class="font-medium">
+              Déplacement impossible :
+            </p>
+            <ul class="list-disc pl-5">
+              <li
+                v-for="message in moveErrors"
+                :key="message"
+              >
+                {{ message }}
+              </li>
+            </ul>
+          </UiAlert>
+
+          <UiAlert
             v-if="notice"
             variant="success"
           >
@@ -383,6 +432,8 @@ watch(
               :axis="model.axis"
               @select-slot="openCreate"
               @select-appointment="openDetail"
+              @reschedule="onReschedule"
+              @reschedule-blocked="onRescheduleBlocked"
             />
           </div>
           <AppointmentCreateDialog

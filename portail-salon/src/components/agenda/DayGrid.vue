@@ -5,8 +5,12 @@ import {
   formatMinutes,
   type AgendaColumn,
   type Interval,
+  type PositionedAppointment,
 } from "@/lib/agenda";
 import { STATUS_BLOCK_CLASSES, STATUS_LABELS } from "@/lib/appointmentStatus";
+import { useAppointmentDrag } from "@/composables/useAppointmentDrag";
+import { fitsInAvailable } from "@/lib/agendaDrag";
+import { canReschedule } from "@/lib/appointmentActions";
 
 const HOUR_HEIGHT = 56; // px
 const PX_PER_MINUTE = HOUR_HEIGHT / 60;
@@ -16,6 +20,8 @@ const props = defineProps<{ columns: AgendaColumn[]; axis: Interval }>();
 const emit = defineEmits<{
   "select-slot": [resourceId: string, minutes: number];
   "select-appointment": [appointmentId: string];
+  reschedule: [appointmentId: string, startMinutes: number];
+  "reschedule-blocked": [message: string];
 }>();
 
 const gridHeight = computed(
@@ -38,15 +44,101 @@ function height(interval: Interval): string {
   return `${(interval.end - interval.start) * PX_PER_MINUTE}px`;
 }
 
-function blockStyle(interval: Interval & { lane?: number; lanes?: number }) {
-  const lanes = interval.lanes ?? 1;
-  const lane = interval.lane ?? 0;
+const {
+  drag,
+  start: startDrag,
+  consumeClick,
+} = useAppointmentDrag({
+  axis: () => props.axis,
+  pxPerMinute: PX_PER_MINUTE,
+  onDrop: ({ appointmentId, resourceId, startMinutes, duration }) => {
+    const column = props.columns.find((c) => c.resourceId === resourceId);
+    if (column && fitsInAvailable(startMinutes, duration, column.available)) {
+      emit("reschedule", appointmentId, startMinutes);
+    } else {
+      emit(
+        "reschedule-blocked",
+        "Ce créneau n'est pas ouvert à la réservation (horaires ou fermeture).",
+      );
+    }
+  },
+});
+
+function isDraggable(appointment: PositionedAppointment): boolean {
+  return canReschedule(appointment.status) && !appointment.clipped;
+}
+
+function isDragging(appointment: PositionedAppointment): boolean {
+  return (
+    drag.value?.active === true &&
+    drag.value.appointmentId === appointment.appointmentId
+  );
+}
+
+/** Le créneau visé tient-il dans un créneau ouvert ? Sert au repère rouge pendant le glisser. */
+const dragIsValid = computed(() => {
+  const current = drag.value;
+  if (!current?.active) {
+    return true;
+  }
+  const column = props.columns.find((c) => c.resourceId === current.resourceId);
+  return column
+    ? fitsInAvailable(current.previewStart, current.duration, column.available)
+    : false;
+});
+
+function visibleStart(appointment: PositionedAppointment): number {
+  return isDragging(appointment) && drag.value
+    ? drag.value.previewStart
+    : appointment.start;
+}
+
+function blockTimes(appointment: PositionedAppointment): string {
+  const start = visibleStart(appointment);
+  const end = start + (appointment.end - appointment.start);
+  return `${formatMinutes(start)}–${formatMinutes(end)}`;
+}
+
+function blockStyle(appointment: PositionedAppointment) {
+  const start = visibleStart(appointment);
+  const end = start + (appointment.end - appointment.start);
   return {
-    top: top(interval.start),
-    height: height(interval),
-    left: `${(lane / lanes) * 100}%`,
-    width: `${100 / lanes}%`,
+    top: top(start),
+    height: height({ start, end }),
+    left: `${(appointment.lane / appointment.lanes) * 100}%`,
+    width: `${100 / appointment.lanes}%`,
   };
+}
+
+function blockClasses(appointment: PositionedAppointment): string[] {
+  const classes = [STATUS_BLOCK_CLASSES[appointment.status]];
+  if (isDragging(appointment)) {
+    classes.push(
+      "z-20 cursor-grabbing shadow-lg ring-2",
+      dragIsValid.value ? "ring-wine" : "ring-danger",
+    );
+  } else if (isDraggable(appointment)) {
+    classes.push("cursor-grab touch-none select-none");
+  } else {
+    classes.push("cursor-pointer");
+  }
+  return classes;
+}
+
+function onBlockPointerDown(
+  appointment: PositionedAppointment,
+  button: number,
+  clientY: number,
+) {
+  if (button === 0 && isDraggable(appointment)) {
+    startDrag(appointment, clientY);
+  }
+}
+
+function onBlockClick(appointment: PositionedAppointment) {
+  if (!consumeClick()) {
+    emit("select-appointment", appointment.appointmentId);
+  }
 }
 
 const SNAP_MINUTES = 15;
@@ -135,17 +227,20 @@ function onSlotClick(column: AgendaColumn, clientY: number, bodyTop: number) {
             :key="appointment.appointmentId"
             role="button"
             tabindex="0"
-            class="absolute cursor-pointer overflow-hidden rounded border-l-4 px-1.5 py-0.5 text-xs"
-            :class="STATUS_BLOCK_CLASSES[appointment.status]"
+            class="absolute overflow-hidden rounded border-l-4 px-1.5 py-0.5 text-xs"
+            :class="blockClasses(appointment)"
             :style="blockStyle(appointment)"
             :title="`${formatMinutes(appointment.start)}–${formatMinutes(appointment.end)} · ${appointment.customerName} · ${appointment.serviceName} · ${STATUS_LABELS[appointment.status]}`"
-            @click.stop="emit('select-appointment', appointment.appointmentId)"
-            @keydown.enter="emit('select-appointment', appointment.appointmentId)"
+            @pointerdown="
+              onBlockPointerDown(appointment, $event.button, $event.clientY)
+            "
+            @click.stop="onBlockClick(appointment)"
+            @keydown.enter="
+              emit('select-appointment', appointment.appointmentId)
+            "
           >
             <p class="truncate font-medium">
-              {{ formatMinutes(appointment.start) }}–{{
-                formatMinutes(appointment.end)
-              }}
+              {{ blockTimes(appointment) }}
               {{ appointment.customerName }}
             </p>
             <p class="truncate">

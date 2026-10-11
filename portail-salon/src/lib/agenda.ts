@@ -184,8 +184,7 @@ export function axisRange(
   if (all.length === 0) {
     return { ...DEFAULT_AXIS };
   }
-  const start =
-    Math.floor(Math.min(...all.map((i) => i.start)) / 60) * 60;
+  const start = Math.floor(Math.min(...all.map((i) => i.start)) / 60) * 60;
   const end = Math.ceil(Math.max(...all.map((i) => i.end)) / 60) * 60;
   return { start, end: Math.max(end, start + 60) };
 }
@@ -198,9 +197,7 @@ export function layoutLanes<T extends Interval>(
   items: readonly T[],
 ): Array<T & { lane: number; lanes: number }> {
   type Placed = T & { lane: number; lanes: number };
-  const sorted = [...items].sort(
-    (a, b) => a.start - b.start || a.end - b.end,
-  );
+  const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end);
   const result: Placed[] = [];
   let cluster: Placed[] = [];
   let clusterEnd = -1;
@@ -253,7 +250,12 @@ export interface AgendaClosure {
 }
 
 export type PositionedAppointment = AgendaAppointment &
-  Interval & { lane: number; lanes: number };
+  Interval & {
+    lane: number;
+    lanes: number;
+    /** Vrai si le RDV déborde du jour affiché (non déplaçable par glisser-déposer). */
+    clipped: boolean;
+  };
 
 export type ColumnClosure = Interval & { reason: string | null };
 
@@ -274,6 +276,21 @@ export interface BuildColumnsParams {
   salonSlots: ScheduleSlot[];
   resourceSlots: Record<string, ScheduleSlot[]>;
   closures: AgendaClosure[];
+}
+
+/** Vrai si le RDV déborde du jour affiché (début la veille, fin après minuit). */
+function spansBeyondDay(
+  startAt: string,
+  endAt: string,
+  timeZone: string,
+  date: string,
+): boolean {
+  const start = instantToZonedLocal(startAt, timeZone);
+  const end = instantToZonedLocal(endAt, timeZone);
+  const endDay = end.slice(0, 10);
+  const endsAtNextMidnight =
+    endDay === shiftDate(date, 1) && end.slice(11) === "00:00";
+  return start.slice(0, 10) !== date || (endDay > date && !endsAtNextMidnight);
 }
 
 /**
@@ -313,6 +330,7 @@ export function buildColumns(params: BuildColumnsParams): {
           ...a,
           start: minutesInDay(a.startAt, timeZone, date),
           end: minutesInDay(a.endAt, timeZone, date),
+          clipped: spansBeyondDay(a.startAt, a.endAt, timeZone, date),
         }))
         .filter((a) => a.end > a.start),
     );
