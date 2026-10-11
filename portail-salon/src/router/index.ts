@@ -88,6 +88,12 @@ const router = createRouter({
       ],
     },
     {
+      path: "/salons/:salonId/agenda",
+      name: "agenda",
+      component: () => import("@/views/AgendaView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/invitations/accepter",
       name: "accept-invitation",
       component: () => import("@/views/AcceptInvitationView.vue"),

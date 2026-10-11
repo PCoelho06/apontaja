@@ -45,6 +45,20 @@ export const useClosureStore = defineStore("closure", {
       );
     },
 
+    /** Fermetures recouvrant [from, to) d'un périmètre, sans modifier l'état du store. */
+    async listOverlapping(
+      salonId: string,
+      resourceId: string | null,
+      from: string,
+      to: string,
+    ): Promise<SalonClosure[]> {
+      const query = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      return apiGet<SalonClosure[]>(
+        `${closuresUrl(salonId, resourceId)}${query}`,
+        requireToken(),
+      );
+    },
+
     /** 409 si la période recouvre des RDV actifs (voir parseClosureConflict). */
     async createClosure(
       salonId: string,
