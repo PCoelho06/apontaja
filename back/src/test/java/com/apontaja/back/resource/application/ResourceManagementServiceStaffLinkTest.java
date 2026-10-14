@@ -152,7 +152,7 @@ class ResourceManagementServiceStaffLinkTest {
         stubFreeCreation("Lea");
         when(resourceRepository.save(any(Resource.class))).thenThrow(new DataIntegrityViolationException("nom pris"));
 
-        assertThatThrownBy(() -> service.create(new CreateResourceCommand(salonId, "Lea", "EMPLOYEE")))
+        assertThatThrownBy(() -> service.create(new CreateResourceCommand(salonId, "Lea", "EMPLOYEE"), null))
                 .isInstanceOf(ResourceNameAlreadyUsedException.class);
     }
 }

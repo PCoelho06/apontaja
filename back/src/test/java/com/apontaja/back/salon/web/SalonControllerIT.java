@@ -145,4 +145,41 @@ class SalonControllerIT {
                         executor.shutdownNow();
                 }
         }
+
+                @Test
+        void rejette_un_fuseau_horaire_invalide() throws Exception {
+                String token = bearerTokenForNewAccount();
+                String payload = """
+                                {"name":"Salon Test","address":"1 rue du Test","postalCode":"06140",
+                                 "city":"Vence","country":"France","timezone":"Europe/Nulle"}
+                                """;
+
+                mockMvc.perform(post("/api/salons").header("Authorization", token)
+                                .contentType(MediaType.APPLICATION_JSON).content(payload))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.fieldErrors.timezone").exists());
+        }
+
+        @Test
+        void accepte_un_fuseau_horaire_valide_autre_que_paris() throws Exception {
+                String token = bearerTokenForNewAccount();
+                String payload = """
+                                {"name":"Salon NY","address":"1 Main St","postalCode":"10001",
+                                 "city":"New York","country":"USA","timezone":"America/New_York"}
+                                """;
+
+                mockMvc.perform(post("/api/salons").header("Authorization", token)
+                                .contentType(MediaType.APPLICATION_JSON).content(payload))
+                                .andExpect(status().isCreated());
+        }
+
+        @Test
+        void renvoie_400_et_non_500_pour_un_json_illisible() throws Exception {
+                String token = bearerTokenForNewAccount();
+
+                mockMvc.perform(post("/api/salons").header("Authorization", token)
+                                .contentType(MediaType.APPLICATION_JSON).content("{pas du json"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.detail").value("Corps de requête illisible."));
+        }
 }

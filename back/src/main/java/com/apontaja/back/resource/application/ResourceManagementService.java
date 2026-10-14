@@ -37,12 +37,6 @@ public class ResourceManagementService {
         this.staffMemberQueryService = staffMemberQueryService;
     }
 
-    /** Création sans lien vers un membre de l'équipe. */
-    @Transactional
-    public ResourceSummary create(CreateResourceCommand command) {
-        return create(command, null);
-    }
-
     @Transactional
     public ResourceSummary create(CreateResourceCommand command, UUID staffMembershipId) {
         ResourceType type = parseType(command.type());
@@ -58,12 +52,6 @@ public class ResourceManagementService {
         Resource resource = new Resource(idGenerator.generate(), command.salonId(), name, type, clock.instant());
         resource.linkToStaff(staffMembershipId);
         return ResourceSummary.from(saveMappingConflict(resource));
-    }
-
-    /** Mise à jour SANS lien : délie la ressource (PUT = remplacement complet). */
-    @Transactional
-    public ResourceSummary update(UUID salonId, UUID resourceId, String newName, String newType) {
-        return update(salonId, resourceId, newName, newType, null);
     }
 
     @Transactional

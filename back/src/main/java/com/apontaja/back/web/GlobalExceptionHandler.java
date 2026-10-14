@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,5 +51,12 @@ class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Une erreur interne est survenue.");
         return ResponseEntity.internalServerError().body(problem);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ProblemDetail> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Corps de requête illisible.");
+        return ResponseEntity.badRequest().body(problem);
     }
 }
