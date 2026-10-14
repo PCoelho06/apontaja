@@ -2,6 +2,14 @@
 import { computed, ref, watch } from "vue";
 
 import {
+  UiAlert,
+  UiBadge,
+  UiButton,
+  UiInput,
+  UiSelect,
+} from "@apontaja/ui-kit";
+
+import {
   centsToInput,
   eurosToCents,
   formatCents,
@@ -159,79 +167,80 @@ async function remove(link: ServiceResourceLink) {
 </script>
 
 <template>
-  <div class="space-y-3 rounded-md bg-gray-50 p-3">
-    <p class="text-sm font-medium">
+  <div class="space-y-3 rounded-md bg-ink/5 p-3">
+    <p class="text-sm font-medium text-ink">
       Ressources pouvant réaliser cette prestation
     </p>
 
     <ul
       v-if="links.length > 0"
-      class="divide-y text-sm"
+      class="divide-y divide-border text-sm"
     >
       <li
         v-for="link in links"
         :key="link.resourceId"
         class="flex items-center justify-between gap-3 py-2"
       >
-        <div>
+        <div class="text-ink">
           <span class="font-medium">{{ resourceName(link.resourceId) }}</span>
-          <span class="text-gray-600">
+          <span class="text-ink/60">
             — {{ formatDuration(link.effectiveDurationMinutes) }} ·
             {{ formatCents(link.effectivePriceCents) }}
           </span>
-          <span
+          <UiBadge
             v-if="
               link.overridePriceCents !== null ||
                 link.overrideDurationMinutes !== null
             "
-            class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs"
+            tone="brass"
+            class="ml-1"
           >
             surcharge
-          </span>
+          </UiBadge>
         </div>
         <div
           v-if="canManage"
           class="flex gap-2"
         >
-          <button
-            type="button"
-            class="underline"
+          <UiButton
+            variant="secondary"
+            size="sm"
             @click="startEdit(link)"
           >
             Modifier
-          </button>
-          <button
-            type="button"
-            class="text-red-600 underline"
+          </UiButton>
+          <UiButton
+            variant="danger"
+            size="sm"
             @click="remove(link)"
           >
             Retirer
-          </button>
+          </UiButton>
         </div>
       </li>
     </ul>
     <p
       v-else
-      class="text-sm text-gray-500"
+      class="text-sm text-ink/60"
     >
       Aucune ressource associée : cette prestation n'est pas réservable.
     </p>
 
     <form
       v-if="canManage"
-      class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-4"
+      class="grid grid-cols-1 items-end gap-3 sm:grid-cols-4"
       @submit.prevent="save"
     >
-      <select
+      <UiSelect
         v-model="selectedResourceId"
+        label="Ressource"
         :disabled="editing"
-        class="rounded border px-2 py-1"
       >
         <option
           value=""
           disabled
         >
-          Ressource…
+          Choisir…
         </option>
         <option
           v-for="resource in selectableResources"
@@ -240,52 +249,47 @@ async function remove(link: ServiceResourceLink) {
         >
           {{ resource.name }}
         </option>
-      </select>
-      <input
+      </UiSelect>
+      <UiInput
         v-model="priceInput"
-        type="text"
+        label="Prix (surcharge)"
         inputmode="decimal"
-        :placeholder="`Prix (défaut ${centsToInput(service.defaultPriceCents)})`"
-        class="rounded border px-2 py-1"
-      >
-      <input
+        :placeholder="`Défaut ${centsToInput(service.defaultPriceCents)}`"
+      />
+      <UiInput
         v-model="durationInput"
-        type="text"
+        label="Durée (surcharge, min)"
         inputmode="numeric"
-        :placeholder="`Durée (défaut ${service.defaultDurationMinutes} min)`"
-        class="rounded border px-2 py-1"
-      >
+        :placeholder="`Défaut ${service.defaultDurationMinutes}`"
+      />
       <div class="flex gap-2">
-        <button
+        <UiButton
           type="submit"
-          :disabled="submitting"
-          class="rounded bg-gray-900 px-3 py-1 text-white disabled:opacity-50"
+          :loading="submitting"
         >
           {{ editing ? "Enregistrer" : "Associer" }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
           v-if="editing"
-          type="button"
-          class="rounded border px-3 py-1"
+          variant="secondary"
           @click="resetForm"
         >
           Annuler
-        </button>
+        </UiButton>
       </div>
     </form>
     <p
       v-if="canManage && !editing && selectableResources.length === 0"
-      class="text-sm text-gray-500"
+      class="text-sm text-ink/60"
     >
       Aucune ressource à associer : créez-en une dans l'onglet Ressources, ou
       toutes sont déjà associées à cette prestation.
     </p>
-    <p
+    <UiAlert
       v-if="error"
-      role="alert"
-      class="text-sm text-red-600"
+      variant="error"
     >
       {{ error }}
-    </p>
+    </UiAlert>
   </div>
 </template>

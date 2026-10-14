@@ -5,3 +5,4 @@ export { default as UiDialog } from "./components/UiDialog.vue";
 export { default as UiInput } from "./components/UiInput.vue";
 export { default as UiSelect } from "./components/UiSelect.vue";
 export { default as UiTextarea } from "./components/UiTextarea.vue";
+export { default as UiCheckbox } from "./components/UiCheckbox.vue";

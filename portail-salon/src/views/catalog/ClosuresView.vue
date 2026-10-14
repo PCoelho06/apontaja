@@ -2,6 +2,14 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
+import {
+  UiAlert,
+  UiButton,
+  UiCheckbox,
+  UiInput,
+  UiSelect,
+} from "@apontaja/ui-kit";
+
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import {
   parseClosureConflict,
@@ -179,24 +187,24 @@ async function remove(closure: SalonClosure) {
 
 <template>
   <section class="space-y-6">
-    <p
+    <UiAlert
       v-if="!timeZoneValid"
-      role="alert"
-      class="text-red-600"
+      variant="error"
     >
       Le fuseau horaire du salon (« {{ timeZone }} ») n'est pas un identifiant
       valide (ex. Europe/Paris) : la saisie des fermetures est désactivée.
-    </p>
+    </UiAlert>
 
-    <div class="space-y-2">
-      <label class="block text-sm">
-        Fermetures de
-        <select
+    <div class="space-y-3">
+      <div class="w-72">
+        <UiSelect
           v-model="scope"
+          label="Fermetures de"
           :disabled="editingId !== null"
-          class="ml-2 rounded border px-2 py-1"
         >
-          <option value="salon">Tout le salon</option>
+          <option value="salon">
+            Tout le salon
+          </option>
           <option
             v-for="resource in resourceStore.resources"
             :key="resource.resourceId"
@@ -204,51 +212,47 @@ async function remove(closure: SalonClosure) {
           >
             {{ resource.name }}
           </option>
-        </select>
-      </label>
-      <label class="flex items-center gap-2 text-sm">
-        <input
-          v-model="showPast"
-          type="checkbox"
-        >
-        Afficher aussi les fermetures passées
-      </label>
-      <p class="text-sm text-gray-500">
+        </UiSelect>
+      </div>
+      <UiCheckbox
+        v-model="showPast"
+        label="Afficher aussi les fermetures passées"
+      />
+      <p class="text-sm text-ink/60">
         Heures du salon ({{ timeZone }}). Une fermeture du salon bloque toutes
         les ressources ; une fermeture de ressource ne bloque que celle-ci.
       </p>
     </div>
 
-    <p
+    <UiAlert
       v-if="pageError"
-      role="alert"
-      class="text-red-600"
+      variant="error"
     >
       {{ pageError }}
-    </p>
+    </UiAlert>
     <p
       v-if="loading"
-      class="text-gray-500"
+      class="text-sm text-ink/70"
     >
       Chargement…
     </p>
 
     <ul
       v-else-if="sortedClosures.length > 0"
-      class="divide-y rounded-md border"
+      class="divide-y divide-border rounded-md border border-border bg-white"
     >
       <li
         v-for="closure in sortedClosures"
         :key="closure.closureId"
-        class="flex items-center justify-between gap-4 p-3"
+        class="flex items-center justify-between gap-4 px-4 py-3"
       >
         <div>
-          <p class="font-medium">
+          <p class="font-medium text-ink">
             {{ display(closure.startAt) }} → {{ display(closure.endAt) }}
           </p>
           <p
             v-if="closure.reason"
-            class="text-sm text-gray-500"
+            class="text-sm text-ink/60"
           >
             {{ closure.reason }}
           </p>
@@ -257,88 +261,76 @@ async function remove(closure: SalonClosure) {
           v-if="canManage && timeZoneValid"
           class="flex gap-2"
         >
-          <button
-            type="button"
-            class="text-sm underline"
+          <UiButton
+            variant="secondary"
+            size="sm"
             @click="startEdit(closure)"
           >
             Modifier
-          </button>
-          <button
-            type="button"
-            class="text-sm text-red-600 underline"
+          </UiButton>
+          <UiButton
+            variant="danger"
+            size="sm"
             @click="remove(closure)"
           >
             Supprimer
-          </button>
+          </UiButton>
         </div>
       </li>
     </ul>
     <p
       v-else
-      class="text-gray-500"
+      class="text-ink/60"
     >
       Aucune fermeture.
     </p>
 
     <form
       v-if="canManage && timeZoneValid"
-      class="space-y-3 rounded-md border p-4"
+      class="space-y-4 rounded-md border border-border bg-white p-4"
       @submit.prevent="submit"
     >
-      <h2 class="font-semibold">
+      <h2 class="text-lg font-medium text-ink">
         {{ editingId ? "Modifier la fermeture" : "Nouvelle fermeture" }}
       </h2>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label class="block text-sm">
-          Début
-          <input
-            v-model="form.start"
-            type="datetime-local"
-            required
-            class="mt-1 block w-full rounded border px-2 py-1"
-          >
-        </label>
-        <label class="block text-sm">
-          Fin
-          <input
-            v-model="form.end"
-            type="datetime-local"
-            required
-            class="mt-1 block w-full rounded border px-2 py-1"
-          >
-        </label>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <UiInput
+          v-model="form.start"
+          type="datetime-local"
+          label="Début"
+          required
+        />
+        <UiInput
+          v-model="form.end"
+          type="datetime-local"
+          label="Fin"
+          required
+        />
       </div>
 
-      <label class="block text-sm">
-        Motif (optionnel)
-        <input
-          v-model="form.reason"
-          type="text"
-          maxlength="255"
-          class="mt-1 block w-full rounded border px-2 py-1"
-        >
-      </label>
+      <UiInput
+        v-model="form.reason"
+        label="Motif (optionnel)"
+        maxlength="255"
+      />
 
-      <p
+      <UiAlert
         v-if="formError"
-        role="alert"
-        class="text-sm text-red-600"
+        variant="error"
       >
         {{ formError }}
-      </p>
+      </UiAlert>
 
-      <div
+      <UiAlert
         v-if="conflict"
-        role="alert"
-        class="space-y-2 rounded-md border border-red-300 bg-red-50 p-3 text-sm"
+        variant="error"
       >
-        <p class="font-medium text-red-700">
+        <p class="font-medium">
           Fermeture impossible : {{ conflict.count }} rendez-vous actif(s)
           recouvrent cette période. Annulez-les ou déplacez-les d'abord.
         </p>
-        <ul class="list-disc pl-5">
+        <ul class="mt-1 list-disc pl-5">
           <li
             v-for="a in conflict.appointments"
             :key="a.appointmentId"
@@ -347,32 +339,33 @@ async function remove(closure: SalonClosure) {
             {{ resourceName(a.resourceId) }}
           </li>
         </ul>
-        <p v-if="conflict.count > conflict.appointments.length">
+        <p
+          v-if="conflict.count > conflict.appointments.length"
+          class="mt-1"
+        >
           … et {{ conflict.count - conflict.appointments.length }} autre(s).
         </p>
-      </div>
+      </UiAlert>
 
       <div class="flex gap-2">
-        <button
+        <UiButton
           type="submit"
-          :disabled="submitting"
-          class="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          :loading="submitting"
         >
           {{ editingId ? "Enregistrer" : "Ajouter" }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
           v-if="editingId"
-          type="button"
-          class="rounded border px-3 py-1.5 text-sm"
+          variant="secondary"
           @click="resetForm"
         >
           Annuler
-        </button>
+        </UiButton>
       </div>
     </form>
     <p
       v-else-if="!canManage"
-      class="text-sm text-gray-500"
+      class="text-sm text-ink/60"
     >
       Lecture seule : seuls les gérants et propriétaires modifient les
       fermetures.

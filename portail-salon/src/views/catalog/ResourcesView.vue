@@ -2,6 +2,8 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
+import { UiAlert, UiButton, UiInput, UiSelect } from "@apontaja/ui-kit";
+
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errorMessage";
@@ -153,34 +155,33 @@ async function remove(resource: SalonResource) {
 
 <template>
   <section class="space-y-6">
-    <p
+    <UiAlert
       v-if="pageError"
-      role="alert"
-      class="text-red-600"
+      variant="error"
     >
       {{ pageError }}
-    </p>
+    </UiAlert>
     <p
       v-if="loading"
-      class="text-gray-500"
+      class="text-sm text-ink/70"
     >
       Chargement…
     </p>
 
     <ul
       v-else-if="store.resources.length > 0"
-      class="divide-y rounded-md border"
+      class="divide-y divide-border rounded-md border border-border bg-white"
     >
       <li
         v-for="resource in store.resources"
         :key="resource.resourceId"
-        class="flex items-center justify-between gap-4 p-3"
+        class="flex items-center justify-between gap-4 px-4 py-3"
       >
         <div>
-          <p class="font-medium">
+          <p class="font-medium text-ink">
             {{ resource.name }}
           </p>
-          <p class="text-sm text-gray-500">
+          <p class="text-sm text-ink/60">
             {{ TYPE_LABELS[resource.type] }}
             <template v-if="resource.staffMembershipId">
               · lié à {{ memberLabel(resource.staffMembershipId) }}
@@ -191,26 +192,26 @@ async function remove(resource: SalonResource) {
           v-if="canManage"
           class="flex gap-2"
         >
-          <button
-            type="button"
-            class="text-sm underline"
+          <UiButton
+            variant="secondary"
+            size="sm"
             @click="startEdit(resource)"
           >
             Modifier
-          </button>
-          <button
-            type="button"
-            class="text-sm text-red-600 underline"
+          </UiButton>
+          <UiButton
+            variant="danger"
+            size="sm"
             @click="remove(resource)"
           >
             Supprimer
-          </button>
+          </UiButton>
         </div>
       </li>
     </ul>
     <div
       v-else
-      class="space-y-1 text-gray-500"
+      class="space-y-1 text-ink/60"
     >
       <p>Aucune ressource pour le moment.</p>
       <p class="text-sm">
@@ -222,96 +223,81 @@ async function remove(resource: SalonResource) {
 
     <form
       v-if="canManage"
-      class="space-y-3 rounded-md border p-4"
+      class="space-y-4 rounded-md border border-border bg-white p-4"
       @submit.prevent="submit"
     >
-      <h2 class="font-semibold">
+      <h2 class="text-lg font-medium text-ink">
         {{ editingId ? "Modifier la ressource" : "Nouvelle ressource" }}
       </h2>
 
-      <label class="block text-sm">
-        Nom
-        <input
-          v-model="form.name"
-          type="text"
-          maxlength="100"
-          required
-          class="mt-1 block w-full rounded border px-2 py-1"
-        >
-        <span
-          v-if="fieldErrors.name"
-          class="text-red-600"
-        >
-          {{ fieldErrors.name }}
-        </span>
-      </label>
+      <UiInput
+        v-model="form.name"
+        label="Nom"
+        maxlength="100"
+        required
+        :error="fieldErrors.name"
+      />
 
-      <label class="block text-sm">
-        Type
-        <select
-          v-model="form.type"
-          class="mt-1 block w-full rounded border px-2 py-1"
-        >
-          <option value="EMPLOYEE">Collaborateur</option>
-          <option value="MACHINE">Machine</option>
-        </select>
-      </label>
-
-      <label
-        v-if="form.type === 'EMPLOYEE'"
-        class="block text-sm"
+      <UiSelect
+        v-model="form.type"
+        label="Type"
       >
-        Membre de l'équipe (optionnel)
-        <select
-          v-model="form.staffMembershipId"
-          class="mt-1 block w-full rounded border px-2 py-1"
-        >
-          <option value="">Aucun</option>
-          <option
-            v-for="member in selectableMembers"
-            :key="member.staffMembershipId"
-            :value="member.staffMembershipId"
-          >
-            {{ memberName(member) }} · {{ member.role }}
-          </option>
-        </select>
-        <span
-          v-if="selectableMembers.length === 0"
-          class="text-xs text-gray-500"
-        >
-          Tous les membres de l'équipe sont déjà liés à une ressource.
-        </span>
-      </label>
+        <option value="EMPLOYEE">
+          Collaborateur
+        </option>
+        <option value="MACHINE">
+          Machine
+        </option>
+      </UiSelect>
 
-      <p
+      <UiSelect
+        v-if="form.type === 'EMPLOYEE'"
+        v-model="form.staffMembershipId"
+        label="Membre de l'équipe (optionnel)"
+        :hint="
+          selectableMembers.length === 0
+            ? 'Tous les membres de l\'équipe sont déjà liés à une ressource.'
+            : undefined
+        "
+      >
+        <option value="">
+          Aucun
+        </option>
+        <option
+          v-for="member in selectableMembers"
+          :key="member.staffMembershipId"
+          :value="member.staffMembershipId"
+        >
+          {{ memberName(member) }} · {{ member.role }}
+        </option>
+      </UiSelect>
+
+      <UiAlert
         v-if="formError"
-        role="alert"
-        class="text-sm text-red-600"
+        variant="error"
       >
         {{ formError }}
-      </p>
+      </UiAlert>
 
       <div class="flex gap-2">
-        <button
+        <UiButton
           type="submit"
-          :disabled="submitting"
-          class="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          :loading="submitting"
         >
           {{ editingId ? "Enregistrer" : "Ajouter" }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
           v-if="editingId"
-          type="button"
-          class="rounded border px-3 py-1.5 text-sm"
+          variant="secondary"
           @click="resetForm"
         >
           Annuler
-        </button>
+        </UiButton>
       </div>
     </form>
     <p
       v-else
-      class="text-sm text-gray-500"
+      class="text-sm text-ink/60"
     >
       Lecture seule : seuls les gérants et propriétaires modifient le catalogue.
     </p>

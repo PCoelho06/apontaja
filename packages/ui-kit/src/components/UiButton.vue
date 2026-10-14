@@ -2,9 +2,16 @@
 type Variant = "primary" | "secondary" | "danger";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium " +
+  "inline-flex items-center justify-center gap-2 rounded-md font-medium " +
   "transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-wine " +
   "focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
+type Size = "md" | "sm";
+
+const SIZE_CLASSES: Record<Size, string> = {
+  md: "px-4 py-2 text-sm",
+  sm: "px-2.5 py-1 text-xs",
+};
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary: "bg-wine text-paper hover:bg-wine-hover",
@@ -15,11 +22,18 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 withDefaults(
   defineProps<{
     variant?: Variant;
+    size?: Size;
     type?: "button" | "submit" | "reset";
     loading?: boolean;
     disabled?: boolean;
   }>(),
-  { variant: "primary", type: "button", loading: false, disabled: false },
+  {
+    variant: "primary",
+    size: "md",
+    type: "button",
+    loading: false,
+    disabled: false,
+  },
 );
 </script>
 
@@ -28,7 +42,7 @@ withDefaults(
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
-    :class="[BASE, VARIANT_CLASSES[variant]]"
+    :class="[BASE, SIZE_CLASSES[size], VARIANT_CLASSES[variant]]"
   >
     <span
       v-if="loading"
