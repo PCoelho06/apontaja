@@ -41,36 +41,18 @@ export const useCustomerStore = defineStore("customer", {
       );
       this.loadedSalonId = salonId;
     },
-        /** Crée un client, recharge la liste et renvoie le profil créé. */
+    /** Crée un client (le back répond 201 avec le profil créé) puis recharge la liste. */
     async createCustomer(
       salonId: string,
       payload: NewCustomer,
     ): Promise<Customer> {
-      const created = await apiPost<Partial<Customer> | undefined>(
+      const created = await apiPost<Customer>(
         `/api/salons/${salonId}/customers`,
         payload,
         requireToken(),
       );
       await this.fetchCustomers(salonId);
-      const byId = created?.customerProfileId
-        ? this.customers.find(
-            (c) => c.customerProfileId === created.customerProfileId,
-          )
-        : undefined;
-      // Repli si la réponse ne contient pas l'identifiant : le plus récent du même nom.
-      const found =
-        byId ??
-        this.customers
-          .filter(
-            (c) =>
-              c.firstName === payload.firstName &&
-              c.lastName === payload.lastName,
-          )
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-      if (!found) {
-        throw new Error("Client créé mais introuvable dans la liste.");
-      }
-      return found;
+      return created;
     },
   },
 });

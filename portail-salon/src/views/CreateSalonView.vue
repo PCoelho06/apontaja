@@ -6,6 +6,7 @@ import AuthLayout from "@/layouts/AuthLayout.vue";
 import AuthTextField from "@/components/AuthTextField.vue";
 import { ApiError } from "@/lib/apiClient";
 import { useSalonStore } from "@/stores/salon";
+import { UiSelect } from "@apontaja/ui-kit";
 
 const router = useRouter();
 const salonStore = useSalonStore();
@@ -21,6 +22,15 @@ const phone = ref("");
 const fieldErrors = ref<Record<string, string>>({});
 const generalError = ref<string | null>(null);
 const isSubmitting = ref(false);
+
+// Identifiants IANA proposés par le navigateur ; "Europe/Lisbon" reste toujours disponible.
+const timezones = (() => {
+  const zones =
+    typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : [];
+  return zones.includes("Europe/Lisbon") ? zones : ["Europe/Lisbon", ...zones];
+})();
 
 async function handleSubmit() {
   fieldErrors.value = {};
@@ -97,12 +107,19 @@ async function handleSubmit() {
         label="Pays"
         :error="fieldErrors.country"
       />
-      <AuthTextField
-        id="timezone"
+      <UiSelect
         v-model="timezone"
-        label="Fuseau horaire (IANA)"
+        label="Fuseau horaire"
         :error="fieldErrors.timezone"
-      />
+      >
+        <option
+          v-for="zone in timezones"
+          :key="zone"
+          :value="zone"
+        >
+          {{ zone }}
+        </option>
+      </UiSelect>
       <AuthTextField
         id="phone"
         v-model="phone"

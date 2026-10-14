@@ -59,7 +59,7 @@ class ResourceManagementServiceTest {
     void create_rejette_un_nom_deja_pris() {
         when(resourceRepository.findAliveBySalonIdAndName(salonId, "Chaise 1")).thenReturn(Optional.of(existing("x")));
 
-        assertThatThrownBy(() -> service.create(new CreateResourceCommand(salonId, " Chaise 1 ", "EMPLOYEE")))
+        assertThatThrownBy(() -> service.create(new CreateResourceCommand(salonId, " Chaise 1 ", "EMPLOYEE"), null))
                 .isInstanceOf(ResourceNameAlreadyUsedException.class);
 
         verify(resourceRepository, never()).save(any());
@@ -67,7 +67,7 @@ class ResourceManagementServiceTest {
 
     @Test
     void create_rejette_un_type_invalide() {
-        assertThatThrownBy(() -> service.create(new CreateResourceCommand(salonId, "Chaise", "ROBOT")))
+        assertThatThrownBy(() -> service.create(new CreateResourceCommand(salonId, "Chaise", "ROBOT"), null))
                 .isInstanceOf(InvalidResourceTypeException.class);
     }
 
@@ -78,7 +78,7 @@ class ResourceManagementServiceTest {
         when(resourceRepository.findAliveBySalonIdAndName(salonId, "Chaise 1")).thenReturn(Optional.of(resource));
         when(resourceRepository.save(resource)).thenReturn(resource);
 
-        ResourceSummary result = service.update(salonId, resource.getId(), "Chaise 1", "MACHINE");
+        ResourceSummary result = service.update(salonId, resource.getId(), "Chaise 1", "MACHINE", null);
 
         assertThat(result.type()).isEqualTo("MACHINE");
     }

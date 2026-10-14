@@ -19,7 +19,12 @@ const PAYLOAD = {
 };
 
 function customer(id: string, createdAt: string) {
-  return { customerProfileId: id, firstName: "Alice", lastName: "Martin", createdAt };
+  return {
+    customerProfileId: id,
+    firstName: "Alice",
+    lastName: "Martin",
+    createdAt,
+  };
 }
 
 describe("customer store, création", () => {
@@ -38,28 +43,27 @@ describe("customer store, création", () => {
 
     const created = await useCustomerStore().createCustomer("s1", PAYLOAD);
 
-    expect(apiPost).toHaveBeenCalledWith("/api/salons/s1/customers", PAYLOAD, "tok");
-    expect(created.customerProfileId).toBe("c2");
-  });
-
-  it("retrouve le dernier profil du même nom si la réponse ne contient pas l'identifiant", async () => {
-    vi.mocked(apiPost).mockResolvedValue(undefined);
-    vi.mocked(apiGet).mockResolvedValue([
-      customer("c1", "2026-01-01T00:00:00Z"),
-      customer("c2", "2026-02-01T00:00:00Z"),
-    ]);
-
-    const created = await useCustomerStore().createCustomer("s1", PAYLOAD);
-
-    expect(created.customerProfileId).toBe("c2");
-  });
-
-  it("échoue si le client est introuvable après création", async () => {
-    vi.mocked(apiPost).mockResolvedValue(undefined);
-    vi.mocked(apiGet).mockResolvedValue([]);
-
-    await expect(useCustomerStore().createCustomer("s1", PAYLOAD)).rejects.toThrow(
-      "introuvable",
+    expect(apiPost).toHaveBeenCalledWith(
+      "/api/salons/s1/customers",
+      PAYLOAD,
+      "tok",
     );
+    expect(created.customerProfileId).toBe("c2");
+  });
+
+  it("renvoie le profil créé par le back puis recharge la liste", async () => {
+    const created = customer("c2", "2026-02-01T00:00:00Z");
+    vi.mocked(apiPost).mockResolvedValue(created);
+    vi.mocked(apiGet).mockResolvedValue([created]);
+
+    const result = await useCustomerStore().createCustomer("s1", PAYLOAD);
+
+    expect(apiPost).toHaveBeenCalledWith(
+      "/api/salons/s1/customers",
+      PAYLOAD,
+      "tok",
+    );
+    expect(apiGet).toHaveBeenCalledWith("/api/salons/s1/customers", "tok");
+    expect(result).toEqual(created);
   });
 });
