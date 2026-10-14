@@ -2,6 +2,8 @@
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
+import { UiAlert, UiButton, UiSelect } from "@apontaja/ui-kit";
+
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import { errorMessage } from "@/lib/errorMessage";
 import {
@@ -15,6 +17,12 @@ import {
 } from "@/lib/schedule";
 import { useResourceStore } from "@/stores/resource";
 import { useScheduleStore } from "@/stores/schedule";
+
+// Champs d'heure compacts (le libellé est porté par aria-label) : mêmes tokens que le ui-kit.
+const TIME_INPUT_CLASS =
+  "rounded-md border border-border bg-white px-2 py-1 text-sm text-ink " +
+  "focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine " +
+  "disabled:cursor-not-allowed disabled:opacity-50";
 
 const route = useRoute();
 const store = useScheduleStore();
@@ -120,15 +128,16 @@ async function save() {
 
 <template>
   <section class="space-y-6">
-    <div class="space-y-2">
-      <label class="block text-sm">
-        Horaires de
-        <select
+    <div class="space-y-3">
+      <div class="w-72">
+        <UiSelect
           v-model="scope"
+          label="Horaires de"
           :disabled="dirty"
-          class="ml-2 rounded border px-2 py-1"
         >
-          <option value="salon">Tout le salon</option>
+          <option value="salon">
+            Tout le salon
+          </option>
           <option
             v-for="resource in resourceStore.resources"
             :key="resource.resourceId"
@@ -136,25 +145,22 @@ async function save() {
           >
             {{ resource.name }}
           </option>
-        </select>
-      </label>
-      <p
-        v-if="dirty"
-        class="text-xs text-amber-700"
-      >
+        </UiSelect>
+      </div>
+      <UiAlert v-if="dirty">
         Modifications non enregistrées : enregistrez ou annulez avant de changer
         de périmètre.
-      </p>
+      </UiAlert>
       <p
         v-if="scope === 'salon'"
-        class="text-sm text-gray-500"
+        class="text-sm text-ink/60"
       >
         Heures locales du salon. Sans aucune plage, le salon n'est jamais ouvert
         (aucune réservation possible).
       </p>
       <p
         v-else
-        class="text-sm text-gray-500"
+        class="text-sm text-ink/60"
       >
         Sans aucune plage, la ressource suit les horaires du salon. Avec des
         plages, elle n'est disponible que sur celles-ci (bornées par les horaires
@@ -164,7 +170,7 @@ async function save() {
 
     <p
       v-if="loading"
-      class="text-gray-500"
+      class="text-sm text-ink/70"
     >
       Chargement…
     </p>
@@ -176,96 +182,92 @@ async function save() {
       <div
         v-for="day in DAYS"
         :key="day.code"
-        class="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-start"
+        class="flex flex-col gap-2 rounded-md border border-border bg-white p-3 sm:flex-row sm:items-start"
       >
-        <p class="w-28 shrink-0 font-medium">
+        <p class="w-28 shrink-0 font-medium text-ink">
           {{ day.label }}
         </p>
         <div class="flex-1 space-y-2">
           <p
             v-if="week[day.code].length === 0"
-            class="text-sm text-gray-500"
+            class="text-sm text-ink/60"
           >
             Aucune plage
           </p>
           <div
             v-for="(range, index) in week[day.code]"
             :key="index"
-            class="flex items-center gap-2"
+            class="flex flex-wrap items-center gap-2"
           >
             <input
               v-model="range.start"
               type="time"
               :disabled="!canManage"
               :aria-label="`${day.label}, début de la plage ${index + 1}`"
-              class="rounded border px-2 py-1"
+              :class="TIME_INPUT_CLASS"
             >
-            <span>–</span>
+            <span class="text-ink/60">–</span>
             <input
               v-model="range.end"
               type="time"
               :disabled="!canManage"
               :aria-label="`${day.label}, fin de la plage ${index + 1}`"
-              class="rounded border px-2 py-1"
+              :class="TIME_INPUT_CLASS"
             >
-            <button
+            <UiButton
               v-if="canManage"
-              type="button"
-              class="text-sm text-red-600 underline"
+              variant="danger"
+              size="sm"
               @click="removeRange(day.code, index)"
             >
               Retirer
-            </button>
+            </UiButton>
           </div>
-          <button
+          <UiButton
             v-if="canManage"
-            type="button"
-            class="text-sm underline"
+            variant="secondary"
+            size="sm"
             @click="addRange(day.code)"
           >
             Ajouter une plage
-          </button>
+          </UiButton>
         </div>
       </div>
 
-      <p
+      <UiAlert
         v-if="error"
-        role="alert"
-        class="text-sm text-red-600"
+        variant="error"
       >
         {{ error }}
-      </p>
-      <p
+      </UiAlert>
+      <UiAlert
         v-if="saved"
-        class="text-sm text-green-700"
+        variant="success"
       >
         Horaires enregistrés.
-      </p>
+      </UiAlert>
 
       <div
         v-if="canManage"
         class="flex flex-wrap gap-2"
       >
-        <button
-          type="button"
-          :disabled="!dirty || saving"
-          class="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+        <UiButton
+          :disabled="!dirty"
+          :loading="saving"
           @click="save"
         >
           Enregistrer
-        </button>
-        <button
-          type="button"
+        </UiButton>
+        <UiButton
+          variant="secondary"
           :disabled="!dirty || saving"
-          class="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
           @click="load"
         >
           Annuler les modifications
-        </button>
-        <button
-          type="button"
+        </UiButton>
+        <UiButton
+          variant="secondary"
           :disabled="saving"
-          class="rounded border px-3 py-1.5 text-sm"
           @click="clearWeek"
         >
           {{
@@ -273,11 +275,11 @@ async function save() {
               ? "Fermer toute la semaine"
               : "Suivre les horaires du salon"
           }}
-        </button>
+        </UiButton>
       </div>
       <p
         v-else
-        class="text-sm text-gray-500"
+        class="text-sm text-ink/60"
       >
         Lecture seule : seuls les gérants et propriétaires modifient les horaires.
       </p>

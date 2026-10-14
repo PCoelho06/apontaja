@@ -2,6 +2,8 @@
 import { computed, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
+import { UiAlert } from "@apontaja/ui-kit";
+
 import { errorMessage } from "@/lib/errorMessage";
 import { useSalonStore } from "@/stores/salon";
 
@@ -33,67 +35,68 @@ watch(
 );
 
 const tabClass =
-  "rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100";
-const activeTabClass = "!bg-gray-900 !text-white";
+  "rounded-md px-3 py-1.5 text-sm font-medium text-ink/70 hover:bg-ink/5";
+const activeTabClass = "bg-wine! text-paper! hover:bg-wine!";
 </script>
 
 <template>
-  <main class="mx-auto max-w-4xl space-y-6 p-6">
-    <header class="space-y-3">
-      <RouterLink
-        :to="{ name: 'salon-detail', params: { salonId } }"
-        class="text-sm text-gray-500 hover:underline"
-      >
-        ← {{ salonStore.currentSalon?.name ?? "Salon" }}
-      </RouterLink>
-      <h1 class="text-2xl font-semibold">
-        Catalogue
-      </h1>
-      <nav class="flex gap-2">
+  <main class="min-h-screen bg-paper px-6 py-8">
+    <div class="mx-auto max-w-4xl space-y-6">
+      <header class="space-y-3">
         <RouterLink
-          :to="{ name: 'catalog-resources', params: { salonId } }"
-          :class="tabClass"
-          :active-class="activeTabClass"
+          :to="{ name: 'salon-detail', params: { salonId } }"
+          class="text-sm text-wine hover:underline"
         >
-          Ressources
+          ← {{ salonStore.currentSalon?.name ?? "Salon" }}
         </RouterLink>
-        <RouterLink
-          :to="{ name: 'catalog-services', params: { salonId } }"
-          :class="tabClass"
-          :active-class="activeTabClass"
-        >
-          Prestations
-        </RouterLink>
-        <RouterLink
-          :to="{ name: 'catalog-schedule', params: { salonId } }"
-          :class="tabClass"
-          :active-class="activeTabClass"
-        >
-          Horaires
-        </RouterLink>
-        <RouterLink
-          :to="{ name: 'catalog-closures', params: { salonId } }"
-          :class="tabClass"
-          :active-class="activeTabClass"
-        >
-          Fermetures
-        </RouterLink>
-      </nav>
-    </header>
+        <h1 class="font-display text-2xl text-ink">
+          Catalogue
+        </h1>
+        <nav class="flex flex-wrap gap-2">
+          <RouterLink
+            :to="{ name: 'catalog-resources', params: { salonId } }"
+            :class="tabClass"
+            :active-class="activeTabClass"
+          >
+            Ressources
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'catalog-services', params: { salonId } }"
+            :class="tabClass"
+            :active-class="activeTabClass"
+          >
+            Prestations
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'catalog-schedule', params: { salonId } }"
+            :class="tabClass"
+            :active-class="activeTabClass"
+          >
+            Horaires
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'catalog-closures', params: { salonId } }"
+            :class="tabClass"
+            :active-class="activeTabClass"
+          >
+            Fermetures
+          </RouterLink>
+        </nav>
+      </header>
 
-    <p
-      v-if="error"
-      role="alert"
-      class="text-red-600"
-    >
-      {{ error }}
-    </p>
-    <RouterView v-else-if="ready" />
-    <p
-      v-else
-      class="text-gray-500"
-    >
-      Chargement…
-    </p>
+      <UiAlert
+        v-if="error"
+        variant="error"
+      >
+        {{ error }}
+      </UiAlert>
+      <RouterView v-else-if="ready" />
+      <p
+        v-else
+        class="text-sm text-ink/70"
+      >
+        Chargement…
+      </p>
+    </div>
   </main>
 </template>

@@ -2,6 +2,13 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
+import {
+  UiAlert,
+  UiButton,
+  UiInput,
+  UiTextarea,
+} from "@apontaja/ui-kit";
+
 import ServiceLinksPanel from "@/components/catalog/ServiceLinksPanel.vue";
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import { ApiError } from "@/lib/apiClient";
@@ -141,68 +148,67 @@ function toggleLinks(service: SalonServiceItem) {
 
 <template>
   <section class="space-y-6">
-    <p
+    <UiAlert
       v-if="pageError"
-      role="alert"
-      class="text-red-600"
+      variant="error"
     >
       {{ pageError }}
-    </p>
+    </UiAlert>
     <p
       v-if="loading"
-      class="text-gray-500"
+      class="text-sm text-ink/70"
     >
       Chargement…
     </p>
 
     <ul
       v-else-if="store.services.length > 0"
-      class="divide-y rounded-md border"
+      class="divide-y divide-border rounded-md border border-border bg-white"
     >
       <li
         v-for="service in store.services"
         :key="service.serviceId"
-        class="space-y-3 p-3"
+        class="space-y-3 px-4 py-3"
       >
         <div class="flex items-start justify-between gap-4">
           <div>
-            <p class="font-medium">
+            <p class="font-medium text-ink">
               {{ service.name }}
             </p>
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-ink/60">
               {{ formatDuration(service.defaultDurationMinutes) }} ·
               {{ formatCents(service.defaultPriceCents) }}
             </p>
             <p
               v-if="service.description"
-              class="text-sm text-gray-600"
+              class="text-sm text-ink/70"
             >
               {{ service.description }}
             </p>
           </div>
-          <div class="flex shrink-0 gap-2">
-            <button
-              type="button"
-              class="text-sm underline"
+          <div class="flex shrink-0 flex-wrap justify-end gap-2">
+            <UiButton
+              variant="secondary"
+              size="sm"
               @click="toggleLinks(service)"
             >
               {{ expandedId === service.serviceId ? "Masquer" : "Ressources" }}
-            </button>
+            </UiButton>
             <template v-if="canManage">
-              <button
-                type="button"
-                class="text-sm underline"
+              <UiButton
+                variant="secondary"
+                size="sm"
                 @click="startEdit(service)"
               >
                 Modifier
-              </button>
-              <button
-                type="button"
-                class="text-sm text-red-600 underline"
+              </UiButton>
+              <UiButton
+                variant="danger"
+                size="sm"
                 @click="remove(service)"
               >
                 Supprimer
-              </button>
+              </UiButton>
             </template>
           </div>
         </div>
@@ -217,109 +223,76 @@ function toggleLinks(service: SalonServiceItem) {
     </ul>
     <p
       v-else
-      class="text-gray-500"
+      class="text-ink/60"
     >
       Aucune prestation pour le moment.
     </p>
 
     <form
       v-if="canManage"
-      class="space-y-3 rounded-md border p-4"
+      class="space-y-4 rounded-md border border-border bg-white p-4"
       @submit.prevent="submit"
     >
-      <h2 class="font-semibold">
+      <h2 class="text-lg font-medium text-ink">
         {{ editingId ? "Modifier la prestation" : "Nouvelle prestation" }}
       </h2>
 
-      <label class="block text-sm">
-        Nom
-        <input
-          v-model="form.name"
-          type="text"
-          maxlength="100"
-          class="mt-1 block w-full rounded border px-2 py-1"
-        >
-        <span
-          v-if="fieldErrors.name"
-          class="text-red-600"
-        >
-          {{ fieldErrors.name }}
-        </span>
-      </label>
+      <UiInput
+        v-model="form.name"
+        label="Nom"
+        maxlength="100"
+        :error="fieldErrors.name"
+      />
 
-      <label class="block text-sm">
-        Description (optionnelle)
-        <textarea
-          v-model="form.description"
-          maxlength="1000"
-          rows="2"
-          class="mt-1 block w-full rounded border px-2 py-1"
+      <UiTextarea
+        v-model="form.description"
+        label="Description (optionnelle)"
+        maxlength="1000"
+        rows="2"
+      />
+
+      <div class="grid grid-cols-2 gap-4">
+        <UiInput
+          v-model="form.duration"
+          label="Durée (minutes)"
+          inputmode="numeric"
+          :error="fieldErrors.defaultDurationMinutes"
         />
-      </label>
-
-      <div class="grid grid-cols-2 gap-3">
-        <label class="block text-sm">
-          Durée (minutes)
-          <input
-            v-model="form.duration"
-            type="text"
-            inputmode="numeric"
-            class="mt-1 block w-full rounded border px-2 py-1"
-          >
-          <span
-            v-if="fieldErrors.defaultDurationMinutes"
-            class="text-red-600"
-          >
-            {{ fieldErrors.defaultDurationMinutes }}
-          </span>
-        </label>
-        <label class="block text-sm">
-          Prix (€)
-          <input
-            v-model="form.price"
-            type="text"
-            inputmode="decimal"
-            placeholder="25,00"
-            class="mt-1 block w-full rounded border px-2 py-1"
-          >
-          <span
-            v-if="fieldErrors.defaultPriceCents"
-            class="text-red-600"
-          >
-            {{ fieldErrors.defaultPriceCents }}
-          </span>
-        </label>
+        <UiInput
+          v-model="form.price"
+          label="Prix (€)"
+          inputmode="decimal"
+          placeholder="25,00"
+          :error="fieldErrors.defaultPriceCents"
+        />
       </div>
 
-      <p
+      <UiAlert
         v-if="formError"
-        role="alert"
-        class="text-sm text-red-600"
+        variant="error"
       >
         {{ formError }}
-      </p>
+      </UiAlert>
 
       <div class="flex gap-2">
-        <button
+        <UiButton
           type="submit"
-          :disabled="submitting"
-          class="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          :loading="submitting"
         >
           {{ editingId ? "Enregistrer" : "Ajouter" }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
           v-if="editingId"
-          type="button"
-          class="rounded border px-3 py-1.5 text-sm"
+          variant="secondary"
           @click="resetForm"
         >
           Annuler
-        </button>
+        </UiButton>
       </div>
     </form>
     <p
       v-else
-      class="text-sm text-gray-500"
+      class="text-sm text-ink/60"
     >
       Lecture seule : seuls les gérants et propriétaires modifient le catalogue.
     </p>

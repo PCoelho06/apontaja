@@ -16,9 +16,9 @@ Paquet consommé **en source** (pas d'étape de build). Dans une application :
 
 ## Composants
 
-`UiButton` (primaire, secondaire, danger, chargement) · `UiInput`, `UiSelect`, `UiTextarea`
+`UiButton` (primaire, secondaire, danger, chargement, size) · `UiInput`, `UiSelect`, `UiTextarea`
 (libellé, aide, erreur, `v-model`) · `UiAlert` · `UiBadge` · `UiDialog` (`<dialog>` natif,
-`v-model:open`). Un composant n'est ajouté que lorsqu'un écran en a besoin.
+`v-model:open`), `UiCheckbox`. Un composant n'est ajouté que lorsqu'un écran en a besoin.
 
 ## Règles
 
