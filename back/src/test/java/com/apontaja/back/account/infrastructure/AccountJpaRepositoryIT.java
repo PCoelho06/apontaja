@@ -28,10 +28,10 @@ class AccountJpaRepositoryIT {
     @Test
     void un_meme_email_ne_peut_pas_etre_reutilise_par_deux_comptes_vivants() {
         Instant now = Instant.now();
-        accountJpaRepository.save(new Account(UUID.randomUUID(), "alice@example.com", "hash-1", now));
+        accountJpaRepository.save(new Account(UUID.randomUUID(), "alice@example.com", "Test", "User", "hash-1", now));
         accountJpaRepository.flush();
 
-        Account duplicate = new Account(UUID.randomUUID(), "alice@example.com", "hash-2", now);
+        Account duplicate = new Account(UUID.randomUUID(), "alice@example.com", "Test", "User", "hash-2", now);
 
         assertThatThrownBy(() -> {
             accountJpaRepository.save(duplicate);
@@ -42,12 +42,12 @@ class AccountJpaRepositoryIT {
     @Test
     void un_email_libere_par_soft_delete_redevient_utilisable() {
         Instant now = Instant.now();
-        Account first = new Account(UUID.randomUUID(), "bob@example.com", "hash-1", now);
+        Account first = new Account(UUID.randomUUID(), "bob@example.com", "Test", "User", "hash-1", now);
         first.softDelete(now);
         accountJpaRepository.save(first);
         accountJpaRepository.flush();
 
-        Account second = new Account(UUID.randomUUID(), "bob@example.com", "hash-2", now);
+        Account second = new Account(UUID.randomUUID(), "bob@example.com", "Test", "User", "hash-2", now);
         accountJpaRepository.save(second);
         accountJpaRepository.flush();
 
@@ -57,7 +57,7 @@ class AccountJpaRepositoryIT {
     @Test
     void find_alive_by_id_retourne_un_compte_vivant() {
         Instant now = Instant.now();
-        Account account = new Account(UUID.randomUUID(), "david@example.com", "hash", now);
+        Account account = new Account(UUID.randomUUID(), "david@example.com", "Test", "User", "hash", now);
 
         accountJpaRepository.save(account);
         accountJpaRepository.flush();
@@ -68,7 +68,7 @@ class AccountJpaRepositoryIT {
     @Test
     void find_alive_by_id_ignore_les_comptes_supprimes() {
         Instant now = Instant.now();
-        Account deleted = new Account(UUID.randomUUID(), "eric@example.com", "hash", now);
+        Account deleted = new Account(UUID.randomUUID(), "eric@example.com", "Test", "User", "hash", now);
 
         deleted.softDelete(now);
 
@@ -81,7 +81,7 @@ class AccountJpaRepositoryIT {
     @Test
     void find_alive_by_email_ignore_les_comptes_supprimes() {
         Instant now = Instant.now();
-        Account deleted = new Account(UUID.randomUUID(), "carol@example.com", "hash", now);
+        Account deleted = new Account(UUID.randomUUID(), "carol@example.com", "Test", "User", "hash", now);
         deleted.softDelete(now);
         accountJpaRepository.save(deleted);
         accountJpaRepository.flush();

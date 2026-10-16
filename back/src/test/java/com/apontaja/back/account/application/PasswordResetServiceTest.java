@@ -83,7 +83,7 @@ class PasswordResetServiceTest {
 
         @Test
         void requestReset_invalide_les_anciens_tokens_de_reset_actifs() {
-                Account account = new Account(accountId, "bob@example.com", "hash", fixedNow);
+                Account account = new Account(accountId, "bob@example.com", "Test", "User", "hash", fixedNow);
 
                 AccountToken existingToken = new AccountToken(UUID.randomUUID(), accountId,
                                 AccountTokenType.PASSWORD_RESET, "old-hashed-token",
@@ -109,7 +109,7 @@ class PasswordResetServiceTest {
 
         @Test
         void requestReset_cree_un_token_et_envoie_le_lien_si_le_compte_existe() {
-                Account account = new Account(accountId, "bob@example.com", "hash", fixedNow);
+                Account account = new Account(accountId, "bob@example.com", "Test", "User", "hash", fixedNow);
 
                 when(accountRepository.findAliveByEmail("bob@example.com")).thenReturn(Optional.of(account));
                 when(accountTokenRepository.findActiveByAccountIdAndType(accountId, AccountTokenType.PASSWORD_RESET))
@@ -128,7 +128,7 @@ class PasswordResetServiceTest {
 
         @Test
         void resetPassword_change_le_mot_de_passe_et_revoque_toutes_les_sessions_actives() {
-                Account account = new Account(accountId, "carol@example.com", "old-hash",
+                Account account = new Account(accountId, "carol@example.com", "Test", "User", "old-hash",
                                 fixedNow.minus(1, ChronoUnit.DAYS));
                 AccountToken token = new AccountToken(UUID.randomUUID(), accountId, AccountTokenType.PASSWORD_RESET,
                                 "hashed-token", fixedNow.plus(1, ChronoUnit.HOURS),

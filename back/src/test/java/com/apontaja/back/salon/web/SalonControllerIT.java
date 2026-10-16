@@ -47,7 +47,7 @@ class SalonControllerIT {
 
         private String bearerTokenForNewAccount() {
                 Account account = accountRepository.save(new Account(UUID.randomUUID(),
-                                UUID.randomUUID() + "@example.com", "hash", Instant.now()));
+                                UUID.randomUUID() + "@example.com", "Test", "User", "hash", Instant.now()));
                 return "Bearer " + accessTokenIssuer.issue(account.getId());
         }
 

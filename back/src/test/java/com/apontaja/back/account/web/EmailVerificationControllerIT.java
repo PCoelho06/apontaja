@@ -33,6 +33,8 @@ class EmailVerificationControllerIT {
                 {
                   "email": "%s",
                   "password": "un-mot-de-passe-suffisamment-long",
+                  "firstName": "Alice",
+                  "lastName": "Martin",
                   "acceptTos": true,
                   "acceptPrivacy": true
                 }

@@ -30,11 +30,10 @@ class RegisterController {
 
     @PostMapping("/register")
     ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
-        RegisterAccountResult result = registerAccountService.register(
-                new RegisterAccountCommand(request.email(), request.password()));
+        RegisterAccountResult result = registerAccountService.register(new RegisterAccountCommand(request.email(),
+                request.firstName(), request.lastName(), request.password()));
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new RegisterResponse(result.accountId(), result.email()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new RegisterResponse(result.accountId(), result.email()));
     }
 
     @ExceptionHandler(EmailAlreadyUsedException.class)

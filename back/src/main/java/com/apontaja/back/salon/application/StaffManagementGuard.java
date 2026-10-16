@@ -99,6 +99,23 @@ public class StaffManagementGuard {
                 && canManageRole(actorAccountId, salonId, newRoleName);
     }
 
+    /**
+     * Les emails des membres ne sont visibles que d'un OWNER ou d'un MANAGER du
+     * salon (staff direct), ou d'un OWNER de l'organisation propriétaire. Un
+     * EMPLOYEE ne voit que les noms d'affichage.
+     */
+    public boolean canViewStaffEmails(UUID actorAccountId, UUID salonId) {
+        if (actorAccountId == null || salonId == null) {
+            return false;
+        }
+        if (isOrganizationOwner(actorAccountId, salonId)) {
+            return true;
+        }
+        return staffMembershipRepository.findAliveByAccountIdAndSalonId(actorAccountId, salonId)
+                .map(StaffMembership::getRole).map(role -> role == StaffRole.OWNER || role == StaffRole.MANAGER)
+                .orElse(false);
+    }
+
     private StaffRole findRoleOrNull(UUID salonId, UUID staffMembershipId) {
         return staffMembershipRepository.findAliveById(staffMembershipId)
                 .filter(membership -> membership.getSalonId().equals(salonId)).map(StaffMembership::getRole)

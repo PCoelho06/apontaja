@@ -49,7 +49,8 @@ class OrganizationMembershipJpaRepositoryIT {
 
         private UUID createAccount() {
                 Instant now = Instant.now();
-                Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", now);
+                Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test", "User",
+                                "hash", now);
                 entityManager.persistAndFlush(account);
                 return account.getId();
         }

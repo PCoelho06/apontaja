@@ -27,7 +27,9 @@ class RegisterControllerIT {
                 return """
                                 {
                                   "email": "%s",
-                                  "password": "un-mot-de-passe-suffisamment-long"
+                                  "password": "un-mot-de-passe-suffisamment-long",
+                                  "firstName":"Alice",
+                                  "lastName":"Martin"
                                 }
                                 """.formatted(email);
         }
@@ -56,7 +58,9 @@ class RegisterControllerIT {
                 String body = """
                                 {
                                   "email": "gwen@example.com",
-                                  "password": "court"
+                                  "password": "court",
+                                  "firstName":"Alice",
+                                  "lastName":"Martin"
                                 }
                                 """;
 

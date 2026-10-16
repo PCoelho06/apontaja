@@ -43,10 +43,6 @@ async function loadAll() {
 
 onMounted(loadAll);
 
-function shortId(id: string) {
-  return id.slice(0, 8);
-}
-
 async function handleInvite() {
   inviteError.value = "";
   isInviting.value = true;
@@ -128,20 +124,9 @@ async function handleRemove(staffMembershipId: string) {
           {{ salonStore.currentSalon.country }}
         </p>
 
-        <nav class="mt-4 flex gap-4 text-sm">
-          <RouterLink
-            :to="{ name: 'agenda', params: { salonId } }"
-            class="font-medium text-wine hover:underline"
-          >
-            Agenda
-          </RouterLink>
-          <RouterLink
-            :to="{ name: 'catalog-resources', params: { salonId } }"
-            class="font-medium text-wine hover:underline"
-          >
-            Catalogue
-          </RouterLink>
-        </nav>
+        <RouterLink :to="{ name: 'catalog-resources', params: { salonId } }">
+          Catalogue
+        </RouterLink>
 
         <!-- Équipe -->
         <section class="mt-8">
@@ -159,8 +144,12 @@ async function handleRemove(staffMembershipId: string) {
             >
               <div>
                 <span class="block text-sm text-ink">{{
-                  member.email ?? `Compte ${shortId(member.accountId)}…`
+                  member.displayName
                 }}</span>
+                <span
+                  v-if="member.email"
+                  class="block text-xs text-ink/50"
+                >{{ member.email }}</span>
                 <span class="block text-xs text-ink/50">Membre depuis
                   {{ new Date(member.since).toLocaleDateString() }}</span>
               </div>

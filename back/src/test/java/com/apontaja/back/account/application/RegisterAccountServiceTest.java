@@ -60,8 +60,8 @@ class RegisterAccountServiceTest {
         when(passwordEncoder.encode("un-mot-de-passe-suffisamment-long")).thenReturn("hashed");
         when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RegisterAccountResult result = service
-                .register(new RegisterAccountCommand("alice@example.com", "un-mot-de-passe-suffisamment-long"));
+        RegisterAccountResult result = service.register(new RegisterAccountCommand("alice@example.com", "Alice",
+                "Martin", "un-mot-de-passe-suffisamment-long"));
 
         assertThat(result.email()).isEqualTo("alice@example.com");
 
@@ -81,8 +81,8 @@ class RegisterAccountServiceTest {
     void rejette_l_inscription_si_l_email_est_deja_utilise() {
         when(accountRepository.existsAliveByEmail("bob@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> service
-                .register(new RegisterAccountCommand("bob@example.com", "un-mot-de-passe-suffisamment-long")))
+        assertThatThrownBy(() -> service.register(
+                new RegisterAccountCommand("bob@example.com", "Bob", "Martin", "un-mot-de-passe-suffisamment-long")))
                         .isInstanceOf(EmailAlreadyUsedException.class);
     }
 

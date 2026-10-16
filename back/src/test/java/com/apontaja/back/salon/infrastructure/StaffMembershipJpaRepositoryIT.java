@@ -45,8 +45,8 @@ class StaffMembershipJpaRepositoryIT {
         private TransactionTemplate transactionTemplate;
 
         private UUID createAccount() {
-                Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash",
-                                Instant.now());
+                Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test", "User",
+                                "hash", Instant.now());
                 entityManager.persistAndFlush(account);
                 return account.getId();
         }

@@ -51,8 +51,8 @@ public class RegisterAccountService {
         }
 
         Instant now = clock.instant();
-        Account account = new Account(idGenerator.generate(), email, passwordEncoder.encode(command.rawPassword()),
-                now);
+        Account account = new Account(idGenerator.generate(), email, command.firstName(), command.lastName(),
+                passwordEncoder.encode(command.rawPassword()), now);
         accountRepository.save(account);
 
         consentRecordRepository

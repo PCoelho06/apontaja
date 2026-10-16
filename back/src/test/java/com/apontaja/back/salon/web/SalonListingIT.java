@@ -61,8 +61,8 @@ class SalonListingIT {
     private IdGenerator idGenerator;
 
     private UUID createAccount() {
-        Account account = accountRepository
-                .save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", Instant.now()));
+        Account account = accountRepository.save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com",
+                "Test", "User", "hash", Instant.now()));
         return account.getId();
     }
 

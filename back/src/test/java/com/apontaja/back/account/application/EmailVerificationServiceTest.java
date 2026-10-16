@@ -64,7 +64,7 @@ class EmailVerificationServiceTest {
     }
 
     private Account unverifiedAccount() {
-        return new Account(accountId, "alice@example.com", "hash", fixedNow);
+        return new Account(accountId, "alice@example.com", "Test", "User", "hash", fixedNow);
     }
 
     @Test

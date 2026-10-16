@@ -10,6 +10,8 @@ import {
 interface AuthAccount {
   accountId: string;
   email: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface LoginResponse {
@@ -26,6 +28,8 @@ interface RefreshResponse {
 interface MeResponse {
   accountId: string;
   email: string;
+  firstName: string;
+  lastName: string;
   emailVerified: boolean;
 }
 
@@ -47,17 +51,55 @@ export const useAuthStore = defineStore("auth", {
       });
 
       this.accessToken = result.accessToken;
-      this.account = {
-        accountId: result.accountId,
-        email: result.email,
-      };
+      try {
+        await this.loadAccount();
+      } catch (error) {
+        this.accessToken = null;
+        this.account = null;
+        throw error;
+      }
     },
 
-    async register(email: string, password: string) {
+    async register(
+      email: string,
+      password: string,
+      firstName: string,
+      lastName: string,
+    ) {
       await apiPost<void>("/api/auth/register", {
         email,
         password,
+        firstName,
+        lastName,
       });
+    },
+
+    /** Lit l'identité du compte connecté (prénom, nom, email) avec le jeton courant. */
+    async loadAccount() {
+      const me = await apiGet<MeResponse>(
+        "/api/account/me",
+        this.accessToken ?? undefined,
+      );
+
+      this.account = {
+        accountId: me.accountId,
+        email: me.email,
+        firstName: me.firstName,
+        lastName: me.lastName,
+      };
+    },
+
+    async restoreSession() {
+      try {
+        const refreshResult =
+          await apiPostWithCsrf<RefreshResponse>("/api/auth/refresh");
+
+        this.accessToken = refreshResult.accessToken;
+        await this.loadAccount();
+      } catch {
+        this.accessToken = null;
+        this.account = null;
+      }
     },
 
     async requestPasswordReset(email: string) {
@@ -83,28 +125,6 @@ export const useAuthStore = defineStore("auth", {
       try {
         await apiPostWithCsrf<void>("/api/auth/logout");
       } finally {
-        this.accessToken = null;
-        this.account = null;
-      }
-    },
-
-    async restoreSession() {
-      try {
-        const refreshResult =
-          await apiPostWithCsrf<RefreshResponse>("/api/auth/refresh");
-
-        this.accessToken = refreshResult.accessToken;
-
-        const me = await apiGet<MeResponse>(
-          "/api/account/me",
-          this.accessToken,
-        );
-
-        this.account = {
-          accountId: me.accountId,
-          email: me.email,
-        };
-      } catch {
         this.accessToken = null;
         this.account = null;
       }
