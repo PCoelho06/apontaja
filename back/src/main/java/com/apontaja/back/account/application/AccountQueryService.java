@@ -22,8 +22,8 @@ public class AccountQueryService {
      * pour le rationnel.
      */
     public Optional<AccountSummary> findAliveById(UUID accountId) {
-        return accountRepository.findAliveById(accountId)
-                .map(account -> new AccountSummary(account.getId(), account.getEmail(), account.isEmailVerified()));
+        return accountRepository.findAliveById(accountId).map(account -> new AccountSummary(account.getId(),
+                account.getEmail(), account.isEmailVerified(), account.getFirstName(), account.getLastName()));
     }
 
     /**

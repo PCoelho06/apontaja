@@ -69,7 +69,9 @@ class StaffInvitationAcceptanceControllerIT {
         private IdGenerator idGenerator;
 
         private UUID createAccountWithEmail(String email) {
-                return accountRepository.save(new Account(UUID.randomUUID(), email, "hash", Instant.now())).getId();
+                return accountRepository
+                                .save(new Account(UUID.randomUUID(), email, "Test", "User", "hash", Instant.now()))
+                                .getId();
         }
 
         private String bearerTokenFor(UUID accountId) {

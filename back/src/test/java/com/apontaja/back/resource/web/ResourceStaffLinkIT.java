@@ -81,9 +81,8 @@ class ResourceStaffLinkIT {
     }
 
     private UUID createAccount() {
-        return accountRepository
-                .save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", Instant.now()))
-                .getId();
+        return accountRepository.save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test", "User",
+                "hash", Instant.now())).getId();
     }
 
     private String bearerTokenFor(UUID accountId) {
@@ -124,8 +123,8 @@ class ResourceStaffLinkIT {
     }
 
     private UUID createResourceVia(UUID salonId, String auth, String body) throws Exception {
-        String response = postResource(salonId, auth, body).andExpect(status().isCreated()).andReturn()
-                .getResponse().getContentAsString();
+        String response = postResource(salonId, auth, body).andExpect(status().isCreated()).andReturn().getResponse()
+                .getContentAsString();
         return UUID.fromString(objectMapper.readTree(response).get("resourceId").asText());
     }
 
@@ -135,8 +134,7 @@ class ResourceStaffLinkIT {
     }
 
     private Resource linkedResource(UUID salonId, String name, UUID staffMembershipId) {
-        Resource resource = new Resource(idGenerator.generate(), salonId, name, ResourceType.EMPLOYEE,
-                Instant.now());
+        Resource resource = new Resource(idGenerator.generate(), salonId, name, ResourceType.EMPLOYEE, Instant.now());
         resource.linkToStaff(staffMembershipId);
         return resource;
     }
@@ -147,8 +145,7 @@ class ResourceStaffLinkIT {
         String auth = ownerAuth(salonId);
         Member employee = member(salonId, StaffRole.EMPLOYEE);
 
-        postResource(salonId, auth, payload("Lea", "EMPLOYEE", employee.membershipId()))
-                .andExpect(status().isCreated())
+        postResource(salonId, auth, payload("Lea", "EMPLOYEE", employee.membershipId())).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.staffMembershipId").value(employee.membershipId().toString()));
 
         mockMvc.perform(get(RESOURCES, salonId).header("Authorization", auth)).andExpect(status().isOk())
@@ -185,10 +182,8 @@ class ResourceStaffLinkIT {
         staffMembershipRepository.save(membership);
 
         postResource(salonId, auth, payload("A", "EMPLOYEE", UUID.randomUUID())).andExpect(status().isNotFound());
-        postResource(salonId, auth, payload("B", "EMPLOYEE", foreign.membershipId()))
-                .andExpect(status().isNotFound());
-        postResource(salonId, auth, payload("C", "EMPLOYEE", removed.membershipId()))
-                .andExpect(status().isNotFound());
+        postResource(salonId, auth, payload("B", "EMPLOYEE", foreign.membershipId())).andExpect(status().isNotFound());
+        postResource(salonId, auth, payload("C", "EMPLOYEE", removed.membershipId())).andExpect(status().isNotFound());
     }
 
     @Test
@@ -200,11 +195,10 @@ class ResourceStaffLinkIT {
         UUID second = createResourceVia(salonId, auth, payload("Chaise", "EMPLOYEE", null));
 
         postResource(salonId, auth, payload("Lea bis", "EMPLOYEE", memberId)).andExpect(status().isConflict());
-        putResource(salonId, second, auth, payload("Chaise", "EMPLOYEE", memberId))
-                .andExpect(status().isConflict());
+        putResource(salonId, second, auth, payload("Chaise", "EMPLOYEE", memberId)).andExpect(status().isConflict());
         // renommer la ressource déjà liée ne la met pas en conflit avec elle-même
-        putResource(salonId, first, auth, payload("Lea renommee", "EMPLOYEE", memberId))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.staffMembershipId").value(memberId.toString()));
+        putResource(salonId, first, auth, payload("Lea renommee", "EMPLOYEE", memberId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.staffMembershipId").value(memberId.toString()));
     }
 
     @Test
@@ -214,8 +208,8 @@ class ResourceStaffLinkIT {
         UUID memberId = member(salonId, StaffRole.EMPLOYEE).membershipId();
         UUID first = createResourceVia(salonId, auth, payload("Lea", "EMPLOYEE", memberId));
 
-        String unlinked = putResource(salonId, first, auth, payload("Lea", "EMPLOYEE", null))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String unlinked = putResource(salonId, first, auth, payload("Lea", "EMPLOYEE", null)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
         assertNoLink(unlinked);
 
         postResource(salonId, auth, payload("Autre", "EMPLOYEE", memberId)).andExpect(status().isCreated());

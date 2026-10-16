@@ -5,6 +5,8 @@ import { useRoute } from "vue-router";
 import { ApiError, apiGet, apiPost } from "@/lib/apiClient";
 import { useAuthStore } from "@/stores/auth";
 
+import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
+
 interface LookupResponse {
   invitationId: string;
   email: string;
@@ -35,6 +37,8 @@ const lookup = ref<LookupResponse | null>(null);
 const errorMessage = ref("");
 
 const password = ref("");
+const firstName = ref("");
+const lastName = ref("");
 const isSubmitting = ref(false);
 
 async function load() {
@@ -103,14 +107,19 @@ async function handleRegisterThenLogin() {
   isSubmitting.value = true;
   errorMessage.value = "";
   try {
-    await auth.register(lookup.value.email, password.value);
+    await auth.register(
+      lookup.value.email,
+      password.value,
+      firstName.value.trim(),
+      lastName.value.trim(),
+    );
     // Pas de connexion automatique après /register (voir stores/auth.ts) — on enchaîne nous-mêmes.
     await auth.login(lookup.value.email, password.value);
     await acceptInvitation();
   } catch (error) {
     errorMessage.value =
       error instanceof ApiError
-        ? error.message
+        ? (Object.values(error.fieldErrors ?? {})[0] ?? error.message)
         : "Impossible de créer le compte.";
     isSubmitting.value = false;
   }
@@ -174,22 +183,26 @@ async function handleRegisterThenLogin() {
           class="mt-4 space-y-4"
           @submit.prevent="handleLogin"
         >
-          <div>
-            <label class="block text-sm font-medium text-ink">Mot de passe</label>
-            <input
-              v-model="password"
-              type="password"
-              autocomplete="current-password"
-              class="mt-1.5 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-ink focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine"
-            >
-          </div>
-          <button
+          <UiInput
+            v-model="password"
+            type="password"
+            label="Mot de passe"
+            autocomplete="current-password"
+            required
+          />
+          <UiAlert
+            v-if="errorMessage"
+            variant="error"
+          >
+            {{ errorMessage }}
+          </UiAlert>
+          <UiButton
             type="submit"
-            :disabled="isSubmitting"
-            class="w-full rounded-md bg-wine px-4 py-2.5 text-sm font-medium text-paper hover:bg-wine/90 disabled:opacity-60"
+            class="w-full"
+            :loading="isSubmitting"
           >
             {{ isSubmitting ? "Connexion..." : "Se connecter et accepter" }}
-          </button>
+          </UiButton>
         </form>
       </template>
 
@@ -205,22 +218,44 @@ async function handleRegisterThenLogin() {
           class="mt-4 space-y-4"
           @submit.prevent="handleRegisterThenLogin"
         >
-          <div>
-            <label class="block text-sm font-medium text-ink">Mot de passe (12 caractères minimum)</label>
-            <input
-              v-model="password"
-              type="password"
-              autocomplete="new-password"
-              class="mt-1.5 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-ink focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine"
-            >
+          <div class="grid grid-cols-2 gap-4">
+            <UiInput
+              v-model="firstName"
+              label="Prénom"
+              autocomplete="given-name"
+              maxlength="100"
+              required
+            />
+            <UiInput
+              v-model="lastName"
+              label="Nom"
+              autocomplete="family-name"
+              maxlength="100"
+              required
+            />
           </div>
-          <button
+          <UiInput
+            v-model="password"
+            type="password"
+            label="Mot de passe"
+            hint="12 caractères minimum"
+            autocomplete="new-password"
+            minlength="12"
+            required
+          />
+          <UiAlert
+            v-if="errorMessage"
+            variant="error"
+          >
+            {{ errorMessage }}
+          </UiAlert>
+          <UiButton
             type="submit"
-            :disabled="isSubmitting"
-            class="w-full rounded-md bg-wine px-4 py-2.5 text-sm font-medium text-paper hover:bg-wine/90 disabled:opacity-60"
+            class="w-full"
+            :loading="isSubmitting"
           >
             {{ isSubmitting ? "Création..." : "Créer le compte et accepter" }}
-          </button>
+          </UiButton>
         </form>
       </template>
 

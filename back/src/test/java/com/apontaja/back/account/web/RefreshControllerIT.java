@@ -48,7 +48,7 @@ class RefreshControllerIT {
         private Clock clock;
 
         private Cookie loginAndGetRefreshCookie(String email) throws Exception {
-                accountRepository.save(new Account(idGenerator.generate(), email,
+                accountRepository.save(new Account(idGenerator.generate(), email, "Test", "User",
                                 passwordEncoder.encode("un-mot-de-passe-suffisamment-long"), clock.instant()));
 
                 MvcResult loginResult = mockMvc

@@ -15,20 +15,31 @@ describe("useAuthStore", () => {
     vi.unstubAllGlobals();
   });
 
+  function jsonResponse(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
   it("login réussi peuple accessToken et account", async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(
-        JSON.stringify({
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({
           accountId: "1",
           email: "a@example.com",
           accessToken: "jwt",
         }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
-    );
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          accountId: "1",
+          email: "a@example.com",
+          firstName: "Alice",
+          lastName: "Martin",
+          emailVerified: true,
+        }),
+      );
 
     const store = useAuthStore();
 
@@ -39,6 +50,8 @@ describe("useAuthStore", () => {
     expect(store.account).toEqual({
       accountId: "1",
       email: "a@example.com",
+      firstName: "Alice",
+      lastName: "Martin",
     });
   });
 

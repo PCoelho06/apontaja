@@ -27,13 +27,16 @@ class StaffMemberQueryServiceTest {
     private StaffMembershipRepository staffMembershipRepository;
     @Mock
     private AccountQueryService accountQueryService;
+    @Mock
+    private StaffManagementGuard staffManagementGuard;
 
     private StaffMemberQueryService service;
     private final UUID salonId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new StaffMemberQueryService(managementService, staffMembershipRepository, accountQueryService);
+        service = new StaffMemberQueryService(managementService, staffMembershipRepository, accountQueryService,
+                staffManagementGuard);
     }
 
     private StaffMembership membershipIn(UUID salon) {

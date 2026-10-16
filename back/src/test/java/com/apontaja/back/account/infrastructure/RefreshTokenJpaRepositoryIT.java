@@ -32,7 +32,8 @@ class RefreshTokenJpaRepositoryIT {
 
     private UUID createAccount() {
         Instant now = Instant.now();
-        Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", now);
+        Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test", "User", "hash",
+                now);
         accountJpaRepository.save(account);
         accountJpaRepository.flush();
         return account.getId();

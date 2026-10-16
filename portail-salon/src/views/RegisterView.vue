@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
+const firstName = ref('')
+const lastName = ref('')
 const email = ref('')
 const password = ref('')
 
@@ -28,7 +30,12 @@ async function handleSubmit() {
   fieldErrors.value = {}
   isSubmitting.value = true
   try {
-    await auth.register(email.value, password.value)
+    await auth.register(
+      email.value,
+      password.value,
+      firstName.value.trim(),
+      lastName.value.trim(),
+    )
     isDone.value = true
   } catch (error) {
     if (error instanceof ApiError) {
@@ -69,6 +76,22 @@ async function handleSubmit() {
       class="space-y-5"
       @submit.prevent="handleSubmit"
     >
+      <div class="grid grid-cols-2 gap-4">
+        <AuthTextField
+          id="firstName"
+          v-model="firstName"
+          label="Prénom"
+          autocomplete="given-name"
+          :error="fieldErrors.firstName"
+        />
+        <AuthTextField
+          id="lastName"
+          v-model="lastName"
+          label="Nom"
+          autocomplete="family-name"
+          :error="fieldErrors.lastName"
+        />
+      </div>
       <AuthTextField
         id="email"
         v-model="email"

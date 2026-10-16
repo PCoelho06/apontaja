@@ -31,7 +31,7 @@ class ConsentRecordJpaRepositoryIT {
     @Test
     void enregistre_et_retrouve_les_consentements_d_un_compte() {
         Instant now = Instant.now();
-        Account account = new Account(UUID.randomUUID(), "dave@example.com", "hash", now);
+        Account account = new Account(UUID.randomUUID(), "dave@example.com", "Test", "User", "hash", now);
         accountJpaRepository.save(account);
         accountJpaRepository.flush();
 

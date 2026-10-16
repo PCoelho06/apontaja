@@ -37,6 +37,8 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;  -- contraintes d'exclusion (anti dou
 CREATE TABLE account (
     id                  uuid PRIMARY KEY,
     email               citext NOT NULL,
+    first_name          text NOT NULL CHECK (btrim(first_name) <> ''),
+    last_name           text NOT NULL CHECK (btrim(last_name) <> ''),
     email_verified_at   timestamptz NULL,
     password_hash       text NOT NULL,
     created_at          timestamptz NOT NULL DEFAULT now(),

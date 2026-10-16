@@ -85,7 +85,7 @@ class AccountControllerIT {
     }
 
     private Account createAliveAccount() {
-        Account account = new Account(UUID.randomUUID(), "me-" + UUID.randomUUID() + "@example.com",
+        Account account = new Account(UUID.randomUUID(), "me-" + UUID.randomUUID() + "@example.com", "Test", "User",
                 passwordEncoder.encode("un-mot-de-passe-suffisant"), clock.instant());
         return accountRepository.save(account);
     }
@@ -133,7 +133,9 @@ class AccountControllerIT {
         mockMvc.perform(get("/api/account/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.accountId").value(account.getId().toString()))
                 .andExpect(jsonPath("$.email").value(account.getEmail()))
-                .andExpect(jsonPath("$.emailVerified").value(false));
+                .andExpect(jsonPath("$.emailVerified").value(false))
+                .andExpect(jsonPath("$.firstName").value(account.getFirstName()))
+                .andExpect(jsonPath("$.lastName").value(account.getLastName()));
     }
 
     @Test

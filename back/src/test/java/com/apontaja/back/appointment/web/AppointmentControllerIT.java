@@ -107,8 +107,8 @@ class AppointmentControllerIT {
         private final ObjectMapper objectMapper = new ObjectMapper();
 
         private UUID createAccount() {
-                return accountRepository.save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash",
-                                Instant.now())).getId();
+                return accountRepository.save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test",
+                                "User", "hash", Instant.now())).getId();
         }
 
         private String bearerTokenFor(UUID accountId) {

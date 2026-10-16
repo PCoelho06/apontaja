@@ -40,285 +40,294 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,
-        properties = "apontaja.security.rate-limiting.enabled=false")
+                properties = "apontaja.security.rate-limiting.enabled=false")
 @AutoConfigureMockMvc
 @Import(PostgresTestcontainersConfiguration.class)
 class StaffMembershipControllerIT {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private AccountRepository accountRepository;
+        @Autowired
+        private AccountRepository accountRepository;
 
-    @Autowired
-    private AccessTokenIssuer accessTokenIssuer;
+        @Autowired
+        private AccessTokenIssuer accessTokenIssuer;
 
-    @Autowired
-    private OrganizationRepository organizationRepository;
+        @Autowired
+        private OrganizationRepository organizationRepository;
 
-    @Autowired
-    private SalonRepository salonRepository;
+        @Autowired
+        private SalonRepository salonRepository;
 
-    @Autowired
-    private StaffMembershipRepository staffMembershipRepository;
+        @Autowired
+        private StaffMembershipRepository staffMembershipRepository;
 
-    @Autowired
-    private IdGenerator idGenerator;
+        @Autowired
+        private IdGenerator idGenerator;
 
-    private UUID createAccount() {
-        return accountRepository
-                .save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", Instant.now()))
-                .getId();
-    }
-
-    private String bearerTokenFor(UUID accountId) {
-        return "Bearer " + accessTokenIssuer.issue(accountId);
-    }
-
-    private UUID createSalon() {
-        UUID organizationId = organizationRepository
-                .save(new Organization(idGenerator.generate(), "Org Test", Instant.now())).getId();
-        return salonRepository.save(new Salon(idGenerator.generate(), organizationId, "Salon Test", "1 rue du Test",
-                "06140", "Vence", "France", "Europe/Paris", Instant.now())).getId();
-    }
-
-    private UUID addStaff(UUID accountId, UUID salonId, StaffRole role) {
-        return staffMembershipRepository
-                .save(new StaffMembership(idGenerator.generate(), accountId, salonId, role, Instant.now())).getId();
-    }
-
-    private String rolePayload(String role) {
-        return """
-                {"role":"%s"}
-                """.formatted(role);
-    }
-
-    @Test
-    void un_employee_peut_lister_le_staff() throws Exception {
-        UUID salonId = createSalon();
-        UUID employeeId = createAccount();
-        addStaff(employeeId, salonId, StaffRole.EMPLOYEE);
-
-        mockMvc.perform(get("/api/salons/{salonId}/staff", salonId).header("Authorization", bearerTokenFor(employeeId)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
-    }
-
-    @Test
-    void un_owner_peut_promouvoir_un_employee_en_manager() throws Exception {
-        UUID salonId = createSalon();
-        UUID ownerId = createAccount();
-        addStaff(ownerId, salonId, StaffRole.OWNER);
-        UUID employeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
-
-        mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId, employeeMembershipId)
-                .header("Authorization", bearerTokenFor(ownerId)).contentType(MediaType.APPLICATION_JSON)
-                .content(rolePayload("MANAGER"))).andExpect(status().isNoContent());
-
-        assertThat(staffMembershipRepository.findAliveById(employeeMembershipId))
-                .hasValueSatisfying(m -> assertThat(m.getRole()).isEqualTo(StaffRole.MANAGER));
-    }
-
-    @Test
-    void un_manager_ne_peut_pas_promouvoir_un_employee_en_manager() throws Exception {
-        UUID salonId = createSalon();
-        UUID managerId = createAccount();
-        addStaff(managerId, salonId, StaffRole.MANAGER);
-        UUID employeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
-
-        mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId, employeeMembershipId)
-                .header("Authorization", bearerTokenFor(managerId)).contentType(MediaType.APPLICATION_JSON)
-                .content(rolePayload("MANAGER"))).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void un_manager_peut_retirer_un_employee() throws Exception {
-        UUID salonId = createSalon();
-        UUID managerId = createAccount();
-        addStaff(managerId, salonId, StaffRole.MANAGER);
-        UUID employeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
-
-        mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, employeeMembershipId)
-                .header("Authorization", bearerTokenFor(managerId))).andExpect(status().isNoContent());
-
-        assertThat(staffMembershipRepository.findAliveById(employeeMembershipId)).isEmpty();
-    }
-
-    @Test
-    void un_manager_ne_peut_pas_retirer_un_owner() throws Exception {
-        UUID salonId = createSalon();
-        UUID managerId = createAccount();
-        addStaff(managerId, salonId, StaffRole.MANAGER);
-        UUID ownerMembershipId = addStaff(createAccount(), salonId, StaffRole.OWNER);
-
-        mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, ownerMembershipId).header("Authorization",
-                bearerTokenFor(managerId))).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void un_employee_ne_peut_rien_modifier() throws Exception {
-        UUID salonId = createSalon();
-        UUID employeeId = createAccount();
-        addStaff(employeeId, salonId, StaffRole.EMPLOYEE);
-        UUID otherEmployeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
-
-        mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, otherEmployeeMembershipId)
-                .header("Authorization", bearerTokenFor(employeeId))).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void refuse_de_retirer_le_dernier_owner() throws Exception {
-        UUID salonId = createSalon();
-        UUID ownerId = createAccount();
-        UUID ownerMembershipId = addStaff(ownerId, salonId, StaffRole.OWNER);
-
-        mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, ownerMembershipId).header("Authorization",
-                bearerTokenFor(ownerId))).andExpect(status().isConflict());
-
-        assertThat(staffMembershipRepository.findAliveById(ownerMembershipId)).isPresent();
-    }
-
-    @Test
-    void refuse_de_retrograder_le_dernier_owner() throws Exception {
-        UUID salonId = createSalon();
-        UUID ownerId = createAccount();
-        UUID ownerMembershipId = addStaff(ownerId, salonId, StaffRole.OWNER);
-
-        mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId, ownerMembershipId)
-                .header("Authorization", bearerTokenFor(ownerId)).contentType(MediaType.APPLICATION_JSON)
-                .content(rolePayload("MANAGER"))).andExpect(status().isConflict());
-    }
-
-    @Test
-    void autorise_le_retrait_d_un_owner_si_un_autre_owner_reste() throws Exception {
-        UUID salonId = createSalon();
-        UUID ownerId = createAccount();
-        addStaff(ownerId, salonId, StaffRole.OWNER);
-        UUID secondOwnerMembershipId = addStaff(createAccount(), salonId, StaffRole.OWNER);
-
-        mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, secondOwnerMembershipId)
-                .header("Authorization", bearerTokenFor(ownerId))).andExpect(status().isNoContent());
-    }
-
-    @Test
-    void refuse_une_action_sur_un_membre_d_un_autre_salon() throws Exception {
-        UUID salonA = createSalon();
-        UUID salonB = createSalon();
-        UUID ownerA = createAccount();
-        addStaff(ownerA, salonA, StaffRole.OWNER);
-        UUID membershipOnSalonB = addStaff(createAccount(), salonB, StaffRole.EMPLOYEE);
-
-        mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonA, membershipOnSalonB).header("Authorization",
-                bearerTokenFor(ownerA))).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void refuse_sans_authentification() throws Exception {
-        UUID salonId = createSalon();
-
-        mockMvc.perform(get("/api/salons/{salonId}/staff", salonId)).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void empeche_deux_owner_de_se_retrograder_simultanement() throws Exception {
-        UUID salonId = createSalon();
-
-        UUID firstOwnerId = createAccount();
-        UUID firstOwnerMembershipId = addStaff(firstOwnerId, salonId, StaffRole.OWNER);
-
-        UUID secondOwnerId = createAccount();
-        UUID secondOwnerMembershipId = addStaff(secondOwnerId, salonId, StaffRole.OWNER);
-
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch start = new CountDownLatch(1);
-
-        try {
-            Future<Integer> firstResult = executor.submit(() -> {
-                start.await();
-
-                return mockMvc
-                        .perform(patch("/api/salons/{salonId}/staff/{id}", salonId, firstOwnerMembershipId)
-                                .header("Authorization", bearerTokenFor(firstOwnerId))
-                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
-                        .andReturn().getResponse().getStatus();
-            });
-
-            Future<Integer> secondResult = executor.submit(() -> {
-                start.await();
-
-                return mockMvc
-                        .perform(patch("/api/salons/{salonId}/staff/{id}", salonId, secondOwnerMembershipId)
-                                .header("Authorization", bearerTokenFor(secondOwnerId))
-                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
-                        .andReturn().getResponse().getStatus();
-            });
-
-            start.countDown();
-
-            int firstStatus = firstResult.get(10, TimeUnit.SECONDS);
-            int secondStatus = secondResult.get(10, TimeUnit.SECONDS);
-
-            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(204, 409);
-
-            StaffRole firstRole = staffMembershipRepository.findAliveById(firstOwnerMembershipId).orElseThrow()
-                    .getRole();
-
-            StaffRole secondRole = staffMembershipRepository.findAliveById(secondOwnerMembershipId).orElseThrow()
-                    .getRole();
-
-            assertThat(List.of(firstRole, secondRole)).containsExactlyInAnyOrder(StaffRole.OWNER, StaffRole.MANAGER);
-        } finally {
-            executor.shutdownNow();
+        private UUID createAccount() {
+                return accountRepository.save(new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test",
+                                "User", "hash", Instant.now())).getId();
         }
-    }
 
-    @Test
-    void empeche_deux_owner_de_se_supprimer_simultanement() throws Exception {
-        UUID salonId = createSalon();
-
-        UUID firstOwnerId = createAccount();
-        UUID firstOwnerMembershipId = addStaff(firstOwnerId, salonId, StaffRole.OWNER);
-
-        UUID secondOwnerId = createAccount();
-        UUID secondOwnerMembershipId = addStaff(secondOwnerId, salonId, StaffRole.OWNER);
-
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch start = new CountDownLatch(1);
-
-        try {
-            Future<Integer> firstResult = executor.submit(() -> {
-                start.await();
-
-                return mockMvc
-                        .perform(delete("/api/salons/{salonId}/staff/{id}", salonId, firstOwnerMembershipId)
-                                .header("Authorization", bearerTokenFor(firstOwnerId)))
-                        .andReturn().getResponse().getStatus();
-            });
-
-            Future<Integer> secondResult = executor.submit(() -> {
-                start.await();
-
-                return mockMvc
-                        .perform(delete("/api/salons/{salonId}/staff/{id}", salonId, secondOwnerMembershipId)
-                                .header("Authorization", bearerTokenFor(secondOwnerId)))
-                        .andReturn().getResponse().getStatus();
-            });
-
-            start.countDown();
-
-            int firstStatus = firstResult.get(10, TimeUnit.SECONDS);
-            int secondStatus = secondResult.get(10, TimeUnit.SECONDS);
-
-            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(204, 409);
-
-            long aliveOwnerCount = Stream
-                    .of(staffMembershipRepository.findAliveById(firstOwnerMembershipId),
-                            staffMembershipRepository.findAliveById(secondOwnerMembershipId))
-                    .flatMap(Optional::stream).filter(membership -> membership.getRole() == StaffRole.OWNER).count();
-
-            assertThat(aliveOwnerCount).isEqualTo(1);
-        } finally {
-            executor.shutdownNow();
+        private String bearerTokenFor(UUID accountId) {
+                return "Bearer " + accessTokenIssuer.issue(accountId);
         }
-    }
+
+        private UUID createSalon() {
+                UUID organizationId = organizationRepository
+                                .save(new Organization(idGenerator.generate(), "Org Test", Instant.now())).getId();
+                return salonRepository.save(new Salon(idGenerator.generate(), organizationId, "Salon Test",
+                                "1 rue du Test", "06140", "Vence", "France", "Europe/Paris", Instant.now())).getId();
+        }
+
+        private UUID addStaff(UUID accountId, UUID salonId, StaffRole role) {
+                return staffMembershipRepository.save(
+                                new StaffMembership(idGenerator.generate(), accountId, salonId, role, Instant.now()))
+                                .getId();
+        }
+
+        private String rolePayload(String role) {
+                return """
+                                {"role":"%s"}
+                                """.formatted(role);
+        }
+
+        @Test
+        void un_employee_peut_lister_le_staff() throws Exception {
+                UUID salonId = createSalon();
+                UUID employeeId = createAccount();
+                addStaff(employeeId, salonId, StaffRole.EMPLOYEE);
+
+                mockMvc.perform(get("/api/salons/{salonId}/staff", salonId).header("Authorization",
+                                bearerTokenFor(employeeId))).andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(1));
+        }
+
+        @Test
+        void un_owner_peut_promouvoir_un_employee_en_manager() throws Exception {
+                UUID salonId = createSalon();
+                UUID ownerId = createAccount();
+                addStaff(ownerId, salonId, StaffRole.OWNER);
+                UUID employeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
+
+                mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId, employeeMembershipId)
+                                .header("Authorization", bearerTokenFor(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
+                                .andExpect(status().isNoContent());
+
+                assertThat(staffMembershipRepository.findAliveById(employeeMembershipId))
+                                .hasValueSatisfying(m -> assertThat(m.getRole()).isEqualTo(StaffRole.MANAGER));
+        }
+
+        @Test
+        void un_manager_ne_peut_pas_promouvoir_un_employee_en_manager() throws Exception {
+                UUID salonId = createSalon();
+                UUID managerId = createAccount();
+                addStaff(managerId, salonId, StaffRole.MANAGER);
+                UUID employeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
+
+                mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId, employeeMembershipId)
+                                .header("Authorization", bearerTokenFor(managerId))
+                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
+                                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void un_manager_peut_retirer_un_employee() throws Exception {
+                UUID salonId = createSalon();
+                UUID managerId = createAccount();
+                addStaff(managerId, salonId, StaffRole.MANAGER);
+                UUID employeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
+
+                mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, employeeMembershipId)
+                                .header("Authorization", bearerTokenFor(managerId))).andExpect(status().isNoContent());
+
+                assertThat(staffMembershipRepository.findAliveById(employeeMembershipId)).isEmpty();
+        }
+
+        @Test
+        void un_manager_ne_peut_pas_retirer_un_owner() throws Exception {
+                UUID salonId = createSalon();
+                UUID managerId = createAccount();
+                addStaff(managerId, salonId, StaffRole.MANAGER);
+                UUID ownerMembershipId = addStaff(createAccount(), salonId, StaffRole.OWNER);
+
+                mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, ownerMembershipId)
+                                .header("Authorization", bearerTokenFor(managerId))).andExpect(status().isForbidden());
+        }
+
+        @Test
+        void un_employee_ne_peut_rien_modifier() throws Exception {
+                UUID salonId = createSalon();
+                UUID employeeId = createAccount();
+                addStaff(employeeId, salonId, StaffRole.EMPLOYEE);
+                UUID otherEmployeeMembershipId = addStaff(createAccount(), salonId, StaffRole.EMPLOYEE);
+
+                mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, otherEmployeeMembershipId)
+                                .header("Authorization", bearerTokenFor(employeeId))).andExpect(status().isForbidden());
+        }
+
+        @Test
+        void refuse_de_retirer_le_dernier_owner() throws Exception {
+                UUID salonId = createSalon();
+                UUID ownerId = createAccount();
+                UUID ownerMembershipId = addStaff(ownerId, salonId, StaffRole.OWNER);
+
+                mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, ownerMembershipId)
+                                .header("Authorization", bearerTokenFor(ownerId))).andExpect(status().isConflict());
+
+                assertThat(staffMembershipRepository.findAliveById(ownerMembershipId)).isPresent();
+        }
+
+        @Test
+        void refuse_de_retrograder_le_dernier_owner() throws Exception {
+                UUID salonId = createSalon();
+                UUID ownerId = createAccount();
+                UUID ownerMembershipId = addStaff(ownerId, salonId, StaffRole.OWNER);
+
+                mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId, ownerMembershipId)
+                                .header("Authorization", bearerTokenFor(ownerId))
+                                .contentType(MediaType.APPLICATION_JSON).content(rolePayload("MANAGER")))
+                                .andExpect(status().isConflict());
+        }
+
+        @Test
+        void autorise_le_retrait_d_un_owner_si_un_autre_owner_reste() throws Exception {
+                UUID salonId = createSalon();
+                UUID ownerId = createAccount();
+                addStaff(ownerId, salonId, StaffRole.OWNER);
+                UUID secondOwnerMembershipId = addStaff(createAccount(), salonId, StaffRole.OWNER);
+
+                mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId, secondOwnerMembershipId)
+                                .header("Authorization", bearerTokenFor(ownerId))).andExpect(status().isNoContent());
+        }
+
+        @Test
+        void refuse_une_action_sur_un_membre_d_un_autre_salon() throws Exception {
+                UUID salonA = createSalon();
+                UUID salonB = createSalon();
+                UUID ownerA = createAccount();
+                addStaff(ownerA, salonA, StaffRole.OWNER);
+                UUID membershipOnSalonB = addStaff(createAccount(), salonB, StaffRole.EMPLOYEE);
+
+                mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonA, membershipOnSalonB)
+                                .header("Authorization", bearerTokenFor(ownerA))).andExpect(status().isForbidden());
+        }
+
+        @Test
+        void refuse_sans_authentification() throws Exception {
+                UUID salonId = createSalon();
+
+                mockMvc.perform(get("/api/salons/{salonId}/staff", salonId)).andExpect(status().isForbidden());
+        }
+
+        @Test
+        void empeche_deux_owner_de_se_retrograder_simultanement() throws Exception {
+                UUID salonId = createSalon();
+
+                UUID firstOwnerId = createAccount();
+                UUID firstOwnerMembershipId = addStaff(firstOwnerId, salonId, StaffRole.OWNER);
+
+                UUID secondOwnerId = createAccount();
+                UUID secondOwnerMembershipId = addStaff(secondOwnerId, salonId, StaffRole.OWNER);
+
+                ExecutorService executor = Executors.newFixedThreadPool(2);
+                CountDownLatch start = new CountDownLatch(1);
+
+                try {
+                        Future<Integer> firstResult = executor.submit(() -> {
+                                start.await();
+
+                                return mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId,
+                                                firstOwnerMembershipId)
+                                                                .header("Authorization", bearerTokenFor(firstOwnerId))
+                                                                .contentType(MediaType.APPLICATION_JSON)
+                                                                .content(rolePayload("MANAGER")))
+                                                .andReturn().getResponse().getStatus();
+                        });
+
+                        Future<Integer> secondResult = executor.submit(() -> {
+                                start.await();
+
+                                return mockMvc.perform(patch("/api/salons/{salonId}/staff/{id}", salonId,
+                                                secondOwnerMembershipId)
+                                                                .header("Authorization", bearerTokenFor(secondOwnerId))
+                                                                .contentType(MediaType.APPLICATION_JSON)
+                                                                .content(rolePayload("MANAGER")))
+                                                .andReturn().getResponse().getStatus();
+                        });
+
+                        start.countDown();
+
+                        int firstStatus = firstResult.get(10, TimeUnit.SECONDS);
+                        int secondStatus = secondResult.get(10, TimeUnit.SECONDS);
+
+                        assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(204, 409);
+
+                        StaffRole firstRole = staffMembershipRepository.findAliveById(firstOwnerMembershipId)
+                                        .orElseThrow().getRole();
+
+                        StaffRole secondRole = staffMembershipRepository.findAliveById(secondOwnerMembershipId)
+                                        .orElseThrow().getRole();
+
+                        assertThat(List.of(firstRole, secondRole)).containsExactlyInAnyOrder(StaffRole.OWNER,
+                                        StaffRole.MANAGER);
+                } finally {
+                        executor.shutdownNow();
+                }
+        }
+
+        @Test
+        void empeche_deux_owner_de_se_supprimer_simultanement() throws Exception {
+                UUID salonId = createSalon();
+
+                UUID firstOwnerId = createAccount();
+                UUID firstOwnerMembershipId = addStaff(firstOwnerId, salonId, StaffRole.OWNER);
+
+                UUID secondOwnerId = createAccount();
+                UUID secondOwnerMembershipId = addStaff(secondOwnerId, salonId, StaffRole.OWNER);
+
+                ExecutorService executor = Executors.newFixedThreadPool(2);
+                CountDownLatch start = new CountDownLatch(1);
+
+                try {
+                        Future<Integer> firstResult = executor.submit(() -> {
+                                start.await();
+
+                                return mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId,
+                                                firstOwnerMembershipId).header("Authorization",
+                                                                bearerTokenFor(firstOwnerId)))
+                                                .andReturn().getResponse().getStatus();
+                        });
+
+                        Future<Integer> secondResult = executor.submit(() -> {
+                                start.await();
+
+                                return mockMvc.perform(delete("/api/salons/{salonId}/staff/{id}", salonId,
+                                                secondOwnerMembershipId).header("Authorization",
+                                                                bearerTokenFor(secondOwnerId)))
+                                                .andReturn().getResponse().getStatus();
+                        });
+
+                        start.countDown();
+
+                        int firstStatus = firstResult.get(10, TimeUnit.SECONDS);
+                        int secondStatus = secondResult.get(10, TimeUnit.SECONDS);
+
+                        assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(204, 409);
+
+                        long aliveOwnerCount = Stream
+                                        .of(staffMembershipRepository.findAliveById(firstOwnerMembershipId),
+                                                        staffMembershipRepository
+                                                                        .findAliveById(secondOwnerMembershipId))
+                                        .flatMap(Optional::stream)
+                                        .filter(membership -> membership.getRole() == StaffRole.OWNER).count();
+
+                        assertThat(aliveOwnerCount).isEqualTo(1);
+                } finally {
+                        executor.shutdownNow();
+                }
+        }
 }

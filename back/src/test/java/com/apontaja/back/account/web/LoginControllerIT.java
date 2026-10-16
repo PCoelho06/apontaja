@@ -43,8 +43,8 @@ class LoginControllerIT {
   private Clock clock;
 
   private void createAccount(String email, String rawPassword) {
-    accountRepository
-        .save(new Account(idGenerator.generate(), email, passwordEncoder.encode(rawPassword), clock.instant()));
+    accountRepository.save(new Account(idGenerator.generate(), email, "Test", "User",
+        passwordEncoder.encode(rawPassword), clock.instant()));
   }
 
   @Test

@@ -63,7 +63,8 @@ class CustomerProfileJpaRepositoryIT {
 
     @Test
     void rejette_deux_profils_vivants_pour_le_meme_compte_reclame() {
-        Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "hash", Instant.now());
+        Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test", "User", "hash",
+                Instant.now());
         entityManager.persistAndFlush(account);
 
         CustomerProfile first = withEmail("d1@example.com");

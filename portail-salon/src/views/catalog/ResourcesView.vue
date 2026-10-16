@@ -55,7 +55,7 @@ async function load() {
 watch(salonId, load, { immediate: true });
 
 function memberName(member: StaffMember): string {
-  return member.email ?? member.accountId.slice(0, 8);
+  return member.displayName;
 }
 
 function memberLabel(staffMembershipId: string): string {

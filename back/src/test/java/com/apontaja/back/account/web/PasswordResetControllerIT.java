@@ -53,6 +53,8 @@ class PasswordResetControllerIT {
                                 {
                                   "email": "%s",
                                   "password": "ancien-mot-de-passe-suffisant",
+                                  "firstName": "Alice",
+                                  "lastName": "Martin",
                                   "acceptTos": true,
                                   "acceptPrivacy": true
                                 }

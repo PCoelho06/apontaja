@@ -68,7 +68,7 @@ class LoginServiceTest {
     }
 
     private Account existingAccount() {
-        return new Account(accountId, "alice@example.com", "real-hash", fixedNow);
+        return new Account(accountId, "alice@example.com", "Test", "User", "real-hash", fixedNow);
     }
 
     @Test

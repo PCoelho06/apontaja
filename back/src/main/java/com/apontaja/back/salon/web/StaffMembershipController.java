@@ -14,6 +14,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,8 +42,9 @@ class StaffMembershipController {
 
     @GetMapping
     @PreAuthorize("@salonAccessGuard.hasAccessToSalon(authentication.principal, #salonId)")
-    public ResponseEntity<List<StaffMemberResponse>> listMembers(@P("salonId") @PathVariable UUID salonId) {
-        List<StaffMemberResponse> body = staffMemberQueryService.listMembersWithEmail(salonId).stream()
+    public ResponseEntity<List<StaffMemberResponse>> listMembers(@P("salonId") @PathVariable UUID salonId,
+            @AuthenticationPrincipal UUID accountId) {
+        List<StaffMemberResponse> body = staffMemberQueryService.listMembers(salonId, accountId).stream()
                 .map(StaffMembershipController::toResponse).toList();
         return ResponseEntity.ok(body);
     }
@@ -84,7 +86,7 @@ class StaffMembershipController {
     }
 
     private static StaffMemberResponse toResponse(StaffMemberDetails details) {
-        return new StaffMemberResponse(details.staffMembershipId(), details.accountId(), details.email(),
-                details.role(), details.since());
+        return new StaffMemberResponse(details.staffMembershipId(), details.accountId(), details.displayName(),
+                details.email(), details.role(), details.since());
     }
 }
