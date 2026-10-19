@@ -4,5 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record CustomerResponse(UUID customerProfileId, UUID salonCustomerLinkId, UUID salonId, String firstName,
-        String lastName, String email, String phone, String internalNotes, Instant createdAt) {
+        String lastName, String email, String phone, String internalNotes, boolean marketingConsent,
+        Instant marketingConsentAt, Instant marketingConsentRevokedAt, boolean anonymized, Instant createdAt,
+        Instant lastVisitAt, Instant nextVisitAt) {
 }

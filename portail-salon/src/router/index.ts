@@ -94,6 +94,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/salons/:salonId/clients",
+      name: "customers",
+      component: () => import("@/views/CustomersView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/invitations/accepter",
       name: "accept-invitation",
       component: () => import("@/views/AcceptInvitationView.vue"),

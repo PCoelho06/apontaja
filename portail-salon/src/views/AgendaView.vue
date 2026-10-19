@@ -89,7 +89,7 @@ const visibleResources = computed(() => {
 const customerNames = computed(
   () =>
     new Map(
-      customerStore.customers.map((c) => [
+      Object.values(customerStore.byId).map((c) => [
         c.customerProfileId,
         `${c.firstName} ${c.lastName}`,
       ]),
@@ -148,6 +148,10 @@ async function loadDay() {
       date.value,
       timeZone.value,
       resourceStore.resources.map((r) => r.resourceId),
+    );
+    await customerStore.ensureCustomers(
+      salonId.value,
+      agendaStore.appointments.map((a) => a.customerProfileId),
     );
   } catch (e) {
     error.value =
@@ -242,7 +246,6 @@ watch(
         salonStore.fetchSalon(id),
         resourceStore.fetchResources(id),
         staffStore.fetchMembers(id),
-        customerStore.fetchCustomers(id),
         serviceStore.fetchServices(id),
       ]);
       if (id !== salonId.value) {

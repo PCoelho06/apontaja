@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 
 import {
   UiAlert,
@@ -10,14 +10,16 @@ import {
 } from "@apontaja/ui-kit";
 
 import { describeIssues } from "@/lib/availabilityIssues";
-import {
-  formatCents,
-  formatDuration,
-} from "@/lib/catalogFormat";
+import { formatCents, formatDuration } from "@/lib/catalogFormat";
+import { debounce } from "@/lib/debounce";
 import { errorMessage } from "@/lib/errorMessage";
 import { instantToZonedLocal, zonedLocalToInstant } from "@/lib/zonedTime";
 import { useAppointmentStore } from "@/stores/appointment";
-import { useCustomerStore, type NewCustomer } from "@/stores/customer";
+import {
+  useCustomerStore,
+  type Customer,
+  type NewCustomer,
+} from "@/stores/customer";
 import { useSalonServiceStore } from "@/stores/salonService";
 
 const props = defineProps<{
@@ -41,6 +43,7 @@ const start = ref("");
 const serviceId = ref("");
 const customerId = ref("");
 const search = ref("");
+const selectedCustomer = ref<Customer | null>(null);
 const newCustomer = ref(false);
 const customerForm = reactive({
   firstName: "",
@@ -53,7 +56,8 @@ const issues = ref<string[]>([]);
 const submitting = ref(false);
 
 function reset() {
-  resourceId.value = props.initialResourceId ?? props.resources[0]?.resourceId ?? "";
+  resourceId.value =
+    props.initialResourceId ?? props.resources[0]?.resourceId ?? "";
   start.value = props.initialStart;
   serviceId.value = "";
   customerId.value = "";
@@ -85,6 +89,7 @@ watch(
     if (isOpen) {
       reset();
       loadLinks();
+      runSearch();
     }
   },
   { immediate: true },
@@ -109,7 +114,8 @@ const serviceChoices = computed(() =>
 );
 
 const selectedChoice = computed(
-  () => serviceChoices.value.find((c) => c.serviceId === serviceId.value) ?? null,
+  () =>
+    serviceChoices.value.find((c) => c.serviceId === serviceId.value) ?? null,
 );
 
 watch(resourceId, () => {
@@ -125,7 +131,9 @@ const endHint = computed(() => {
   }
   try {
     const startAt = zonedLocalToInstant(start.value, props.timeZone);
-    const end = new Date(new Date(startAt).getTime() + choice.durationMinutes * 60_000);
+    const end = new Date(
+      new Date(startAt).getTime() + choice.durationMinutes * 60_000,
+    );
     return `Fin prévue à ${instantToZonedLocal(end.toISOString(), props.timeZone).slice(11, 16)}`;
   } catch {
     return undefined;
@@ -139,24 +147,45 @@ const serviceHint = computed(() => {
   return endHint.value;
 });
 
-const filteredCustomers = computed(() => {
-  const needle = search.value.trim().toLowerCase();
-  return customerStore.customers
-    .filter((c) =>
-      needle === ""
-        ? true
-        : [c.firstName, c.lastName, c.email ?? "", c.phone ?? ""]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle),
-    )
-    .sort((a, b) => a.lastName.localeCompare(b.lastName))
-    .slice(0, 50);
+async function runSearch() {
+  try {
+    await customerStore.searchCustomers(props.salonId, {
+      q: search.value,
+      size: 20,
+    });
+  } catch (e) {
+    formError.value = errorMessage(e, "Recherche de clients impossible.");
+  }
+}
+
+const debouncedSearch = debounce(runSearch, 300);
+watch(search, () => debouncedSearch());
+onBeforeUnmount(() => debouncedSearch.cancel());
+
+watch(customerId, (id) => {
+  selectedCustomer.value = customerStore.byId[id] ?? null;
 });
 
-function customerLabel(c: { firstName: string; lastName: string; email: string | null; phone: string | null }) {
+/** Résultats de la recherche ; le client choisi reste proposé même s'il n'y figure plus. */
+const customerChoices = computed(() => {
+  const found = customerStore.results;
+  const chosen = selectedCustomer.value;
+  return chosen &&
+    !found.some((c) => c.customerProfileId === chosen.customerProfileId)
+    ? [chosen, ...found]
+    : found;
+});
+
+function customerLabel(c: {
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+}) {
   const contact = c.email ?? c.phone;
-  return contact ? `${c.firstName} ${c.lastName} · ${contact}` : `${c.firstName} ${c.lastName}`;
+  return contact
+    ? `${c.firstName} ${c.lastName} · ${contact}`
+    : `${c.firstName} ${c.lastName}`;
 }
 
 function buildCustomer(): NewCustomer | null {
@@ -169,10 +198,17 @@ function buildCustomer(): NewCustomer | null {
     return null;
   }
   if (!email && !phone) {
-    formError.value = "Renseignez au moins un email ou un téléphone pour le client.";
+    formError.value =
+      "Renseignez au moins un email ou un téléphone pour le client.";
     return null;
   }
-  return { firstName, lastName, email: email || null, phone: phone || null, internalNotes: null };
+  return {
+    firstName,
+    lastName,
+    email: email || null,
+    phone: phone || null,
+    internalNotes: null,
+  };
 }
 
 async function submit() {
@@ -196,7 +232,10 @@ async function submit() {
     const startAt = zonedLocalToInstant(start.value, props.timeZone);
     let profileId = customerId.value;
     if (customerPayload) {
-      const created = await customerStore.createCustomer(props.salonId, customerPayload);
+      const created = await customerStore.createCustomer(
+        props.salonId,
+        customerPayload,
+      );
       // Le client existe désormais : un nouvel essai ne doit pas le recréer (pas de dédoublonnage côté back).
       profileId = created.customerProfileId;
       customerId.value = profileId;
@@ -295,7 +334,7 @@ async function submit() {
               Choisir un client…
             </option>
             <option
-              v-for="customer in filteredCustomers"
+              v-for="customer in customerChoices"
               :key="customer.customerProfileId"
               :value="customer.customerProfileId"
             >

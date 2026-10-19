@@ -127,6 +127,12 @@ async function handleRemove(staffMembershipId: string) {
         <RouterLink :to="{ name: 'catalog-resources', params: { salonId } }">
           Catalogue
         </RouterLink>
+        <RouterLink
+          :to="{ name: 'customers', params: { salonId } }"
+          class="ml-4"
+        >
+          Clients
+        </RouterLink>
 
         <!-- Équipe -->
         <section class="mt-8">
@@ -149,7 +155,9 @@ async function handleRemove(staffMembershipId: string) {
                 <span
                   v-if="member.email"
                   class="block text-xs text-ink/50"
-                >{{ member.email }}</span>
+                >{{
+                  member.email
+                }}</span>
                 <span class="block text-xs text-ink/50">Membre depuis
                   {{ new Date(member.since).toLocaleDateString() }}</span>
               </div>

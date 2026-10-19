@@ -19,9 +19,8 @@ import java.util.UUID;
 /**
  * Carnet client : rattache un {@link CustomerProfile} à un salon, strictement
  * propre à ce salon (jamais visible d'un autre, cf. règle de matching §4 du
- * contexte). Consentement marketing et dates de visite non mappés en Phase 3
- * (colonnes existantes dans le schéma, mais rien ne les renseigne encore —
- * ajoutés quand un vrai besoin apparaît, Phase 4 / tranches 7-8).
+ * contexte). Le consentement marketing est mappé ; les dates de visite sont
+ * dérivées des RDV et ne sont pas stockées.
  *
  * <p>
  * Implémente {@link Persistable} pour la même raison que {@code Account}.
@@ -45,6 +44,12 @@ public class SalonCustomerLink implements Persistable<UUID> {
 
     @Column(name = "internal_notes")
     private String internalNotes;
+
+    @Column(name = "marketing_consent_at")
+    private Instant marketingConsentAt;
+
+    @Column(name = "marketing_consent_revoked_at")
+    private Instant marketingConsentRevokedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -103,6 +108,38 @@ public class SalonCustomerLink implements Persistable<UUID> {
 
     public String getInternalNotes() {
         return internalNotes;
+    }
+
+    public Instant getMarketingConsentAt() {
+        return marketingConsentAt;
+    }
+
+    public Instant getMarketingConsentRevokedAt() {
+        return marketingConsentRevokedAt;
+    }
+
+    public boolean hasMarketingConsent() {
+        return marketingConsentAt != null && marketingConsentRevokedAt == null;
+    }
+
+    public void updateInternalNotes(String internalNotes) {
+        this.internalNotes = internalNotes;
+    }
+
+    public void grantMarketingConsent(Instant at) {
+        this.marketingConsentAt = Objects.requireNonNull(at, "at");
+        this.marketingConsentRevokedAt = null;
+    }
+
+    public void revokeMarketingConsent(Instant at) {
+        this.marketingConsentRevokedAt = Objects.requireNonNull(at, "at");
+    }
+
+    /** Efface notes et consentement (anonymisation). */
+    public void clearPersonalData() {
+        this.internalNotes = null;
+        this.marketingConsentAt = null;
+        this.marketingConsentRevokedAt = null;
     }
 
     public Instant getCreatedAt() {

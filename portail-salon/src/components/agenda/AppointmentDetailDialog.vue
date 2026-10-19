@@ -53,10 +53,7 @@ watch(
 );
 
 const customer = computed(
-  () =>
-    customerStore.customers.find(
-      (c) => c.customerProfileId === props.appointment?.customerProfileId,
-    ) ?? null,
+  () => customerStore.byId[props.appointment?.customerProfileId ?? ""] ?? null,
 );
 const resourceName = computed(
   () =>

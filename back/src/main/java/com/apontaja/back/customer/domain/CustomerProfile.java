@@ -53,6 +53,9 @@ public class CustomerProfile implements Persistable<UUID> {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "anonymized_at")
+    private Instant anonymizedAt;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
@@ -63,8 +66,7 @@ public class CustomerProfile implements Persistable<UUID> {
         // requis par Hibernate
     }
 
-    public CustomerProfile(UUID id, String firstName, String lastName, String email, String phone,
-            Instant createdAt) {
+    public CustomerProfile(UUID id, String firstName, String lastName, String email, String phone, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "id");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.firstName = Objects.requireNonNull(firstName, "firstName");
@@ -122,6 +124,38 @@ public class CustomerProfile implements Persistable<UUID> {
 
     public Instant getDeletedAt() {
         return deletedAt;
+    }
+
+    public boolean isAnonymized() {
+        return anonymizedAt != null;
+    }
+
+    public Instant getAnonymizedAt() {
+        return anonymizedAt;
+    }
+
+    /**
+     * Mutateur inconditionnel : la règle « email ou téléphone » vit dans le service
+     * applicatif.
+     */
+    public void updateIdentity(String firstName, String lastName, String email, String phone) {
+        this.firstName = Objects.requireNonNull(firstName, "firstName");
+        this.lastName = Objects.requireNonNull(lastName, "lastName");
+        this.email = email;
+        this.phone = phone;
+    }
+
+    /**
+     * Efface les données personnelles et détache le compte ; le profil reste (les
+     * RDV le référencent).
+     */
+    public void anonymize(Instant at) {
+        this.firstName = "Client";
+        this.lastName = "anonymisé";
+        this.email = null;
+        this.phone = null;
+        this.accountId = null;
+        this.anonymizedAt = Objects.requireNonNull(at, "at");
     }
 
     private static boolean isBlank(String value) {

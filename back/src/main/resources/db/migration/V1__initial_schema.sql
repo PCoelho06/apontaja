@@ -269,9 +269,11 @@ CREATE TABLE customer_profile (
     email           citext NULL,
     phone           text NULL,
     created_at      timestamptz NOT NULL DEFAULT now(),
+    anonymized_at   timestamptz NULL,
     deleted_at      timestamptz NULL,
 
-    CONSTRAINT ck_customer_profile_has_contact CHECK (email IS NOT NULL OR phone IS NOT NULL)
+    CONSTRAINT ck_customer_profile_has_contact
+        CHECK (email IS NOT NULL OR phone IS NOT NULL OR anonymized_at IS NOT NULL)
 );
 
 -- Un compte ne "réclame" qu'un seul profil client (le profil canonique).
@@ -295,8 +297,6 @@ CREATE TABLE salon_customer_link (
     internal_notes                  text NULL,
     marketing_consent_at            timestamptz NULL,
     marketing_consent_revoked_at    timestamptz NULL,
-    first_visit_at                  timestamptz NULL,
-    last_visit_at                   timestamptz NULL,
     created_at                      timestamptz NOT NULL DEFAULT now(),
     deleted_at                      timestamptz NULL
 );
