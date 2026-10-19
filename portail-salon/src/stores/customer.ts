@@ -1,13 +1,9 @@
 import { defineStore } from "pinia";
 
-import {
-  apiDelete,
-  apiGet,
-  apiPatch,
-  apiPost,
-  apiPut,
-} from "@/lib/apiClient";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/lib/apiClient";
 import { requireToken } from "@/lib/requireToken";
+
+import type { DuplicateReport } from "@/lib/customerDuplicates";
 
 export interface Customer {
   customerProfileId: string;
@@ -113,7 +109,10 @@ export const useCustomerStore = defineStore("customer", {
       return result;
     },
 
-    async fetchCustomer(salonId: string, customerId: string): Promise<Customer> {
+    async fetchCustomer(
+      salonId: string,
+      customerId: string,
+    ): Promise<Customer> {
       const customer = await apiGet<Customer>(
         `/api/salons/${salonId}/customers/${customerId}`,
         requireToken(),
@@ -198,6 +197,30 @@ export const useCustomerStore = defineStore("customer", {
         `/api/salons/${salonId}/customers/${customerId}/appointments?page=${page}&size=${size}`,
         requireToken(),
       );
+    },
+
+    fetchDuplicates(salonId: string): Promise<DuplicateReport> {
+      return apiGet<DuplicateReport>(
+        `/api/salons/${salonId}/customers/duplicates`,
+        requireToken(),
+      );
+    },
+
+    /** Fusion irréversible : les profils absorbés disparaissent, le cache des clients est donc vidé. */
+    async mergeCustomers(
+      salonId: string,
+      survivorId: string,
+      absorbedIds: string[],
+    ): Promise<Customer> {
+      const survivor = await apiPost<Customer>(
+        `/api/salons/${salonId}/customers/merge`,
+        { survivorId, absorbedIds },
+        requireToken(),
+      );
+      this.byId = {};
+      this.cacheSalonId = null;
+      this.remember(salonId, [survivor]);
+      return survivor;
     },
   },
 });
