@@ -111,7 +111,7 @@ class CustomerControllerIT {
                 String customerId = objectMapper.readTree(responseBody).get("customerProfileId").asText();
 
                 mockMvc.perform(get(CUSTOMERS, salonId).header("Authorization", auth)).andExpect(status().isOk())
-                                .andExpect(jsonPath("$.length()").value(1));
+                                .andExpect(jsonPath("$.content.length()").value(1));
                 mockMvc.perform(get(CUSTOMER, salonId, customerId).header("Authorization", auth))
                                 .andExpect(status().isOk()).andExpect(jsonPath("$.lastName").value("Martin"));
         }
@@ -183,6 +183,6 @@ class CustomerControllerIT {
                                 .content(body("Dave", "B", "dave@example.com", null))).andExpect(status().isCreated());
 
                 mockMvc.perform(get(CUSTOMERS, salonId).header("Authorization", auth)).andExpect(status().isOk())
-                                .andExpect(jsonPath("$.length()").value(2));
+                                .andExpect(jsonPath("$.content.length()").value(2));
         }
 }

@@ -18,15 +18,6 @@ const PAYLOAD = {
   internalNotes: null,
 };
 
-function customer(id: string, createdAt: string) {
-  return {
-    customerProfileId: id,
-    firstName: "Alice",
-    lastName: "Martin",
-    createdAt,
-  };
-}
-
 describe("customer store, création", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -34,36 +25,20 @@ describe("customer store, création", () => {
     useAuthStore().accessToken = "tok";
   });
 
-  it("renvoie le profil identifié par la réponse du back", async () => {
-    vi.mocked(apiPost).mockResolvedValue({ customerProfileId: "c2" });
-    vi.mocked(apiGet).mockResolvedValue([
-      customer("c1", "2026-01-01T00:00:00Z"),
-      customer("c2", "2026-02-01T00:00:00Z"),
-    ]);
-
-    const created = await useCustomerStore().createCustomer("s1", PAYLOAD);
-
-    expect(apiPost).toHaveBeenCalledWith(
-      "/api/salons/s1/customers",
-      PAYLOAD,
-      "tok",
-    );
-    expect(created.customerProfileId).toBe("c2");
-  });
-
-  it("renvoie le profil créé par le back puis recharge la liste", async () => {
-    const created = customer("c2", "2026-02-01T00:00:00Z");
+  it("renvoie le profil créé par le back et le met en cache sans recharger de liste", async () => {
+    const created = { customerProfileId: "c2", ...PAYLOAD };
     vi.mocked(apiPost).mockResolvedValue(created);
-    vi.mocked(apiGet).mockResolvedValue([created]);
 
-    const result = await useCustomerStore().createCustomer("s1", PAYLOAD);
+    const store = useCustomerStore();
+    const result = await store.createCustomer("s1", PAYLOAD);
 
     expect(apiPost).toHaveBeenCalledWith(
       "/api/salons/s1/customers",
       PAYLOAD,
       "tok",
     );
-    expect(apiGet).toHaveBeenCalledWith("/api/salons/s1/customers", "tok");
+    expect(apiGet).not.toHaveBeenCalled();
     expect(result).toEqual(created);
+    expect(store.byId["c2"]).toEqual(created);
   });
 });
