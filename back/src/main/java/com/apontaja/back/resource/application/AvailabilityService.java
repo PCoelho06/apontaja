@@ -66,6 +66,26 @@ public class AvailabilityService {
                 result.violations().stream().map(v -> AvailabilityIssue.valueOf(v.name())).toList());
     }
 
+    /**
+     * Charge une seule fois horaires et fermetures d'une ressource pour la fenêtre
+     * [from, to) et renvoie un plan qui teste vite de nombreux créneaux (mêmes
+     * règles que {@link #check}, sans les autres RDV).
+     */
+    @Transactional(readOnly = true)
+    public AvailabilityPlan plan(UUID salonId, UUID resourceId, Instant from, Instant to) {
+        if (!to.isAfter(from)) {
+            throw new InvalidTimeRangeException("La fin doit être postérieure au début.");
+        }
+        SalonSummary salon = salonQueryService.findAliveById(salonId).orElseThrow(ResourceNotFoundException::new);
+        resourceRepository.findAliveById(resourceId).map(Resource::getSalonId).filter(salonId::equals)
+                .orElseThrow(ResourceNotFoundException::new);
+        return new EngineAvailabilityPlan(parseZone(salon.timezone()),
+                windows(scheduleRepository.findBySalonId(salonId)),
+                windows(scheduleRepository.findByResourceId(resourceId)),
+                intervals(closureRepository.findOverlappingBySalonId(salonId, from, to)),
+                intervals(closureRepository.findOverlappingByResourceId(resourceId, from, to)));
+    }
+
     private static ZoneId parseZone(String timezone) {
         try {
             return ZoneId.of(timezone);
