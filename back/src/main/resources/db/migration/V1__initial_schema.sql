@@ -270,8 +270,11 @@ CREATE TABLE customer_profile (
     phone           text NULL,
     created_at      timestamptz NOT NULL DEFAULT now(),
     anonymized_at   timestamptz NULL,
+    merged_into_profile_id uuid NULL REFERENCES customer_profile(id),
     deleted_at      timestamptz NULL,
 
+    CONSTRAINT ck_customer_profile_merged_is_deleted
+        CHECK (merged_into_profile_id IS NULL OR deleted_at IS NOT NULL),
     CONSTRAINT ck_customer_profile_has_contact
         CHECK (email IS NOT NULL OR phone IS NOT NULL OR anonymized_at IS NOT NULL)
 );

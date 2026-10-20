@@ -100,6 +100,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/salons/:salonId/clients/doublons",
+      name: "customer-duplicates",
+      component: () => import("@/views/CustomerDuplicatesView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/invitations/accepter",
       name: "accept-invitation",
       component: () => import("@/views/AcceptInvitationView.vue"),

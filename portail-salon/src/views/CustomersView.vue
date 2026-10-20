@@ -9,6 +9,7 @@ import CustomerFormDialog from "@/components/customers/CustomerFormDialog.vue";
 import { contactLine, fullName, visitLabel } from "@/lib/customerFormat";
 import { debounce } from "@/lib/debounce";
 import { errorMessage } from "@/lib/errorMessage";
+import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import { useCustomerStore, type Customer } from "@/stores/customer";
 import { useSalonStore } from "@/stores/salon";
 import { useSalonServiceStore } from "@/stores/salonService";
@@ -19,6 +20,8 @@ const salonId = computed(() => String(route.params.salonId));
 const salonStore = useSalonStore();
 const serviceStore = useSalonServiceStore();
 const customerStore = useCustomerStore();
+
+const { canManage } = useCatalogAccess(() => salonId.value);
 
 const ready = ref(false);
 const loading = ref(false);
@@ -72,6 +75,9 @@ watch(
       await Promise.all([
         salonStore.fetchSalon(id),
         serviceStore.fetchServices(id),
+        salonStore.salons.length === 0
+          ? salonStore.fetchSalons()
+          : Promise.resolve(),
       ]);
       if (id !== salonId.value) {
         return;
@@ -122,9 +128,18 @@ function onSaved(customer: Customer) {
         >
           ← {{ salonStore.currentSalon?.name ?? "Salon" }}
         </RouterLink>
-        <h1 class="mt-2 font-display text-2xl text-ink">
-          Clients
-        </h1>
+        <div class="mt-2 flex items-center justify-between gap-3">
+          <h1 class="font-display text-2xl text-ink">
+            Clients
+          </h1>
+          <RouterLink
+            v-if="canManage"
+            :to="{ name: 'customer-duplicates', params: { salonId } }"
+            class="text-sm text-wine hover:underline"
+          >
+            Doublons
+          </RouterLink>
+        </div>
       </div>
 
       <UiAlert

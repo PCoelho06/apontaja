@@ -158,7 +158,7 @@ class CustomerController {
         return (int) ((totalElements + size - 1) / size);
     }
 
-    private static CustomerResponse toResponse(CustomerCard c) {
+    static CustomerResponse toResponse(CustomerCard c) {
         return new CustomerResponse(c.customerProfileId(), c.salonCustomerLinkId(), c.salonId(), c.firstName(),
                 c.lastName(), c.email(), c.phone(), c.internalNotes(), c.marketingConsent(),
                 c.marketingConsentAt(), c.marketingConsentRevokedAt(), c.anonymized(), c.createdAt(),

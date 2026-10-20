@@ -56,6 +56,9 @@ public class CustomerProfile implements Persistable<UUID> {
     @Column(name = "anonymized_at")
     private Instant anonymizedAt;
 
+    @Column(name = "merged_into_profile_id")
+    private UUID mergedIntoProfileId;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
@@ -132,6 +135,20 @@ public class CustomerProfile implements Persistable<UUID> {
 
     public Instant getAnonymizedAt() {
         return anonymizedAt;
+    }
+
+    public UUID getMergedIntoProfileId() {
+        return mergedIntoProfileId;
+    }
+
+    /**
+     * Fusion : efface les données personnelles, retire le profil du carnet et garde
+     * la trace du survivant.
+     */
+    public void markMergedInto(UUID survivorId, Instant at) {
+        anonymize(at);
+        this.mergedIntoProfileId = Objects.requireNonNull(survivorId, "survivorId");
+        this.deletedAt = at;
     }
 
     /**

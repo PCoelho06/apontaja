@@ -142,6 +142,16 @@ public class SalonCustomerLink implements Persistable<UUID> {
         this.marketingConsentRevokedAt = null;
     }
 
+        /** Fusion : pose les deux dates de consentement calculées (mutateur inconditionnel). */
+    public void replaceMarketingConsent(Instant consentAt, Instant revokedAt) {
+        this.marketingConsentAt = consentAt;
+        this.marketingConsentRevokedAt = revokedAt;
+    }
+
+    public void softDelete(Instant at) {
+        this.deletedAt = Objects.requireNonNull(at, "at");
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
