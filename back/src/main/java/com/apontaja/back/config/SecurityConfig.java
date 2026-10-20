@@ -57,7 +57,8 @@ public class SecurityConfig {
                                                 "/api/auth/resend-verification-email", "/api/auth/forgot-password",
                                                 "/api/auth/reset-password")
                                 .permitAll().requestMatchers(HttpMethod.GET, "/api/staff-invitations/*").permitAll()
-                                .anyRequest().authenticated())
+                                .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll().anyRequest()
+                                .authenticated())
                                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                                                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                                                 // Inversion (Phase 2) : CSRF n'a de sens que pour l'auth cookie-driven

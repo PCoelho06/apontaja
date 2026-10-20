@@ -65,6 +65,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                         "/api/staff-invitations/accept",
                         () -> Bandwidth.builder().capacity(10).refillGreedy(10, Duration.ofHours(1)).build());
 
+        private static final String PUBLIC_PREFIX = "/api/public/";
+        private static final String PUBLIC_SLOTS_SUFFIX = "/slots";
+        private static final Supplier<Bandwidth> PUBLIC_LIMIT = () -> Bandwidth.builder().capacity(60)
+                        .refillGreedy(60, Duration.ofMinutes(1)).build();
+        private static final Supplier<Bandwidth> PUBLIC_SLOTS_LIMIT = () -> Bandwidth.builder().capacity(20)
+                        .refillGreedy(20, Duration.ofMinutes(1)).build();
+
         private final Cache<String, Bucket> buckets = Caffeine.newBuilder().expireAfterAccess(Duration.ofHours(2))
                         .maximumSize(100_000).build();
 
@@ -85,14 +92,24 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
                 String path = request.getRequestURI();
                 Supplier<Bandwidth> limitSupplier = LIMITED_PATHS.get(path);
+                String bucketName = path;
+
+                // Chemins publics : l'URL contient un UUID, donc un seau par catégorie et par
+                // IP.
+                if (limitSupplier == null && path.startsWith(PUBLIC_PREFIX)) {
+                        boolean slots = path.endsWith(PUBLIC_SLOTS_SUFFIX);
+                        bucketName = slots ? PUBLIC_PREFIX + "*/slots" : PUBLIC_PREFIX + "*";
+                        limitSupplier = slots ? PUBLIC_SLOTS_LIMIT : PUBLIC_LIMIT;
+                }
 
                 if (limitSupplier == null) {
                         filterChain.doFilter(request, response);
                         return;
                 }
 
-                String key = path + ':' + request.getRemoteAddr();
-                Bucket bucket = buckets.get(key, k -> Bucket.builder().addLimit(limitSupplier.get()).build());
+                String key = bucketName + ':' + request.getRemoteAddr();
+                Supplier<Bandwidth> bandwidth = limitSupplier;
+                Bucket bucket = buckets.get(key, k -> Bucket.builder().addLimit(bandwidth.get()).build());
 
                 ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 

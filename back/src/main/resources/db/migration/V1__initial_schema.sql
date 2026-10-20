@@ -126,6 +126,24 @@ CREATE TABLE salon (
 CREATE INDEX ix_salon_organization ON salon (organization_id) WHERE deleted_at IS NULL;
 
 -- =============================================================================
+-- SALON_BOOKING_SETTINGS — réglages de réservation en ligne (ligne absente = défauts)
+-- =============================================================================
+CREATE TABLE salon_booking_settings (
+    salon_id                     uuid PRIMARY KEY REFERENCES salon(id) ON DELETE CASCADE,
+    online_booking_enabled       boolean NOT NULL DEFAULT false,
+    auto_confirm                 boolean NOT NULL DEFAULT false,
+    slot_granularity_minutes     integer NOT NULL DEFAULT 15
+        CHECK (slot_granularity_minutes IN (5, 10, 15, 20, 30, 60)),
+    min_notice_minutes           integer NOT NULL DEFAULT 120
+        CHECK (min_notice_minutes BETWEEN 0 AND 10080),
+    horizon_days                 integer NOT NULL DEFAULT 60
+        CHECK (horizon_days BETWEEN 1 AND 365),
+    cancellation_deadline_hours  integer NOT NULL DEFAULT 24
+        CHECK (cancellation_deadline_hours BETWEEN 0 AND 720),
+    updated_at                   timestamptz NOT NULL DEFAULT now()
+);
+
+-- =============================================================================
 -- STAFF_MEMBERSHIP — rattachement d'un compte à un salon avec un rôle
 -- =============================================================================
 CREATE TABLE staff_membership (
