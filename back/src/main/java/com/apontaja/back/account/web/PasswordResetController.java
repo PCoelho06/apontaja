@@ -27,7 +27,7 @@ class PasswordResetController {
     /** Toujours 204, que l'email existe ou non — anti-énumération (même principe que login). */
     @PostMapping("/forgot-password")
     ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        passwordResetService.requestReset(request.email());
+        passwordResetService.requestReset(request.email(), request.portal());
         return ResponseEntity.noContent().build();
     }
 

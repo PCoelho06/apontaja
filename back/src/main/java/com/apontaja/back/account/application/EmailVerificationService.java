@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class EmailVerificationService {
@@ -29,7 +30,8 @@ public class EmailVerificationService {
     private final IdGenerator idGenerator;
     private final Clock clock;
     private final Duration tokenTtl;
-    private final String frontendBaseUrl;
+    private final FrontendLinks frontendLinks;
+    private final List<AccountEmailVerifiedListener> verifiedListeners;
 
     EmailVerificationService(AccountRepository accountRepository, AccountTokenRepository accountTokenRepository,
             OpaqueTokenGenerator opaqueTokenGenerator, TokenHasher tokenHasher, EmailSender emailSender,
@@ -37,7 +39,7 @@ public class EmailVerificationService {
             @Value("${apontaja.security.email-verification.ttl:48h}") Duration tokenTtl,
             // ADAPTER cette valeur par défaut si le port dev du portail-salon diffère
             // (5173 = défaut Vite). Pas de vraie décision de prod ici (§6 [OPEN]).
-            @Value("${apontaja.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
+            FrontendLinks frontendLinks, List<AccountEmailVerifiedListener> verifiedListeners) {
         this.accountRepository = accountRepository;
         this.accountTokenRepository = accountTokenRepository;
         this.opaqueTokenGenerator = opaqueTokenGenerator;
@@ -46,7 +48,8 @@ public class EmailVerificationService {
         this.idGenerator = idGenerator;
         this.clock = clock;
         this.tokenTtl = tokenTtl;
-        this.frontendBaseUrl = frontendBaseUrl;
+        this.frontendLinks = frontendLinks;
+        this.verifiedListeners = verifiedListeners;
     }
 
     /**
@@ -54,7 +57,7 @@ public class EmailVerificationService {
      * resend().
      */
     @Transactional
-    public void issueAndSend(Account account) {
+    public void issueAndSend(Account account, FrontendPortal portal) {
         Instant now = clock.instant();
         String rawToken = opaqueTokenGenerator.generate();
 
@@ -62,7 +65,7 @@ public class EmailVerificationService {
                 AccountTokenType.EMAIL_VERIFICATION, tokenHasher.hash(rawToken), now.plus(tokenTtl), now);
         accountTokenRepository.save(token);
 
-        String link = frontendBaseUrl + "/confirmer-email?token=" + rawToken;
+        String link = frontendLinks.link(portal, "/confirmer-email?token=" + rawToken);
         emailSender.send(account.getEmail(), "Confirmez votre adresse email",
                 "Cliquez sur ce lien pour confirmer votre email (valable " + tokenTtl.toHours() + "h) : " + link);
     }
@@ -86,6 +89,11 @@ public class EmailVerificationService {
 
         token.markUsed(now);
         accountTokenRepository.save(token);
+
+        // Même transaction : si un écouteur échoue, la vérification est annulée (rien de partiel).
+        for (AccountEmailVerifiedListener listener : verifiedListeners) {
+            listener.onEmailVerified(account.getId(), account.getEmail());
+        }
     }
 
     /**
@@ -94,8 +102,8 @@ public class EmailVerificationService {
      * forgot-password).
      */
     @Transactional
-    public void resend(String email) {
+    public void resend(String email, FrontendPortal portal) {
         accountRepository.findAliveByEmail(email.trim()).filter(account -> !account.isEmailVerified())
-                .ifPresent(this::issueAndSend);
+                .ifPresent(account -> issueAndSend(account, portal));
     }
 }

@@ -15,10 +15,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Identité personne, "réclamable" par un compte (Phase 4). {@code accountId}
- * toujours {@code null} en Phase 3 (aucune auto-inscription possible tant que
- * le portail client n'existe pas) — champ en UUID brut, pas de relation JPA
- * vers {@code Account} (même principe que {@code StaffMembership.accountId}).
+ * Identité d'un client dans le carnet d'UN salon, « réclamable » par un compte
+ * (tranche 4d). {@code accountId} est renseigné par
+ * {@code CustomerClaimService} (au plus un profil réclamé par compte et par
+ * salon) ; champ en UUID brut, pas de relation JPA vers {@code Account} (même
+ * principe que {@code StaffMembership.accountId}
  *
  * <p>
  * Contrat obligatoire (CHECK {@code ck_customer_profile_has_contact}) : email
@@ -139,6 +140,15 @@ public class CustomerProfile implements Persistable<UUID> {
 
     public UUID getMergedIntoProfileId() {
         return mergedIntoProfileId;
+    }
+
+    /**
+     * Rattache le profil à un compte dont l'email est vérifié. Mutateur
+     * inconditionnel : les règles (un seul profil réclamé par compte et par salon,
+     * jamais un profil déjà réclamé) vivent dans {@code CustomerClaimService}.
+     */
+    public void claimBy(UUID accountId) {
+        this.accountId = Objects.requireNonNull(accountId, "accountId");
     }
 
     /**

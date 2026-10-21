@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,6 +52,9 @@ class EmailVerificationServiceTest {
     @Mock
     private EmailSender emailSender;
 
+    @Mock
+    private AccountEmailVerifiedListener verifiedListener;
+
     private EmailVerificationService service;
 
     private final Instant fixedNow = Instant.parse("2026-08-31T10:00:00Z");
@@ -60,7 +64,8 @@ class EmailVerificationServiceTest {
     void setUp() {
         service = new EmailVerificationService(accountRepository, accountTokenRepository, opaqueTokenGenerator,
                 tokenHasher, emailSender, () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC),
-                Duration.ofHours(48), "http://localhost:5173");
+                Duration.ofHours(48), new FrontendLinks("http://localhost:5173", "http://localhost:5174"),
+                List.of(verifiedListener));
     }
 
     private Account unverifiedAccount() {
@@ -73,7 +78,7 @@ class EmailVerificationServiceTest {
         when(opaqueTokenGenerator.generate()).thenReturn("raw-token");
         when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
 
-        service.issueAndSend(account);
+        service.issueAndSend(account, FrontendPortal.SALON);
 
         ArgumentCaptor<AccountToken> captor = ArgumentCaptor.forClass(AccountToken.class);
         verify(accountTokenRepository).save(captor.capture());
@@ -82,6 +87,18 @@ class EmailVerificationServiceTest {
 
         verify(emailSender).send(eq("alice@example.com"), anyString(),
                 org.mockito.ArgumentMatchers.contains("raw-token"));
+    }
+
+    @Test
+    void issueAndSend_envoie_un_lien_vers_le_portail_client() {
+        Account account = unverifiedAccount();
+        when(opaqueTokenGenerator.generate()).thenReturn("raw-token");
+        when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
+
+        service.issueAndSend(account, FrontendPortal.CLIENT);
+
+        verify(emailSender).send(eq("alice@example.com"), anyString(),
+                org.mockito.ArgumentMatchers.contains("http://localhost:5174/confirmer-email?token=raw-token"));
     }
 
     @Test
@@ -99,6 +116,7 @@ class EmailVerificationServiceTest {
         assertThat(token.isUsed()).isTrue();
         verify(accountRepository).save(account);
         verify(accountTokenRepository).save(token);
+        verify(verifiedListener).onEmailVerified(accountId, "alice@example.com");
     }
 
     @Test
@@ -126,6 +144,7 @@ class EmailVerificationServiceTest {
         when(accountTokenRepository.findByTokenHash("hashed-expired")).thenReturn(Optional.of(expiredToken));
 
         assertThatThrownBy(() -> service.confirm("raw-expired")).isInstanceOf(InvalidOrExpiredTokenException.class);
+        verify(verifiedListener, never()).onEmailVerified(any(), anyString());
     }
 
     @Test
@@ -142,7 +161,7 @@ class EmailVerificationServiceTest {
     void resend_ne_fait_rien_silencieusement_si_email_inconnu() {
         when(accountRepository.findAliveByEmail("inconnu@example.com")).thenReturn(Optional.empty());
 
-        service.resend("inconnu@example.com");
+        service.resend("inconnu@example.com", FrontendPortal.SALON);
 
         verify(accountTokenRepository, never()).save(org.mockito.ArgumentMatchers.any());
         verify(emailSender, never()).send(anyString(), anyString(), anyString());
@@ -154,7 +173,7 @@ class EmailVerificationServiceTest {
         verified.markEmailVerified(fixedNow.minus(1, ChronoUnit.DAYS));
         when(accountRepository.findAliveByEmail("alice@example.com")).thenReturn(Optional.of(verified));
 
-        service.resend("alice@example.com");
+        service.resend("alice@example.com", FrontendPortal.SALON);
 
         verify(accountTokenRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }

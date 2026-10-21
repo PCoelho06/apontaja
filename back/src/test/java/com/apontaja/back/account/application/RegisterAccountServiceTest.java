@@ -61,7 +61,7 @@ class RegisterAccountServiceTest {
         when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RegisterAccountResult result = service.register(new RegisterAccountCommand("alice@example.com", "Alice",
-                "Martin", "un-mot-de-passe-suffisamment-long"));
+                "Martin", "un-mot-de-passe-suffisamment-long", FrontendPortal.CLIENT));
 
         assertThat(result.email()).isEqualTo("alice@example.com");
 
@@ -74,7 +74,8 @@ class RegisterAccountServiceTest {
         List<ConsentType> types = consentCaptor.getAllValues().stream().map(ConsentRecord::getType).toList();
         assertThat(types).containsExactlyInAnyOrder(ConsentType.TOS, ConsentType.PRIVACY);
 
-        verify(emailVerificationService).issueAndSend(any(Account.class));
+        verify(emailVerificationService).issueAndSend(any(Account.class),
+                org.mockito.ArgumentMatchers.eq(FrontendPortal.CLIENT));
     }
 
     @Test
@@ -82,7 +83,8 @@ class RegisterAccountServiceTest {
         when(accountRepository.existsAliveByEmail("bob@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> service.register(
-                new RegisterAccountCommand("bob@example.com", "Bob", "Martin", "un-mot-de-passe-suffisamment-long")))
+                new RegisterAccountCommand("bob@example.com", "Bob", "Martin", "un-mot-de-passe-suffisamment-long",
+                        FrontendPortal.SALON)))
                         .isInstanceOf(EmailAlreadyUsedException.class);
     }
 

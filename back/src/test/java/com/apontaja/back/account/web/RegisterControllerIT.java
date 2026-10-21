@@ -29,7 +29,9 @@ class RegisterControllerIT {
                                   "email": "%s",
                                   "password": "un-mot-de-passe-suffisamment-long",
                                   "firstName":"Alice",
-                                  "lastName":"Martin"
+                                  "lastName":"Martin",
+                                  "acceptTos":true,
+                                  "acceptPrivacy":true
                                 }
                                 """.formatted(email);
         }
@@ -60,7 +62,9 @@ class RegisterControllerIT {
                                   "email": "gwen@example.com",
                                   "password": "court",
                                   "firstName":"Alice",
-                                  "lastName":"Martin"
+                                  "lastName":"Martin",
+                                  "acceptTos":true,
+                                  "acceptPrivacy":true
                                 }
                                 """;
 

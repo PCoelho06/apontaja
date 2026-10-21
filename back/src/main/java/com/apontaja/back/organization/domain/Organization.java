@@ -15,8 +15,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Regroupement "société" au-dessus des salons. Voir apontaja-schema.sql pour la
- * définition canonique (table {@code organization}).
+ * Regroupement "société" au-dessus des salons. Voir V1__initial_schema.sql pour
+ * la définition (table {@code organization}).
  *
  * <p>
  * Implémente {@link Persistable} pour la même raison que {@code Account} (ID

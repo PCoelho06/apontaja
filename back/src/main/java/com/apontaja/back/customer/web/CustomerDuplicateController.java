@@ -1,6 +1,7 @@
 package com.apontaja.back.customer.web;
 
 import com.apontaja.back.customer.application.CustomerAnonymizedException;
+import com.apontaja.back.customer.application.CustomerClaimedException;
 import com.apontaja.back.customer.application.CustomerDuplicateQueryService;
 import com.apontaja.back.customer.application.CustomerMergeService;
 import com.apontaja.back.customer.application.CustomerNotFoundException;
@@ -70,7 +71,8 @@ class CustomerDuplicateController {
         return problem(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler({ CustomerAnonymizedException.class, CustomerSharedException.class })
+    @ExceptionHandler({ CustomerAnonymizedException.class, CustomerClaimedException.class,
+            CustomerSharedException.class })
     ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
         return problem(HttpStatus.CONFLICT, ex.getMessage());
     }

@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Voir apontaja-schema.sql pour la définition canonique (table {@code salon}).
+ * Voir V1__initial_schema.sql pour la définition (table {@code salon}).
  * {@code timezone} : identifiant IANA (ex. {@code Europe/Lisbon}), voir §2 du
  * contexte pour la gestion du temps.
  *

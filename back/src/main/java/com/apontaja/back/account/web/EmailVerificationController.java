@@ -33,7 +33,7 @@ class EmailVerificationController {
     /** Toujours 204, que l'email existe, soit déjà vérifié, ou non — anti-énumération. */
     @PostMapping("/resend-verification-email")
     ResponseEntity<Void> resendVerificationEmail(@Valid @RequestBody ResendVerificationEmailRequest request) {
-        emailVerificationService.resend(request.email());
+        emailVerificationService.resend(request.email(), request.portal());
         return ResponseEntity.noContent().build();
     }
 
