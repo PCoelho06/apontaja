@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 
-import { apiGet } from "@/lib/apiClient";
+import { apiGet } from "@apontaja/web-core/api-client";
 import { dayBounds } from "@/lib/agenda";
 import type { AppointmentStatus } from "@/lib/appointmentStatus";
-import { requireToken } from "@/lib/requireToken";
+import { requireToken } from "@apontaja/web-core/require-token";
 import type { ScheduleSlot } from "@/lib/schedule";
 import { useClosureStore, type SalonClosure } from "@/stores/closure";
 import { useScheduleStore } from "@/stores/schedule";

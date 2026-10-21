@@ -2,10 +2,10 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 
-import { ApiError, apiGet, apiPost } from "@/lib/apiClient";
+import { ApiError, apiGet, apiPost } from "@apontaja/web-core/api-client";
 import { useAuthStore } from "@/stores/auth";
 
-import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
+import { UiAlert, UiButton, UiCheckbox, UiInput } from "@apontaja/ui-kit";
 
 interface LookupResponse {
   invitationId: string;
@@ -39,6 +39,7 @@ const errorMessage = ref("");
 const password = ref("");
 const firstName = ref("");
 const lastName = ref("");
+const acceptTerms = ref(false);
 const isSubmitting = ref(false);
 
 async function load() {
@@ -104,15 +105,21 @@ async function handleLogin() {
 
 async function handleRegisterThenLogin() {
   if (!lookup.value) return;
+  if (!acceptTerms.value) {
+    errorMessage.value =
+      "Vous devez accepter les CGU et la politique de confidentialité.";
+    return;
+  }
   isSubmitting.value = true;
   errorMessage.value = "";
   try {
-    await auth.register(
-      lookup.value.email,
-      password.value,
-      firstName.value.trim(),
-      lastName.value.trim(),
-    );
+    await auth.register({
+      email: lookup.value.email,
+      password: password.value,
+      firstName: firstName.value.trim(),
+      lastName: lastName.value.trim(),
+      acceptTerms: acceptTerms.value,
+    });
     // Pas de connexion automatique après /register (voir stores/auth.ts) — on enchaîne nous-mêmes.
     await auth.login(lookup.value.email, password.value);
     await acceptInvitation();
@@ -243,6 +250,30 @@ async function handleRegisterThenLogin() {
             minlength="12"
             required
           />
+          <div>
+            <UiCheckbox
+              v-model="acceptTerms"
+              label="J'accepte les CGU et la politique de confidentialité"
+            />
+            <div class="mt-1 flex gap-4 pl-6 text-xs">
+              <RouterLink
+                :to="{ name: 'terms' }"
+                target="_blank"
+                rel="noopener"
+                class="text-wine hover:underline"
+              >
+                Lire les CGU
+              </RouterLink>
+              <RouterLink
+                :to="{ name: 'privacy' }"
+                target="_blank"
+                rel="noopener"
+                class="text-wine hover:underline"
+              >
+                Lire la politique de confidentialité
+              </RouterLink>
+            </div>
+          </div>
           <UiAlert
             v-if="errorMessage"
             variant="error"

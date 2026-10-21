@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 
 const MESSAGES: Record<string, string> = {
   OUTSIDE_SALON_HOURS: "Ce créneau est en dehors des horaires du salon.",

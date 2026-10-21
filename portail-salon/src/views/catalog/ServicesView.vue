@@ -11,14 +11,14 @@ import {
 
 import ServiceLinksPanel from "@/components/catalog/ServiceLinksPanel.vue";
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import {
   centsToInput,
   eurosToCents,
   formatCents,
   formatDuration,
 } from "@/lib/catalogFormat";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import {
   useSalonServiceStore,
   type SalonServiceItem,

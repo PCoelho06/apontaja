@@ -25,7 +25,7 @@ import {
   STATUS_ORDER,
   STATUS_TONES,
 } from "@/lib/appointmentStatus";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { formatInstant, isValidTimeZone } from "@/lib/zonedTime";
 import { minutesToInstant } from "@/lib/agendaDrag";
 import { describeIssues } from "@/lib/availabilityIssues";

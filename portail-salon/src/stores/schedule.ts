@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
-import { apiGet, apiPut } from "@/lib/apiClient";
-import { requireToken } from "@/lib/requireToken";
+import { apiGet, apiPut } from "@apontaja/web-core/api-client";
+import { requireToken } from "@apontaja/web-core/require-token";
 import { normalizeSlot, type ScheduleSlot } from "@/lib/schedule";
 
 interface ScheduleResponse {

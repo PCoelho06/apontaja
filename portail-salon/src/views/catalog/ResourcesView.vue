@@ -5,8 +5,8 @@ import { useRoute } from "vue-router";
 import { UiAlert, UiButton, UiInput, UiSelect } from "@apontaja/ui-kit";
 
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
-import { ApiError } from "@/lib/apiClient";
-import { errorMessage } from "@/lib/errorMessage";
+import { ApiError } from "@apontaja/web-core/api-client";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import {
   useResourceStore,
   type ResourceType,

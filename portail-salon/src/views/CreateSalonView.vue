@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
 import AuthTextField from "@/components/AuthTextField.vue";
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import { useSalonStore } from "@/stores/salon";
 import { UiSelect } from "@apontaja/ui-kit";
 

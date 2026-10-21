@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 
-import { useAuthStore } from "./auth";
+import { defineAuthStore } from "./auth";
+
+const useAuthStore = defineAuthStore({ portal: "SALON" });
 
 describe("useAuthStore", () => {
   beforeEach(() => {
@@ -52,6 +54,7 @@ describe("useAuthStore", () => {
       email: "a@example.com",
       firstName: "Alice",
       lastName: "Martin",
+      emailVerified: true,
     });
   });
 
@@ -191,3 +194,5 @@ describe("useAuthStore", () => {
     expect(store.account).toBeNull();
   });
 });
+
+

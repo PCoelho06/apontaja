@@ -4,7 +4,7 @@ import { useRoute } from "vue-router";
 
 import { UiAlert, UiButton, UiDialog } from "@apontaja/ui-kit";
 
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import { visitLabel } from "@/lib/customerFormat";
 import {
   absorbedIds,
@@ -16,7 +16,7 @@ import {
   type DuplicateGroup,
   type DuplicateMember,
 } from "@/lib/customerDuplicates";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { useCustomerStore } from "@/stores/customer";
 import { useSalonStore } from "@/stores/salon";
 

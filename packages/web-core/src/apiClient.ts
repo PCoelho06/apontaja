@@ -42,6 +42,11 @@ export function configureAuthClient(client: AuthClient): void {
   authClient = client;
 }
 
+/** Jeton courant du client configuré, ou null si aucun client n'est configuré. */
+export function getConfiguredAccessToken(): string | null {
+  return authClient ? authClient.getAccessToken() : null;
+}
+
 function readCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
 
@@ -224,3 +229,5 @@ export function apiDelete<T>(path: string, accessToken?: string): Promise<T> {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });
 }
+
+

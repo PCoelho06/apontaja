@@ -7,12 +7,12 @@ import {
   apiGet,
   apiPatch,
   apiPut,
-} from "@/lib/apiClient";
+} from "@apontaja/web-core/api-client";
 import { useAuthStore } from "@/stores/auth";
 import { useCustomerStore, type Customer } from "@/stores/customer";
 
-vi.mock("@/lib/apiClient", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/apiClient")>();
+vi.mock("@apontaja/web-core/api-client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@apontaja/web-core/api-client")>();
   return {
     ...actual,
     apiGet: vi.fn(),

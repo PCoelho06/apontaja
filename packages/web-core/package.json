@@ -1,0 +1,34 @@
+{
+  "name": "@apontaja/web-core",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Socle front partagé (portail-salon, portail-client) : client API, jeton, erreurs, store d'auth.",
+  "type": "module",
+  "exports": {
+    "./api-client": "./src/apiClient.ts",
+    "./require-token": "./src/requireToken.ts",
+    "./error-message": "./src/errorMessage.ts",
+    "./auth": "./src/auth.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "pinia": "^4.0.3",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@vue/tsconfig": "0.9.1",
+    "eslint": "10.9.1",
+    "jsdom": "30.0.1",
+    "pinia": "4.0.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.68.0",
+    "vitest": "4.1.11",
+    "vue": "3.5.42",
+    "vue-tsc": "3.3.11"
+  }
+}

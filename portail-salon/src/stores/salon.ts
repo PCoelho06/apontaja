@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-import { apiGet, apiPost } from "@/lib/apiClient";
+import { apiGet, apiPost } from "@apontaja/web-core/api-client";
 import { useAuthStore } from "@/stores/auth";
 
 interface CreateSalonPayload {

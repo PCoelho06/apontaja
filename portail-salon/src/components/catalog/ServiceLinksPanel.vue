@@ -15,7 +15,7 @@ import {
   formatCents,
   formatDuration,
 } from "@/lib/catalogFormat";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { useResourceStore } from "@/stores/resource";
 import {
   useSalonServiceStore,

@@ -50,6 +50,39 @@ importers:
         specifier: 3.3.11
         version: 3.3.11(@typescript/typescript6@6.0.2)
 
+  packages/web-core:
+    devDependencies:
+      '@eslint/js':
+        specifier: 10.0.1
+        version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@7.2.0))
+      '@vue/tsconfig':
+        specifier: 0.9.1
+        version: 0.9.1(@typescript/typescript6@6.0.2)(vue@3.5.42(@typescript/typescript6@6.0.2))
+      eslint:
+        specifier: 10.9.1
+        version: 10.9.1(jiti@2.7.0)(supports-color@7.2.0)
+      jsdom:
+        specifier: 30.0.1
+        version: 30.0.1
+      pinia:
+        specifier: 4.0.3
+        version: 4.0.3(@typescript/typescript6@6.0.2)(@vue/devtools-api@8.2.1)(vue@3.5.42(@typescript/typescript6@6.0.2))
+      typescript:
+        specifier: npm:@typescript/typescript6@6.0.2
+        version: '@typescript/typescript6@6.0.2'
+      typescript-eslint:
+        specifier: 8.68.0
+        version: 8.68.0(@typescript/typescript6@6.0.2)(eslint@10.9.1(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.4.0)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.0)(jiti@2.7.0))
+      vue:
+        specifier: 3.5.42
+        version: 3.5.42(@typescript/typescript6@6.0.2)
+      vue-tsc:
+        specifier: 3.3.11
+        version: 3.3.11(@typescript/typescript6@6.0.2)
+
   portail-client: {}
 
   portail-salon:
@@ -57,6 +90,9 @@ importers:
       '@apontaja/ui-kit':
         specifier: workspace:*
         version: link:../packages/ui-kit
+      '@apontaja/web-core':
+        specifier: workspace:*
+        version: link:../packages/web-core
       pinia:
         specifier: 4.0.3
         version: 4.0.3(@typescript/typescript6@6.0.2)(@vue/devtools-api@8.2.1)(vue@3.5.42(@typescript/typescript6@6.0.2))

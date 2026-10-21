@@ -12,7 +12,7 @@ import {
 import { availableActions, canReschedule } from "@/lib/appointmentActions";
 import { STATUS_LABELS, STATUS_TONES } from "@/lib/appointmentStatus";
 import { formatCents, formatDuration } from "@/lib/catalogFormat";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { formatInstant, instantToZonedLocal } from "@/lib/zonedTime";
 import type { AppointmentItem } from "@/stores/agenda";
 import { useAppointmentStore } from "@/stores/appointment";

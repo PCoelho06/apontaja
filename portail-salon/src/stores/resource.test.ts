@@ -1,12 +1,12 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/apiClient";
+import { apiDelete, apiGet, apiPost, apiPut } from "@apontaja/web-core/api-client";
 import { useAuthStore } from "@/stores/auth";
 import { useResourceStore } from "@/stores/resource";
 
-vi.mock("@/lib/apiClient", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/apiClient")>();
+vi.mock("@apontaja/web-core/api-client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@apontaja/web-core/api-client")>();
   return {
     ...actual,
     apiGet: vi.fn(),

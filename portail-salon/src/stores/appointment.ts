@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
-import { apiPatch, apiPost } from "@/lib/apiClient";
-import { requireToken } from "@/lib/requireToken";
+import { apiPatch, apiPost } from "@apontaja/web-core/api-client";
+import { requireToken } from "@apontaja/web-core/require-token";
 import type { AppointmentItem } from "@/stores/agenda";
 
 /** startAt : instant ISO 8601 avec offset ; endAt est calculé par le back. */

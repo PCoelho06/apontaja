@@ -4,7 +4,7 @@ import { RouterLink, RouterView, useRoute } from "vue-router";
 
 import { UiAlert } from "@apontaja/ui-kit";
 
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { useSalonStore } from "@/stores/salon";
 
 const route = useRoute();

@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import { ApiError } from '@/lib/apiClient'
+import { ApiError } from '@apontaja/web-core/api-client'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
