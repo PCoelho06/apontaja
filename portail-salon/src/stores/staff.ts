@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/apiClient";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@apontaja/web-core/api-client";
 import { useAuthStore } from "@/stores/auth";
 
 export interface StaffMember {

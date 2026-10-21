@@ -2,7 +2,7 @@
 import { onMounted, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import { useAuthStore } from "@/stores/auth";
 import { useSalonStore } from "@/stores/salon";
 

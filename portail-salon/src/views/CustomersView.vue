@@ -8,7 +8,7 @@ import CustomerDetailDialog from "@/components/customers/CustomerDetailDialog.vu
 import CustomerFormDialog from "@/components/customers/CustomerFormDialog.vue";
 import { contactLine, fullName, visitLabel } from "@/lib/customerFormat";
 import { debounce } from "@/lib/debounce";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import { useCustomerStore, type Customer } from "@/stores/customer";
 import { useSalonStore } from "@/stores/salon";

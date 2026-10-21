@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 
 export interface BlockingAppointment {
   appointmentId: string;

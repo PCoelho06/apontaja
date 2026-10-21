@@ -3,12 +3,12 @@ import { computed, ref, watch } from "vue";
 
 import { UiAlert, UiButton, UiDialog } from "@apontaja/ui-kit";
 
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import type { AppointmentStatus } from "@/lib/appointmentStatus";
 import { STATUS_LABELS } from "@/lib/appointmentStatus";
 import { formatCents } from "@/lib/catalogFormat";
 import { contactLine, fullName, visitLabel } from "@/lib/customerFormat";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import {
   useCustomerStore,
   type Customer,

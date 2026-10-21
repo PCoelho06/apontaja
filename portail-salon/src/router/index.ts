@@ -6,6 +6,7 @@ declare module "vue-router" {
   interface RouteMeta {
     requiresAuth?: boolean;
     guestOnly?: boolean;
+    title?: string;
   }
 }
 
@@ -104,6 +105,18 @@ const router = createRouter({
       name: "customer-duplicates",
       component: () => import("@/views/CustomerDuplicatesView.vue"),
       meta: { requiresAuth: true },
+    },
+    {
+      path: "/cgu",
+      name: "terms",
+      component: () => import("@/views/LegalPlaceholderView.vue"),
+      meta: { title: "Conditions générales d'utilisation" },
+    },
+    {
+      path: "/confidentialite",
+      name: "privacy",
+      component: () => import("@/views/LegalPlaceholderView.vue"),
+      meta: { title: "Politique de confidentialité" },
     },
     {
       path: "/invitations/accepter",

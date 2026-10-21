@@ -1,51 +1,60 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref } from "vue";
+import { RouterLink } from "vue-router";
 
-import AuthTextField from '@/components/AuthTextField.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import { ApiError } from '@/lib/apiClient'
-import { useAuthStore } from '@/stores/auth'
+import AuthLayout from "@/layouts/AuthLayout.vue";
+import { ApiError } from "@apontaja/web-core/api-client";
+import { useAuthStore } from "@/stores/auth";
 
-const auth = useAuthStore()
+import {
+  UiAlert,
+  UiButton,
+  UiCheckbox,
+  UiInput,
+} from "@apontaja/ui-kit";
 
-const firstName = ref('')
-const lastName = ref('')
-const email = ref('')
-const password = ref('')
+const auth = useAuthStore();
 
-const errorMessage = ref('')
-const fieldErrors = ref<Record<string, string>>({})
-const isSubmitting = ref(false)
-const isDone = ref(false)
+const firstName = ref("");
+const lastName = ref("");
+const email = ref("");
+const password = ref("");
+const acceptTerms = ref(false);
 
-const passwordHint = computed(() =>
-  password.value.length > 0 && password.value.length < 12
-    ? `Encore ${12 - password.value.length} caractère(s) minimum.`
-    : '',
-)
+const errorMessage = ref("");
+const fieldErrors = ref<Record<string, string>>({});
+const isSubmitting = ref(false);
+const isDone = ref(false);
 
 async function handleSubmit() {
-  errorMessage.value = ''
-  fieldErrors.value = {}
-  isSubmitting.value = true
+  errorMessage.value = "";
+  fieldErrors.value = {};
+
+  if (!acceptTerms.value) {
+    errorMessage.value =
+      "Vous devez accepter les CGU et la politique de confidentialité pour créer un compte.";
+    return;
+  }
+
+  isSubmitting.value = true;
   try {
-    await auth.register(
-      email.value,
-      password.value,
-      firstName.value.trim(),
-      lastName.value.trim(),
-    )
-    isDone.value = true
+    await auth.register({
+      email: email.value,
+      password: password.value,
+      firstName: firstName.value.trim(),
+      lastName: lastName.value.trim(),
+      acceptTerms: acceptTerms.value,
+    });
+    isDone.value = true;
   } catch (error) {
     if (error instanceof ApiError) {
-      errorMessage.value = error.message
-      fieldErrors.value = error.fieldErrors ?? {}
+      errorMessage.value = error.message;
+      fieldErrors.value = error.fieldErrors ?? {};
     } else {
-      errorMessage.value = 'Impossible de créer le compte, réessayez.'
+      errorMessage.value = "Impossible de créer le compte, réessayez.";
     }
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 </script>
@@ -60,8 +69,8 @@ async function handleSubmit() {
       class="space-y-4"
     >
       <p class="text-sm text-ink">
-        Compte créé. Un email de confirmation vient de vous être envoyé — vérifiez votre boîte de
-        réception, puis connectez-vous.
+        Compte créé. Un email de confirmation vient de vous être envoyé —
+        vérifiez votre boîte de réception, puis connectez-vous.
       </p>
       <RouterLink
         :to="{ name: 'login' }"
@@ -77,59 +86,81 @@ async function handleSubmit() {
       @submit.prevent="handleSubmit"
     >
       <div class="grid grid-cols-2 gap-4">
-        <AuthTextField
-          id="firstName"
+        <UiInput
           v-model="firstName"
           label="Prénom"
           autocomplete="given-name"
+          maxlength="100"
+          required
           :error="fieldErrors.firstName"
         />
-        <AuthTextField
-          id="lastName"
+        <UiInput
           v-model="lastName"
           label="Nom"
           autocomplete="family-name"
+          maxlength="100"
+          required
           :error="fieldErrors.lastName"
         />
       </div>
-      <AuthTextField
-        id="email"
+      <UiInput
         v-model="email"
-        label="Email"
         type="email"
+        label="Email"
         autocomplete="email"
+        required
         :error="fieldErrors.email"
       />
-      <AuthTextField
-        id="password"
+      <UiInput
         v-model="password"
-        label="Mot de passe"
         type="password"
+        label="Mot de passe"
+        hint="12 caractères minimum"
         autocomplete="new-password"
-        :error="fieldErrors.password || passwordHint"
+        minlength="12"
+        required
+        :error="fieldErrors.password"
       />
 
-      <p
+      <div>
+        <UiCheckbox
+          v-model="acceptTerms"
+          label="J'accepte les CGU et la politique de confidentialité"
+        />
+        <div class="mt-1 flex gap-4 pl-6 text-xs">
+          <RouterLink
+            :to="{ name: 'terms' }"
+            target="_blank"
+            rel="noopener"
+            class="text-wine hover:underline"
+          >
+            Lire les CGU
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'privacy' }"
+            target="_blank"
+            rel="noopener"
+            class="text-wine hover:underline"
+          >
+            Lire la politique de confidentialité
+          </RouterLink>
+        </div>
+      </div>
+
+      <UiAlert
         v-if="errorMessage"
-        class="text-sm text-danger"
-        role="alert"
+        variant="error"
       >
         {{ errorMessage }}
-      </p>
+      </UiAlert>
 
-      <button
+      <UiButton
         type="submit"
-        :disabled="isSubmitting"
-        class="w-full rounded-md bg-wine px-4 py-2.5 text-sm font-medium text-paper transition
-               hover:bg-wine-hover disabled:opacity-60"
+        class="w-full"
+        :loading="isSubmitting"
       >
-        {{ isSubmitting ? 'Création...' : 'Créer mon compte' }}
-      </button>
-
-      <p class="text-xs text-ink/60">
-        En créant un compte, vous reconnaissez avoir pris connaissance des conditions générales
-        d'utilisation et de la politique de confidentialité, et les acceptez.
-      </p>
+        {{ isSubmitting ? "Création..." : "Créer mon compte" }}
+      </UiButton>
     </form>
 
     <p

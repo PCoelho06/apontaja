@@ -5,7 +5,7 @@ import { useRoute } from "vue-router";
 import { UiAlert, UiButton, UiSelect } from "@apontaja/ui-kit";
 
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import {
   DAYS,
   emptyWeek,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import { parseClosureConflict } from "@/lib/closureConflict";
 
 describe("parseClosureConflict", () => {

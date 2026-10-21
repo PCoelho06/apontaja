@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 
 import AuthTextField from '@/components/AuthTextField.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import { ApiError } from '@/lib/apiClient'
+import { ApiError } from '@apontaja/web-core/api-client'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()

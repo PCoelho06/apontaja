@@ -15,7 +15,7 @@ import {
   parseClosureConflict,
   type ClosureConflict,
 } from "@/lib/closureConflict";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import {
   formatInstant,
   instantToZonedLocal,

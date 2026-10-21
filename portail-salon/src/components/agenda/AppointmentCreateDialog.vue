@@ -12,7 +12,7 @@ import {
 import { describeIssues } from "@/lib/availabilityIssues";
 import { formatCents, formatDuration } from "@/lib/catalogFormat";
 import { debounce } from "@/lib/debounce";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { instantToZonedLocal, zonedLocalToInstant } from "@/lib/zonedTime";
 import { useAppointmentStore } from "@/stores/appointment";
 import {

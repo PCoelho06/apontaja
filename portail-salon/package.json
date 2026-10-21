@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@apontaja/ui-kit": "workspace:*",
+    "@apontaja/web-core": "workspace:*",
     "pinia": "4.0.3",
     "vue": "3.5.42",
     "vue-router": "^5.3.0"

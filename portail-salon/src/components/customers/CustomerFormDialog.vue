@@ -9,9 +9,9 @@ import {
   UiTextarea,
 } from "@apontaja/ui-kit";
 
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "@apontaja/web-core/api-client";
 import { buildCustomerPayload } from "@/lib/customerForm";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@apontaja/web-core/error-message";
 import { useCustomerStore, type Customer } from "@/stores/customer";
 
 const props = defineProps<{

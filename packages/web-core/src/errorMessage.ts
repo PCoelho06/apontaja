@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/apiClient";
+import { ApiError } from "./apiClient";
 
 /** Message métier du back (ProblemDetail.detail) si disponible, sinon repli. */
 export function errorMessage(error: unknown, fallback: string): string {

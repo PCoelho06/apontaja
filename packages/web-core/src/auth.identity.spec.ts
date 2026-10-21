@@ -1,7 +1,9 @@
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAuthStore } from "@/stores/auth";
+import { defineAuthStore } from "./auth";
+
+const useAuthStore = defineAuthStore({ portal: "SALON" });
 
 const LOGIN = {
   accountId: "a1",
@@ -64,6 +66,7 @@ describe("auth store, identité du compte", () => {
       email: "alice@example.com",
       firstName: "Alice",
       lastName: "Martin",
+      emailVerified: true,
     });
     const meCall = fetchMock.mock.calls.find(
       ([path]) => path === "/api/account/me",
@@ -88,17 +91,18 @@ describe("auth store, identité du compte", () => {
     expect(store.account).toBeNull();
   });
 
-  it("envoie prénom et nom à l'inscription", async () => {
+  it("envoie identité, consentements et portail à l'inscription", async () => {
     const fetchMock = stubApi({
       "/api/auth/register": () => new Response(null, { status: 201 }),
     });
 
-    await useAuthStore().register(
-      "alice@example.com",
-      "mot-de-passe-solide",
-      "Alice",
-      "Martin",
-    );
+    await useAuthStore().register({
+      email: "alice@example.com",
+      password: "mot-de-passe-solide",
+      firstName: "Alice",
+      lastName: "Martin",
+      acceptTerms: true,
+    });
 
     const [, init] = fetchMock.mock.calls[0] ?? [];
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -106,6 +110,9 @@ describe("auth store, identité du compte", () => {
       password: "mot-de-passe-solide",
       firstName: "Alice",
       lastName: "Martin",
+      acceptTos: true,
+      acceptPrivacy: true,
+      portal: "SALON",
     });
   });
 
@@ -136,3 +143,5 @@ describe("auth store, identité du compte", () => {
     expect(store.account).toBeNull();
   });
 });
+
+

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
-import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/apiClient";
-import { requireToken } from "@/lib/requireToken";
+import { apiDelete, apiGet, apiPost, apiPut } from "@apontaja/web-core/api-client";
+import { requireToken } from "@apontaja/web-core/require-token";
 
 export interface SalonClosure {
   closureId: string;
