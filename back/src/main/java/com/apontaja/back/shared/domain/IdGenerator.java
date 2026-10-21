@@ -4,7 +4,7 @@ import java.util.UUID;
 
 /**
  * Génération d'ID côté application (Java), pas par PostgreSQL — voir l'en-tête
- * de apontaja-schema.sql. L'implémentation (infrastructure) doit produire des
+ * de V1__initial_schema.sql. L'implémentation (infrastructure) doit produire des
  * UUIDv7.
  *
  * <p>

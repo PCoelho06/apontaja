@@ -10,7 +10,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,7 +17,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -62,20 +60,20 @@ class CustomerProfileJpaRepositoryIT {
     }
 
     @Test
-    void rejette_deux_profils_vivants_pour_le_meme_compte_reclame() {
+    void un_compte_peut_reclamer_plusieurs_profils_vivants() {
         Account account = new Account(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test", "User", "hash",
                 Instant.now());
         entityManager.persistAndFlush(account);
 
         CustomerProfile first = withEmail("d1@example.com");
-        setAccountId(first, account.getId());
-        customerProfileJpaRepository.saveAndFlush(first);
-
+        first.claimBy(account.getId());
         CustomerProfile second = withEmail("d2@example.com");
-        setAccountId(second, account.getId());
+        second.claimBy(account.getId());
 
-        assertThatThrownBy(() -> customerProfileJpaRepository.saveAndFlush(second))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatCode(() -> {
+            customerProfileJpaRepository.saveAndFlush(first);
+            customerProfileJpaRepository.saveAndFlush(second);
+        }).doesNotThrowAnyException();
     }
 
     @Test
@@ -87,19 +85,5 @@ class CustomerProfileJpaRepositoryIT {
                 .findByIdInAndDeletedAtIsNull(List.of(alive.getId(), UUID.randomUUID()));
 
         assertThat(result).containsExactly(alive);
-    }
-
-    /**
-     * Le contrat CustomerProfile n'expose pas de mutation d'accountId : réflexion
-     * pour ce test ciblé.
-     */
-    private static void setAccountId(CustomerProfile profile, UUID accountId) {
-        try {
-            var field = CustomerProfile.class.getDeclaredField("accountId");
-            field.setAccessible(true);
-            field.set(profile, accountId);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

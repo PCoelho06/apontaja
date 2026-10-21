@@ -60,7 +60,7 @@ public class RegisterAccountService {
         consentRecordRepository.save(
                 new ConsentRecord(idGenerator.generate(), account.getId(), ConsentType.PRIVACY, PRIVACY_VERSION, now));
 
-        emailVerificationService.issueAndSend(account);
+        emailVerificationService.issueAndSend(account, command.portal());
 
         return new RegisterAccountResult(account.getId(), account.getEmail());
     }

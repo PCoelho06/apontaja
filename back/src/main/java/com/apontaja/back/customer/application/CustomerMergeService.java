@@ -19,10 +19,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Fusion pilotée par l'utilisateur de profils d'un même salon vers un profil survivant. Le survivant garde
- * son identité (email/téléphone comblés si vides), reçoit les notes (concaténées), le consentement le plus
- * récent et tous les RDV. Les profils absorbés sont effacés (même mécanique que l'anonymisation), soft-delete
- * et tracés par {@code merged_into_profile_id}. Irréversible.
+ * Fusion pilotée par l'utilisateur de profils d'un même salon vers un profil
+ * survivant. Le survivant garde son identité (email/téléphone comblés si
+ * vides), reçoit les notes (concaténées), le consentement le plus récent et
+ * tous les RDV. Les profils absorbés sont effacés (même mécanique que
+ * l'anonymisation), soft-delete et tracés par {@code merged_into_profile_id}.
+ * Irréversible. Un profil réclamé par un compte peut être le survivant (le
+ * salon y rattache ses doublons) mais jamais un profil absorbé.
  */
 @Service
 public class CustomerMergeService {
@@ -58,12 +61,12 @@ public class CustomerMergeService {
         mergeLock.lockSalon(salonId);
 
         Loaded survivor = load(salonId, survivorId);
-        List<Loaded> absorbed = absorbedIds.stream().map(id -> load(salonId, id))
-                .sorted(Comparator.comparing((Loaded l) -> l.profile().getCreatedAt())
-                        .thenComparing(l -> l.profile().getId()))
+        List<Loaded> absorbed = absorbedIds
+                .stream().map(id -> load(salonId, id)).sorted(Comparator
+                        .comparing((Loaded l) -> l.profile().getCreatedAt()).thenComparing(l -> l.profile().getId()))
                 .toList();
-        refuseIfNotMergeable(salonId, survivor.profile());
-        absorbed.forEach(a -> refuseIfNotMergeable(salonId, a.profile()));
+        refuseIfNotMergeable(salonId, survivor.profile(), false);
+        absorbed.forEach(a -> refuseIfNotMergeable(salonId, a.profile(), true));
 
         Instant now = clock.instant();
         List<SalonCustomerLink> links = new ArrayList<>();
@@ -76,8 +79,8 @@ public class CustomerMergeService {
             email = email == null ? a.profile().getEmail() : email;
             phone = phone == null ? a.profile().getPhone() : phone;
         }
-        survivor.profile().updateIdentity(survivor.profile().getFirstName(), survivor.profile().getLastName(),
-                email, phone);
+        survivor.profile().updateIdentity(survivor.profile().getFirstName(), survivor.profile().getLastName(), email,
+                phone);
         MarketingConsentMerge.Result consent = MarketingConsentMerge.merge(links);
         survivor.link().updateInternalNotes(mergeNotes(links));
         survivor.link().replaceMarketingConsent(consent.consentAt(), consent.revokedAt());
@@ -118,17 +121,22 @@ public class CustomerMergeService {
         return new Loaded(link, profile);
     }
 
-    private void refuseIfNotMergeable(UUID salonId, CustomerProfile profile) {
+    private void refuseIfNotMergeable(UUID salonId, CustomerProfile profile, boolean asAbsorbed) {
         if (profile.isAnonymized()) {
             throw new CustomerAnonymizedException();
         }
-        if (profile.getAccountId() != null
-                || searchRepository.existsAliveLinkInOtherSalon(profile.getId(), salonId)) {
+        if (asAbsorbed && profile.getAccountId() != null) {
+            throw new CustomerClaimedException();
+        }
+        if (searchRepository.existsAliveLinkInOtherSalon(profile.getId(), salonId)) {
             throw new CustomerSharedException();
         }
     }
 
-    /** Notes non vides et distinctes, survivant d'abord, séparées par une ligne vide. */
+    /**
+     * Notes non vides et distinctes, survivant d'abord, séparées par une ligne
+     * vide.
+     */
     private static String mergeNotes(List<SalonCustomerLink> links) {
         List<String> notes = new ArrayList<>();
         for (SalonCustomerLink link : links) {

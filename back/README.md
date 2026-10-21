@@ -8,6 +8,7 @@ Backend Spring Boot 4.1 (Spring Framework 7) / Java 21 / Maven.
 > (le fichier de contexte laissait le choix ouvert entre Gradle et Maven — tranché en session).
 
 **État actuel (Phase 0, étape 7 terminée — Phase 0 complète)** :
+
 - `pom.xml` : Spring Boot 4.1.1, dépendances Web / Security / Data JPA / Validation / Flyway
 - `BackApplication` : point d'entrée, auto-configuration JPA/DataSource/Flyway **active** depuis
   l'étape 7 (plus d'exclusion temporaire)
@@ -36,16 +37,14 @@ Backend Spring Boot 4.1 (Spring Framework 7) / Java 21 / Maven.
   supplémentaires par l'utilisateur (`UnusedLocalVariable`, `ParameterAssignment`,
   `RedundantModifier`, `UpperEll`). Lié à la phase `verify`. **Confirmé vert en CI.**
 - **CI GitHub Actions** (`.github/workflows/ci.yml`, racine du repo) : job `back` = `mvn -B clean
-  verify` (build, tests, ArchUnit, Checkstyle). **Confirmé vert.**
+verify` (build, tests, ArchUnit, Checkstyle). **Confirmé vert.**
 - **Gestion des secrets — dev local** : profil Spring `local`, `application-local.yml.example`
   commité, `application-local.yml` ignoré par Git. Secrets en **production** volontairement
   laissés `[OPEN]`, aucun hébergement choisi pour l'instant.
-- **Flyway + PostgreSQL** (étape 7) : `apontaja-schema.sql` (racine de `back/`, référence
-  canonique) dupliqué verbatim dans `src/main/resources/db/migration/V1__initial_schema.sql`
-  (Flyway impose ce nom de fichier, impossible de le référencer directement — voir le bandeau en
-  tête des deux fichiers pour la procédure de synchronisation, actuellement manuelle, aucune
-  vérification automatique de dérive). `spring.jpa.hibernate.ddl-auto=validate` : Flyway est la
-  seule source de vérité sur le schéma, Hibernate ne le modifie jamais.
+- **Flyway + PostgreSQL** (étape 7) : `src/main/resources/db/migration/V1__initial_schema.sql` est la
+  **seule source de vérité du schéma** (il n'existe aucun autre fichier de référence).
+  `spring.jpa.hibernate.ddl-auto=validate` : Flyway est la seule autorité sur le schéma, Hibernate
+  ne le modifie jamais.
 - **Testcontainers** (`PostgreSQLContainer`, image `postgres:16-alpine` — pas `latest`, un bug
   connu de Flyway sous Spring Boot 4.0.x rejette PostgreSQL 18) : `BackApplicationTests` et
   `HealthControllerTest` bootent désormais un vrai PostgreSQL éphémère via
@@ -61,12 +60,12 @@ Backend Spring Boot 4.1 (Spring Framework 7) / Java 21 / Maven.
 
 Ce sont deux mécanismes séparés, pour deux besoins différents :
 
-| | Testcontainers | `docker-compose.yml` |
-|---|---|---|
-| Pour quoi | Tests d'intégration (`mvn clean verify`) | Faire tourner l'appli toi-même (IDE, `mvn spring-boot:run`) |
-| Démarré par | Le code du test lui-même (`PostgresTestcontainersConfiguration`), automatiquement | Toi, manuellement (`docker compose up -d`) |
-| Durée de vie | Éphémère, un conteneur par exécution de tests, détruit ensuite | Persistant, tu le lances une fois et le réutilises |
-| Fichier à écrire | Aucun — juste avoir Docker qui tourne | `back/docker-compose.yml` |
+|                  | Testcontainers                                                                    | `docker-compose.yml`                                        |
+| ---------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Pour quoi        | Tests d'intégration (`mvn clean verify`)                                          | Faire tourner l'appli toi-même (IDE, `mvn spring-boot:run`) |
+| Démarré par      | Le code du test lui-même (`PostgresTestcontainersConfiguration`), automatiquement | Toi, manuellement (`docker compose up -d`)                  |
+| Durée de vie     | Éphémère, un conteneur par exécution de tests, détruit ensuite                    | Persistant, tu le lances une fois et le réutilises          |
+| Fichier à écrire | Aucun — juste avoir Docker qui tourne                                             | `back/docker-compose.yml`                                   |
 
 Remplace H2 dans ce projet précisément parce que le schéma utilise des fonctionnalités
 PostgreSQL réelles (`citext`, contraintes `EXCLUDE` + `btree_gist`) que H2 ne simule pas
@@ -76,6 +75,7 @@ testant contre un vrai PostgreSQL partout, dev comme tests.
 
 **Deux pièges Spring Boot 4 identifiés et évités en amont** (recherchés avant d'écrire le code,
 cette fois, plutôt que découverts après coup comme aux étapes précédentes) :
+
 1. Flyway est passé en module séparé (`spring-boot-starter-flyway`, pas `flyway-core` en
    dépendance brute — sinon l'auto-configuration ne se déclenche jamais, silencieusement) +
    `flyway-database-postgresql` (support PostgreSQL externalisé depuis Flyway 10+).
@@ -102,6 +102,7 @@ potentiellement à refaire selon l'hébergement retenu. **`[OPEN]`** : gestion d
 production, à trancher quand l'hébergement le sera (voir `APONTAJA-RESTART-CONTEXT.md`).
 
 **Mécanisme en place pour le dev local** (profil Spring `local`) :
+
 - `application.yml` : config par défaut, commitée, **jamais de secret dedans**
 - `application-local.yml.example` : template commité, documente les clés attendues avec des
   valeurs factices
@@ -122,12 +123,14 @@ Chaque étape a été écrite sans accès réseau ni `mvn` côté Claude ; les p
 **Étape 2, 1er correctif** — Spring Boot 4 a éclaté l'ancien jar monolithique
 `spring-boot-autoconfigure` en modules dédiés (nov. 2025, postérieur à la connaissance de
 Claude), renommant les packages de plusieurs classes d'auto-configuration :
+
 - `DataSourceAutoConfiguration` et `DataSourceTransactionManagerAutoConfiguration` :
   `org.springframework.boot.autoconfigure.jdbc` → `org.springframework.boot.jdbc.autoconfigure`
 - `HibernateJpaAutoConfiguration` :
   `org.springframework.boot.autoconfigure.orm.jpa` → `org.springframework.boot.hibernate.autoconfigure`
 
 **Étape 2, 2e correctif** :
+
 - `AutoConfigureMockMvc` a migré vers `org.springframework.boot.webmvc.test.autoconfigure`, et
   nécessite le starter de test dédié `spring-boot-starter-webmvc-test`
 - `spring-boot-starter-web` renommée en `spring-boot-starter-webmvc` (l'ancien nom compile encore
@@ -136,15 +139,16 @@ Claude), renommant les packages de plusieurs classes d'auto-configuration :
 Wrapper Maven généré avec succès après ces deux correctifs (`mvn -N wrapper:wrapper -Dmaven=3.9.9`).
 
 **Étape 5** — deux catégories de bugs distinctes, corrigées par l'utilisateur :
-- *Placement erroné dans `checkstyle.xml`* : `LineLength` avait été placé sous `TreeWalker` alors
+
+- _Placement erroné dans `checkstyle.xml`_ : `LineLength` avait été placé sous `TreeWalker` alors
   qu'il doit être un enfant direct de `Checker` (il travaille sur les lignes brutes du fichier,
   pas sur l'AST — contrairement à la majorité des autres checks). Vrai bug de conception de ma
   part, pas une histoire de version.
-- *Versions front pariées à l'aveugle* : `pnpm` (proposé `9.12.0`, en réalité déjà en `11.24.0`
+- _Versions front pariées à l'aveugle_ : `pnpm` (proposé `9.12.0`, en réalité déjà en `11.24.0`
   au moment de l'exécution), `eslint`/`@eslint/js`/`eslint-plugin-vue` (proposés en version 9.x,
   réellement en version 10.x). Sans réseau, je ne pouvais que deviner des numéros plausibles au
   moment de la rédaction — corrigés par l'utilisateur avec les versions réellement installées.
-- *Node 20 incompatible avec pnpm 11* : la première exécution de CI a échoué côté front pour
+- _Node 20 incompatible avec pnpm 11_ : la première exécution de CI a échoué côté front pour
   cette raison ; `.nvmrc` corrigé de `20` à `22`.
 
 Les deux pipelines (back et front) sont passées avec succès après ces correctifs.

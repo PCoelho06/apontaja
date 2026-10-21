@@ -68,14 +68,15 @@ class PasswordResetServiceTest {
         void setUp() {
                 service = new PasswordResetService(accountRepository, accountTokenRepository, refreshTokenRepository,
                                 opaqueTokenGenerator, tokenHasher, passwordEncoder, emailSender, () -> new UUID(0, 1),
-                                Clock.fixed(fixedNow, ZoneOffset.UTC), Duration.ofHours(1), "http://localhost:5173");
+                                Clock.fixed(fixedNow, ZoneOffset.UTC), Duration.ofHours(1),
+                                new FrontendLinks("http://localhost:5173", "http://localhost:5174"));
         }
 
         @Test
         void requestReset_ne_fait_rien_silencieusement_si_email_inconnu() {
                 when(accountRepository.findAliveByEmail("inconnu@example.com")).thenReturn(Optional.empty());
 
-                service.requestReset("inconnu@example.com");
+                service.requestReset("inconnu@example.com", FrontendPortal.SALON);
 
                 verify(accountTokenRepository, never()).save(org.mockito.ArgumentMatchers.any());
                 verify(emailSender, never()).send(anyString(), anyString(), anyString());
@@ -95,7 +96,7 @@ class PasswordResetServiceTest {
                 when(opaqueTokenGenerator.generate()).thenReturn("new-raw-token");
                 when(tokenHasher.hash("new-raw-token")).thenReturn("new-hashed-token");
 
-                service.requestReset("bob@example.com");
+                service.requestReset("bob@example.com", FrontendPortal.SALON);
 
                 assertThat(existingToken.isUsed()).isTrue();
 
@@ -117,13 +118,30 @@ class PasswordResetServiceTest {
                 when(opaqueTokenGenerator.generate()).thenReturn("raw-token");
                 when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
 
-                service.requestReset("bob@example.com");
+                service.requestReset("bob@example.com", FrontendPortal.SALON);
 
                 verify(accountTokenRepository).save(org.mockito.ArgumentMatchers
                                 .argThat(token -> token.getType() == AccountTokenType.PASSWORD_RESET
                                                 && token.getTokenHash().equals("hashed-token")));
                 verify(emailSender).send(org.mockito.ArgumentMatchers.eq("bob@example.com"), anyString(),
                                 org.mockito.ArgumentMatchers.contains("raw-token"));
+        }
+
+        @Test
+        void requestReset_envoie_un_lien_vers_le_portail_client() {
+                Account account = new Account(accountId, "bob@example.com", "Test", "User", "hash", fixedNow);
+
+                when(accountRepository.findAliveByEmail("bob@example.com")).thenReturn(Optional.of(account));
+                when(accountTokenRepository.findActiveByAccountIdAndType(accountId, AccountTokenType.PASSWORD_RESET))
+                                .thenReturn(List.of());
+                when(opaqueTokenGenerator.generate()).thenReturn("raw-token");
+                when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
+
+                service.requestReset("bob@example.com", FrontendPortal.CLIENT);
+
+                verify(emailSender).send(org.mockito.ArgumentMatchers.eq("bob@example.com"), anyString(),
+                                org.mockito.ArgumentMatchers.contains(
+                                                "http://localhost:5174/reinitialiser-mot-de-passe?token=raw-token"));
         }
 
         @Test

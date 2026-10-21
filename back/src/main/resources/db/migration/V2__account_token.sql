@@ -1,8 +1,5 @@
 -- =============================================================================
 -- V2 — ajoute account_token (vérification email + reset mot de passe, tranche 7).
--- À répercuter dans apontaja-schema.sql (référence canonique) juste après la
--- section CONSENT_RECORD — même règle de duplication que pour V1 (voir l'en-tête
--- de V1__initial_schema.sql).
 -- =============================================================================
 
 -- =============================================================================

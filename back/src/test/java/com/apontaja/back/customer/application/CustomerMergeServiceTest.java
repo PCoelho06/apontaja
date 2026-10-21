@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -141,19 +140,35 @@ class CustomerMergeServiceTest {
         }
 
         @Test
-        void refusesClaimedProfile() {
+        void refusesClaimedAbsorbedProfile() {
                 profile(S, "s@example.fr", null, 0);
                 link(S, null);
                 CustomerProfile claimed = profile(A, "a@example.fr", null, 1);
-                // accountId n'est pas atteignable par l'API avant la tranche 4d : posé par
-                // réflexion.
-                ReflectionTestUtils.setField(claimed, "accountId", UUID.randomUUID());
+                claimed.claimBy(UUID.randomUUID());
                 link(A, null);
 
                 assertThatThrownBy(() -> service.merge(new MergeCustomersCommand(SALON, S, List.of(A))))
-                                .isInstanceOf(CustomerSharedException.class);
+                                .isInstanceOf(CustomerClaimedException.class);
                 verify(reassignment, never()).reassign(org.mockito.ArgumentMatchers.any(),
                                 org.mockito.ArgumentMatchers.anyCollection(), org.mockito.ArgumentMatchers.any());
+        }
+
+        @Test
+        void allowsClaimedSurvivorAndFillsItsEmptyPhone() {
+                UUID accountId = UUID.randomUUID();
+                CustomerProfile survivor = profile(S, "s@example.fr", null, 0);
+                survivor.claimBy(accountId);
+                link(S, null);
+                CustomerProfile absorbedA = profile(A, null, "0612345678", 1);
+                link(A, null);
+
+                CustomerCard card = service.merge(new MergeCustomersCommand(SALON, S, List.of(A)));
+
+                verify(reassignment).reassign(SALON, List.of(A), S);
+                assertThat(survivor.getAccountId()).isEqualTo(accountId);
+                assertThat(survivor.getPhone()).isEqualTo("0612345678");
+                assertThat(absorbedA.isDeleted()).isTrue();
+                assertThat(card.customerProfileId()).isEqualTo(S);
         }
 
         @Test

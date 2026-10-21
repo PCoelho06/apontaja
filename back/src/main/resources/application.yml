@@ -3,8 +3,7 @@ spring:
     name: apontaja-back
 
   # Emplacement par défaut de Flyway (classpath:db/migration), explicité pour la lisibilité.
-  # Copie exacte de ../../../apontaja-schema.sql (racine de back/, référence canonique) — voir
-  # le commentaire en tête de V1__initial_schema.sql pour la procédure de synchronisation.
+  # Les migrations sont la seule source de vérité du schéma (voir V1__initial_schema.sql).
   flyway:
     locations: classpath:db/migration
 

@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Groupes de doublons d'un salon. Motifs : {@code EMAIL}, {@code PHONE}. Raison de non-fusion :
- * {@code CLAIMED} (profil réclamé par un compte) ou {@code SHARED} (lié à un autre salon), sinon {@code null}.
+ * Groupes de doublons d'un salon. Motifs : {@code EMAIL}, {@code PHONE}. Raison
+ * de non-fusion : {@code CLAIMED} (profil réclamé par un compte : conservable
+ * comme survivant, jamais absorbé) ou {@code SHARED} (lié à un autre salon),
+ * sinon {@code null}.
  */
 public record DuplicateReport(List<Group> groups, boolean truncated) {
 
@@ -18,6 +20,14 @@ public record DuplicateReport(List<Group> groups, boolean truncated) {
 
         public boolean mergeable() {
             return notMergeableReason == null;
+        }
+
+        /**
+         * Profil réclamé par un compte client (raison testée en premier : il masque
+         * {@code SHARED}).
+         */
+        public boolean claimed() {
+            return "CLAIMED".equals(notMergeableReason);
         }
     }
 }

@@ -31,7 +31,7 @@ class RegisterController {
     @PostMapping("/register")
     ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         RegisterAccountResult result = registerAccountService.register(new RegisterAccountCommand(request.email(),
-                request.firstName(), request.lastName(), request.password()));
+                request.firstName(), request.lastName(), request.password(), request.portal()));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new RegisterResponse(result.accountId(), result.email()));
     }

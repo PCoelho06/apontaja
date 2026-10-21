@@ -39,7 +39,8 @@ class RegisterIdentityIT {
 
     private static String payload(String email, String firstName, String lastName) {
         return """
-                {"email":"%s","password":"un-mot-de-passe-solide","firstName":"%s","lastName":"%s"}
+                {"email":"%s","password":"un-mot-de-passe-solide","firstName":"%s","lastName":"%s",
+                 "acceptTos":true,"acceptPrivacy":true}
                 """.formatted(email, firstName, lastName);
     }
 
@@ -58,7 +59,8 @@ class RegisterIdentityIT {
     void refuse_un_prenom_ou_un_nom_absent_ou_blanc() throws Exception {
         String email = UUID.randomUUID() + "@example.com";
         String withoutFirstName = """
-                {"email":"%s","password":"un-mot-de-passe-solide","lastName":"Dupont"}
+                {"email":"%s","password":"un-mot-de-passe-solide","lastName":"Dupont",
+                 "acceptTos":true,"acceptPrivacy":true}
                 """.formatted(email);
 
         register(withoutFirstName).andExpect(status().isBadRequest())

@@ -33,7 +33,7 @@ public class PasswordResetService {
     private final IdGenerator idGenerator;
     private final Clock clock;
     private final Duration tokenTtl;
-    private final String frontendBaseUrl;
+    private final FrontendLinks frontendLinks;
 
     PasswordResetService(AccountRepository accountRepository, AccountTokenRepository accountTokenRepository,
             RefreshTokenRepository refreshTokenRepository, OpaqueTokenGenerator opaqueTokenGenerator,
@@ -41,7 +41,7 @@ public class PasswordResetService {
             Clock clock,
             // Fenêtre volontairement courte : plus sensible qu'une vérification d'email.
             @Value("${apontaja.security.password-reset.ttl:1h}") Duration tokenTtl,
-            @Value("${apontaja.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
+            FrontendLinks frontendLinks) {
         this.accountRepository = accountRepository;
         this.accountTokenRepository = accountTokenRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -52,7 +52,7 @@ public class PasswordResetService {
         this.idGenerator = idGenerator;
         this.clock = clock;
         this.tokenTtl = tokenTtl;
-        this.frontendBaseUrl = frontendBaseUrl;
+        this.frontendLinks = frontendLinks;
     }
 
     /**
@@ -60,7 +60,7 @@ public class PasswordResetService {
      * que login).
      */
     @Transactional
-    public void requestReset(String email) {
+    public void requestReset(String email, FrontendPortal portal) {
         accountRepository.findAliveByEmail(email.trim()).ifPresent(account -> {
             Instant now = clock.instant();
 
@@ -76,7 +76,7 @@ public class PasswordResetService {
                     AccountTokenType.PASSWORD_RESET, tokenHasher.hash(rawToken), now.plus(tokenTtl), now);
             accountTokenRepository.save(token);
 
-            String link = frontendBaseUrl + "/reinitialiser-mot-de-passe?token=" + rawToken;
+            String link = frontendLinks.link(portal, "/reinitialiser-mot-de-passe?token=" + rawToken);
             emailSender.send(account.getEmail(), "Réinitialisation de votre mot de passe",
                     "Cliquez sur ce lien pour choisir un nouveau mot de passe (valable " + tokenTtl.toMinutes()
                             + " min) : " + link);
