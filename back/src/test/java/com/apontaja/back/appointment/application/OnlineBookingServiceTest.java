@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
@@ -44,7 +45,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/** Journée de référence : mercredi 2099-06-10 à Paris (UTC+2), créneau de 10:00 locale = 08:00Z. */
+/**
+ * Journée de référence : mercredi 2099-06-10 à Paris (UTC+2), créneau de 10:00
+ * locale = 08:00Z.
+ */
 @ExtendWith(MockitoExtension.class)
 class OnlineBookingServiceTest {
 
@@ -78,6 +82,8 @@ class OnlineBookingServiceTest {
     private AppointmentResourceRepository appointmentResourceRepository;
     @Mock
     private SalonSchedulingLock schedulingLock;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private OnlineBookingService service;
 
@@ -85,8 +91,8 @@ class OnlineBookingServiceTest {
     void setUp() {
         service = new OnlineBookingService(publicBookingService, serviceQueryService, resourceQueryService,
                 resourceBusyRepository, customerSelfService, bookingQuotaRepository, appointmentRepository,
-                appointmentResourceRepository, schedulingLock, () -> new UUID(7, 7), Clock.fixed(NOW,
-                        ZoneOffset.UTC));
+                appointmentResourceRepository, schedulingLock, () -> new UUID(7, 7), Clock.fixed(NOW, ZoneOffset.UTC),
+                events);
     }
 
     private OnlineBookingCommand command(UUID resourceId) {
@@ -186,9 +192,8 @@ class OnlineBookingServiceTest {
         when(resourceQueryService.findAliveBySalonId(salonId)).thenReturn(List.of(
                 new ResourceSummary(r1, salonId, "Chaise 1", "EMPLOYEE", Instant.parse("2020-01-01T00:00:00Z")),
                 new ResourceSummary(r2, salonId, "Chaise 2", "EMPLOYEE", Instant.parse("2021-01-01T00:00:00Z"))));
-        when(resourceBusyRepository.findActiveIntervals(any(), any(), any())).thenReturn(
-                List.of(new BusyInterval(r1, Instant.parse("2099-06-10T07:00:00Z"),
-                        Instant.parse("2099-06-10T09:00:00Z"))));
+        when(resourceBusyRepository.findActiveIntervals(any(), any(), any())).thenReturn(List.of(
+                new BusyInterval(r1, Instant.parse("2099-06-10T07:00:00Z"), Instant.parse("2099-06-10T09:00:00Z"))));
         persistanceEchoes();
 
         OnlineBookingResult result = service.book(command(null));
@@ -216,8 +221,9 @@ class OnlineBookingServiceTest {
 
     @Test
     void refuse_un_debut_illisible_sans_rien_toucher() {
-        assertThatThrownBy(() -> service.book(new OnlineBookingCommand(accountId, salonId, serviceId, r1, "demain",
-                null, true))).isInstanceOf(InvalidTimeRangeException.class);
+        assertThatThrownBy(
+                () -> service.book(new OnlineBookingCommand(accountId, salonId, serviceId, r1, "demain", null, true)))
+                        .isInstanceOf(InvalidTimeRangeException.class);
 
         verifyNoInteractions(publicBookingService, schedulingLock, customerSelfService);
     }
@@ -291,14 +297,68 @@ class OnlineBookingServiceTest {
         salon(false);
         offering(new ResourceTerms(r1, 3000, 60));
         customerAndQuota(0);
-        when(publicBookingService.slots(salonId, serviceId, r1, DAY, DAY)).thenReturn(new PublicBooking.Slots(
-                serviceId, "Europe/Paris", List.of(), List.of(new PublicBooking.Day(DAY, List.of(
-                        new PublicBooking.Slot(START.plusSeconds(1800), List.of(r1)))))));
+        when(publicBookingService.slots(salonId, serviceId, r1, DAY, DAY)).thenReturn(
+                new PublicBooking.Slots(serviceId, "Europe/Paris", List.of(), List.of(new PublicBooking.Day(DAY,
+                        List.of(new PublicBooking.Slot(START.plusSeconds(1800), List.of(r1)))))));
 
         assertThatThrownBy(() -> service.book(command(r1))).isInstanceOf(SlotUnavailableException.class);
 
         verify(appointmentRepository, never()).save(any());
         verify(resourceQueryService, never()).findAliveBySalonId(any());
+    }
+
+    @Test
+    void publie_la_notification_demande_recue_pour_une_demande_scheduled() {
+        salon(false);
+        offering(new ResourceTerms(r1, 4000, 45));
+        customerAndQuota(0);
+        slots(r1, List.of(r1), new PublicBooking.Resource(r1, "Chaise 1", 4000, 45));
+        persistanceEchoes();
+
+        service.book(command(r1));
+
+        ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+        verify(events).publishEvent(published.capture());
+        ClientAppointmentNotification event = (ClientAppointmentNotification) published.getValue();
+        assertThat(event.kind()).isEqualTo(ClientAppointmentNotification.Kind.REQUEST_RECEIVED);
+        assertThat(event.accountId()).isEqualTo(accountId);
+        assertThat(event.salonName()).isEqualTo("Salon");
+        assertThat(event.salonCity()).isEqualTo("Vence");
+        assertThat(event.timezone()).isEqualTo("Europe/Paris");
+        assertThat(event.serviceName()).isEqualTo("Coupe");
+        assertThat(event.resourceName()).isEqualTo("Chaise 1");
+        assertThat(event.startAt()).isEqualTo(START);
+        assertThat(event.endAt()).isEqualTo(START.plusSeconds(45 * 60L));
+        assertThat(event.priceCents()).isEqualTo(4000);
+        assertThat(event.durationMinutes()).isEqualTo(45);
+        assertThat(event.cancellationDeadlineHours()).isEqualTo(24);
+    }
+
+    @Test
+    void publie_la_notification_confirmee_quand_le_salon_confirme_automatiquement() {
+        salon(true);
+        offering(new ResourceTerms(r1, 3000, 60));
+        customerAndQuota(0);
+        slots(r1, List.of(r1), new PublicBooking.Resource(r1, "Chaise 1", 3000, 60));
+        persistanceEchoes();
+
+        service.book(command(r1));
+
+        ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(((ClientAppointmentNotification) published.getValue()).kind())
+                .isEqualTo(ClientAppointmentNotification.Kind.CONFIRMED);
+    }
+
+    @Test
+    void ne_publie_aucune_notification_quand_la_reservation_echoue() {
+        salon(false);
+        offering(new ResourceTerms(r1, 3000, 60));
+        customerAndQuota(OnlineBookingService.MAX_UPCOMING_PER_CUSTOMER);
+
+        assertThatThrownBy(() -> service.book(command(r1))).isInstanceOf(BookingQuotaExceededException.class);
+
+        verify(events, never()).publishEvent(any(Object.class));
     }
 
     @Test
