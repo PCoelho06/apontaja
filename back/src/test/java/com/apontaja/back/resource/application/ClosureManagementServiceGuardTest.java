@@ -27,6 +27,7 @@ import com.apontaja.back.resource.domain.Resource;
 import com.apontaja.back.resource.domain.ResourceRepository;
 import com.apontaja.back.resource.domain.ResourceType;
 import com.apontaja.back.shared.domain.IdGenerator;
+import com.apontaja.back.shared.domain.SalonSchedulingLock;
 
 /** Garde-fou de la tranche 8b : pas de fermeture par-dessus des RDV actifs. */
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +47,8 @@ class ClosureManagementServiceGuardTest {
     private IdGenerator idGenerator;
     @Mock
     private ClosureConflictCheck conflictCheck;
+    @Mock
+    private SalonSchedulingLock schedulingLock;
 
     private ClosureManagementService service;
     private final UUID salonId = UUID.randomUUID();
@@ -54,7 +57,7 @@ class ClosureManagementServiceGuardTest {
     @BeforeEach
     void setUp() {
         service = new ClosureManagementService(closureRepository, resourceRepository, idGenerator,
-                Clock.fixed(NOW, ZoneOffset.UTC), conflictCheck);
+                Clock.fixed(NOW, ZoneOffset.UTC), conflictCheck, schedulingLock);
     }
 
     private static BlockingAppointment blocking() {
@@ -66,9 +69,8 @@ class ClosureManagementServiceGuardTest {
     void refusesToCreateASalonClosureOverActiveAppointments() {
         when(conflictCheck.findBlockingAppointments(salonId, null, START, END)).thenReturn(List.of(blocking()));
 
-        assertThatThrownBy(() -> service.create(salonId, null, command))
-                .isInstanceOfSatisfying(ClosureBlockedByAppointmentsException.class,
-                        ex -> assertThat(ex.count()).isEqualTo(1));
+        assertThatThrownBy(() -> service.create(salonId, null, command)).isInstanceOfSatisfying(
+                ClosureBlockedByAppointmentsException.class, ex -> assertThat(ex.count()).isEqualTo(1));
 
         verify(closureRepository, never()).save(any(Closure.class));
     }
@@ -78,8 +80,7 @@ class ClosureManagementServiceGuardTest {
         UUID resourceId = UUID.randomUUID();
         when(resourceRepository.findAliveById(resourceId))
                 .thenReturn(Optional.of(new Resource(resourceId, salonId, "R", ResourceType.EMPLOYEE, NOW)));
-        when(conflictCheck.findBlockingAppointments(salonId, resourceId, START, END))
-                .thenReturn(List.of(blocking()));
+        when(conflictCheck.findBlockingAppointments(salonId, resourceId, START, END)).thenReturn(List.of(blocking()));
 
         assertThatThrownBy(() -> service.create(salonId, resourceId, command))
                 .isInstanceOf(ClosureBlockedByAppointmentsException.class);
@@ -101,8 +102,8 @@ class ClosureManagementServiceGuardTest {
     @Test
     void refusesToMoveAClosureOverActiveAppointmentsAndLeavesItUntouched() {
         Instant oldStart = Instant.parse("2099-03-01T00:00:00Z");
-        Closure closure = Closure.forSalon(UUID.randomUUID(), salonId, oldStart,
-                Instant.parse("2099-03-02T00:00:00Z"), null, NOW);
+        Closure closure = Closure.forSalon(UUID.randomUUID(), salonId, oldStart, Instant.parse("2099-03-02T00:00:00Z"),
+                null, NOW);
         when(closureRepository.findById(closure.getId())).thenReturn(Optional.of(closure));
         when(conflictCheck.findBlockingAppointments(salonId, null, START, END)).thenReturn(List.of(blocking()));
 

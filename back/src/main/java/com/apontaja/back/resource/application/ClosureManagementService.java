@@ -5,6 +5,7 @@ import com.apontaja.back.resource.domain.ClosureRepository;
 import com.apontaja.back.resource.domain.Resource;
 import com.apontaja.back.resource.domain.ResourceRepository;
 import com.apontaja.back.shared.domain.IdGenerator;
+import com.apontaja.back.shared.domain.SalonSchedulingLock;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,14 +36,17 @@ public class ClosureManagementService {
     private final IdGenerator idGenerator;
     private final Clock clock;
     private final ClosureConflictCheck closureConflictCheck;
+    private final SalonSchedulingLock schedulingLock;
 
     ClosureManagementService(ClosureRepository closureRepository, ResourceRepository resourceRepository,
-            IdGenerator idGenerator, Clock clock, ClosureConflictCheck closureConflictCheck) {
+            IdGenerator idGenerator, Clock clock, ClosureConflictCheck closureConflictCheck,
+            SalonSchedulingLock schedulingLock) {
         this.closureRepository = closureRepository;
         this.resourceRepository = resourceRepository;
         this.idGenerator = idGenerator;
         this.clock = clock;
         this.closureConflictCheck = closureConflictCheck;
+        this.schedulingLock = schedulingLock;
     }
 
     @Transactional
@@ -99,10 +103,17 @@ public class ClosureManagementService {
         }
     }
 
-    /** Refuse la période si elle recouvre un RDV actif (SCHEDULED/CONFIRMED) du périmètre. */
+    /**
+     * Refuse la période si elle recouvre un RDV actif (SCHEDULED/CONFIRMED) du
+     * périmètre.
+     */
     private void requireNoBlockingAppointments(UUID salonId, UUID resourceId, Instant start, Instant end) {
-        List<BlockingAppointment> blocking = closureConflictCheck.findBlockingAppointments(salonId, resourceId,
-                start, end);
+        // Même verrou que la réservation : sans lui, une réservation concurrente
+        // pourrait passer entre la
+        // vérification des RDV et l'enregistrement de la fermeture.
+        schedulingLock.lock(salonId);
+        List<BlockingAppointment> blocking = closureConflictCheck.findBlockingAppointments(salonId, resourceId, start,
+                end);
         if (!blocking.isEmpty()) {
             throw new ClosureBlockedByAppointmentsException(blocking);
         }

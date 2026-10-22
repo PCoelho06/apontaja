@@ -17,11 +17,13 @@ import com.apontaja.back.service.application.ServiceNotFoundException;
 import com.apontaja.back.service.application.ServiceQueryService;
 import com.apontaja.back.service.application.ServiceSummary;
 import com.apontaja.back.service.application.ServiceTerms;
+import com.apontaja.back.shared.domain.SalonSchedulingLock;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,6 +38,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -62,6 +65,9 @@ class AppointmentCreationServiceTest {
     @Mock
     private AvailabilityService availabilityService;
 
+    @Mock
+    private SalonSchedulingLock schedulingLock;
+
     private AppointmentCreationService service;
 
     private final Instant fixedNow = Instant.parse("2026-09-24T07:00:00Z");
@@ -76,7 +82,7 @@ class AppointmentCreationServiceTest {
     void setUp() {
         service = new AppointmentCreationService(appointmentRepository, appointmentResourceRepository,
                 resourceQueryService, serviceQueryService, customerQueryService, availabilityService,
-                () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC));
+                () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC), schedulingLock);
     }
 
     private CreateAppointmentCommand command() {
@@ -105,8 +111,9 @@ class AppointmentCreationServiceTest {
 
     @Test
     void refuse_une_date_de_debut_illisible_sans_toucher_aux_collaborateurs() {
-        assertThatThrownBy(() -> service.create(new CreateAppointmentCommand(salonId, customerProfileId, serviceId,
-                resourceId, "pas-une-date"))).isInstanceOf(InvalidTimeRangeException.class);
+        assertThatThrownBy(() -> service.create(
+                new CreateAppointmentCommand(salonId, customerProfileId, serviceId, resourceId, "pas-une-date")))
+                        .isInstanceOf(InvalidTimeRangeException.class);
 
         verifyNoInteractions(resourceQueryService, serviceQueryService, customerQueryService, availabilityService,
                 appointmentRepository, appointmentResourceRepository);
@@ -147,8 +154,7 @@ class AppointmentCreationServiceTest {
         allReferencesValid();
         when(serviceQueryService.resolveTerms(salonId, serviceId, resourceId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(command()))
-                .isInstanceOf(ServiceResourceNotAssociatedException.class);
+        assertThatThrownBy(() -> service.create(command())).isInstanceOf(ServiceResourceNotAssociatedException.class);
 
         verifyNoInteractions(availabilityService, appointmentRepository);
     }
@@ -195,12 +201,28 @@ class AppointmentCreationServiceTest {
     }
 
     @Test
+    void prend_le_verrou_du_salon_avant_de_verifier_la_disponibilite() {
+        allReferencesValid();
+        when(serviceQueryService.resolveTerms(salonId, serviceId, resourceId))
+                .thenReturn(Optional.of(new ServiceTerms(2500, 60)));
+        when(availabilityService.check(any(), any(), any(), any())).thenReturn(new AvailabilityCheck(true, List.of()));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(appointmentResourceRepository.save(any(AppointmentResource.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.create(command());
+
+        InOrder order = inOrder(schedulingLock, availabilityService);
+        order.verify(schedulingLock).lock(salonId);
+        order.verify(availabilityService).check(any(), any(), any(), any());
+    }
+
+    @Test
     void traduit_une_violation_d_exclusion_concurrente_en_conflit_metier() {
         allReferencesValid();
         when(serviceQueryService.resolveTerms(salonId, serviceId, resourceId))
                 .thenReturn(Optional.of(new ServiceTerms(2500, 60)));
-        when(availabilityService.check(any(), any(), any(), any()))
-                .thenReturn(new AvailabilityCheck(true, List.of()));
+        when(availabilityService.check(any(), any(), any(), any())).thenReturn(new AvailabilityCheck(true, List.of()));
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(appointmentResourceRepository.save(any(AppointmentResource.class)))
                 .thenThrow(new DataIntegrityViolationException("exclusion_violation"));

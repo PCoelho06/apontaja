@@ -9,17 +9,18 @@ import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentStatus;
 import com.apontaja.back.resource.application.AvailabilityCheck;
 import com.apontaja.back.resource.application.AvailabilityService;
+import com.apontaja.back.shared.domain.SalonSchedulingLock;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Déplacement d'un RDV (Phase 3, tranche 8). Revalidation complète, ce qui
- * ferme le bug historique "aucune revalidation à la mise à jour" : RDV du
- * salon (404), statut éligible SCHEDULED/CONFIRMED (409), disponibilité
+ * ferme le bug historique "aucune revalidation à la mise à jour" : RDV du salon
+ * (404), statut éligible SCHEDULED/CONFIRMED (409), disponibilité
  * horaires/fermetures de la ressource du RDV (409), puis persistance — la
- * contrainte d'exclusion PostgreSQL (SQLSTATE 23P01, levée par le trigger
- * AFTER UPDATE) reste la dernière défense contre un chevauchement concurrent.
+ * contrainte d'exclusion PostgreSQL (SQLSTATE 23P01, levée par le trigger AFTER
+ * UPDATE) reste la dernière défense contre un chevauchement concurrent.
  *
  * <p>
  * Le snapshot prix/durée est conservé : la fin est recalculée à partir de la
@@ -31,17 +32,20 @@ public class AppointmentRescheduleService {
     private final AppointmentRepository appointmentRepository;
     private final AppointmentQueryService queryService;
     private final AvailabilityService availabilityService;
+    private final SalonSchedulingLock schedulingLock;
 
-    AppointmentRescheduleService(AppointmentRepository appointmentRepository,
-            AppointmentQueryService queryService, AvailabilityService availabilityService) {
+    AppointmentRescheduleService(AppointmentRepository appointmentRepository, AppointmentQueryService queryService,
+            AvailabilityService availabilityService, SalonSchedulingLock schedulingLock) {
         this.appointmentRepository = appointmentRepository;
         this.queryService = queryService;
         this.availabilityService = availabilityService;
+        this.schedulingLock = schedulingLock;
     }
 
     @Transactional
     public AppointmentSummary reschedule(UUID salonId, UUID appointmentId, String startAt) {
         Instant newStart = AppointmentCreationService.parseStartAt(startAt);
+        schedulingLock.lock(salonId);
 
         UUID resourceId = queryService.findAliveInSalon(salonId, appointmentId)
                 .orElseThrow(AppointmentNotFoundException::new).resourceId();
