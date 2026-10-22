@@ -14,6 +14,7 @@ import com.apontaja.back.service.application.ServiceNotFoundException;
 import com.apontaja.back.service.application.ServiceQueryService;
 import com.apontaja.back.service.application.ServiceTerms;
 import com.apontaja.back.shared.domain.IdGenerator;
+import com.apontaja.back.shared.domain.SalonSchedulingLock;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -44,11 +45,13 @@ public class AppointmentCreationService {
     private final AvailabilityService availabilityService;
     private final IdGenerator idGenerator;
     private final Clock clock;
+    private final SalonSchedulingLock schedulingLock;
 
     AppointmentCreationService(AppointmentRepository appointmentRepository,
             AppointmentResourceRepository appointmentResourceRepository, ResourceQueryService resourceQueryService,
             ServiceQueryService serviceQueryService, CustomerQueryService customerQueryService,
-            AvailabilityService availabilityService, IdGenerator idGenerator, Clock clock) {
+            AvailabilityService availabilityService, IdGenerator idGenerator, Clock clock,
+            SalonSchedulingLock schedulingLock) {
         this.appointmentRepository = appointmentRepository;
         this.appointmentResourceRepository = appointmentResourceRepository;
         this.resourceQueryService = resourceQueryService;
@@ -57,11 +60,13 @@ public class AppointmentCreationService {
         this.availabilityService = availabilityService;
         this.idGenerator = idGenerator;
         this.clock = clock;
+        this.schedulingLock = schedulingLock;
     }
 
     @Transactional
     public AppointmentSummary create(CreateAppointmentCommand command) {
         Instant startAt = parseStartAt(command.startAt());
+        schedulingLock.lock(command.salonId());
 
         resourceQueryService.findAliveInSalon(command.salonId(), command.resourceId())
                 .orElseThrow(ResourceNotFoundException::new);

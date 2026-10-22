@@ -24,9 +24,9 @@ import java.util.UUID;
  *
  * <p>
  * Transitions de statut (Phase 3 tranche 7) : voir {@link #confirm()},
- * {@link #cancel}, {@link #complete()}, {@link #markNoShow()}, {@link #reschedule} — mutateurs
- * inconditionnels, l'éligibilité de chaque transition est vérifiée par
- * {@code AppointmentStatusService}, pas ici.
+ * {@link #cancel}, {@link #complete()}, {@link #markNoShow()},
+ * {@link #reschedule} — mutateurs inconditionnels, l'éligibilité de chaque
+ * transition est vérifiée par {@code AppointmentStatusService}, pas ici.
  *
  * <p>
  * Implémente {@link Persistable} pour la même raison que {@code Account}.
@@ -92,13 +92,23 @@ public class Appointment implements Persistable<UUID> {
      * existante est ce backend, utilisé exclusivement par le staff pour une
      * réservation prise par téléphone ou directement au salon — il n'y a pas de
      * scénario "en attente de confirmation" à ce stade. SCHEDULED reste dans
-     * AppointmentStatus et {@link #confirm()} reste implémenté : ils
-     * redeviendront atteignables quand la Phase 4 ajoutera l'auto-réservation en
-     * ligne par le client, qui devra elle rester en attente jusqu'à validation du
-     * salon.
+     * AppointmentStatus et {@link #confirm()} reste implémenté : ils redeviendront
+     * atteignables quand la Phase 4 ajoutera l'auto-réservation en ligne par le
+     * client, qui devra elle rester en attente jusqu'à validation du salon.
      */
     public Appointment(UUID id, UUID salonId, UUID customerProfileId, UUID serviceId, Instant startAt, Instant endAt,
             int priceAtBookingCents, int durationAtBookingMinutes, Instant createdAt) {
+        this(id, salonId, customerProfileId, serviceId, startAt, endAt, priceAtBookingCents, durationAtBookingMinutes,
+                createdAt, AppointmentStatus.CONFIRMED);
+    }
+
+    /**
+     * Statut initial explicite : SCHEDULED pour une demande de réservation en ligne
+     * à valider par le salon, CONFIRMED sinon (réservation du staff, ou salon à
+     * confirmation automatique). Tout autre statut initial est refusé.
+     */
+    public Appointment(UUID id, UUID salonId, UUID customerProfileId, UUID serviceId, Instant startAt, Instant endAt,
+            int priceAtBookingCents, int durationAtBookingMinutes, Instant createdAt, AppointmentStatus initialStatus) {
         this.id = Objects.requireNonNull(id, "id");
         this.salonId = Objects.requireNonNull(salonId, "salonId");
         this.customerProfileId = Objects.requireNonNull(customerProfileId, "customerProfileId");
@@ -117,7 +127,10 @@ public class Appointment implements Persistable<UUID> {
         this.priceAtBookingCents = priceAtBookingCents;
         this.durationAtBookingMinutes = durationAtBookingMinutes;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
-        this.status = AppointmentStatus.CONFIRMED;
+        if (initialStatus != AppointmentStatus.SCHEDULED && initialStatus != AppointmentStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Statut initial invalide : " + initialStatus);
+        }
+        this.status = initialStatus;
     }
 
     /**
@@ -129,7 +142,10 @@ public class Appointment implements Persistable<UUID> {
         this.status = AppointmentStatus.CONFIRMED;
     }
 
-    /** SCHEDULED/CONFIRMED -> CANCELLED. Mutateur inconditionnel, voir {@link #confirm()}. */
+    /**
+     * SCHEDULED/CONFIRMED -> CANCELLED. Mutateur inconditionnel, voir
+     * {@link #confirm()}.
+     */
     public void cancel(Instant at, UUID cancelledBy, String reason) {
         this.status = AppointmentStatus.CANCELLED;
         this.cancelledAt = Objects.requireNonNull(at, "at");
@@ -142,16 +158,18 @@ public class Appointment implements Persistable<UUID> {
         this.status = AppointmentStatus.COMPLETED;
     }
 
-    /** SCHEDULED/CONFIRMED -> NO_SHOW. Mutateur inconditionnel, voir {@link #confirm()}. */
+    /**
+     * SCHEDULED/CONFIRMED -> NO_SHOW. Mutateur inconditionnel, voir
+     * {@link #confirm()}.
+     */
     public void markNoShow() {
         this.status = AppointmentStatus.NO_SHOW;
     }
 
     /**
-     * Déplacement : change début et fin, conserve le snapshot prix/durée.
-     * Mutateur inconditionnel (voir {@link #confirm()}) ; seul l'invariant
-     * fin &gt; début est gardé ici, l'éligibilité l'est par
-     * AppointmentRescheduleService.
+     * Déplacement : change début et fin, conserve le snapshot prix/durée. Mutateur
+     * inconditionnel (voir {@link #confirm()}) ; seul l'invariant fin &gt; début
+     * est gardé ici, l'éligibilité l'est par AppointmentRescheduleService.
      */
     public void reschedule(Instant startAt, Instant endAt) {
         Objects.requireNonNull(startAt, "startAt");
