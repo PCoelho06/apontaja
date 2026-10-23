@@ -13,7 +13,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.util.Optional;
 
 /**
- * Envoie l'email au client une fois la transaction validée. Une exception levée dans un écouteur AFTER_COMMIT
+ * Envoie l'email au client une fois la transaction validée (réservation, annulation par le client, décision du
+ * staff). Une exception levée dans un écouteur AFTER_COMMIT
  * remonterait à l'appelant alors que l'action est déjà enregistrée : tout échec est donc journalisé (identifiants
  * seulement, jamais l'adresse) sans faire échouer la réservation ou l'annulation.
  */
@@ -33,19 +34,30 @@ class ClientAppointmentEmailListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotification(ClientAppointmentNotification event) {
         try {
-            Optional<ClientContact> contact = contactQueryService.find(event.accountId());
+            Optional<ClientContact> contact = findContact(event);
             if (contact.isEmpty()) {
-                log.warn("Email {} non envoyé : compte introuvable (rendez-vous {}).", event.kind(),
-                        event.appointmentId());
+                log.warn("Email {} non envoyé : destinataire introuvable ou sans email (rendez-vous {}).",
+                        event.kind(), event.appointmentId());
                 return;
             }
             ClientEmailComposer.ClientEmail email = ClientEmailComposer.compose(event,
                     contact.get().firstName());
             emailSender.send(contact.get().email(), email.subject(), email.body());
         } catch (RuntimeException e) {
-            log.warn("Échec de l'envoi de l'email {} (rendez-vous {}, compte {}) : {}", event.kind(),
-                    event.appointmentId(), event.accountId(), e.getClass().getName());
+            log.warn("Échec de l'envoi de l'email {} (rendez-vous {}, compte {}, profil {}) : {}", event.kind(),
+                    event.appointmentId(), event.accountId(), event.customerProfileId(), e.getClass().getName());
             log.debug("Détail de l'échec d'envoi", e);
         }
+    }
+
+    /** Compte connu (actions du client) sinon profil (actions du staff : compte rattaché ou email du profil). */
+    private Optional<ClientContact> findContact(ClientAppointmentNotification event) {
+        if (event.accountId() != null) {
+            return contactQueryService.find(event.accountId());
+        }
+        if (event.customerProfileId() != null) {
+            return contactQueryService.findForProfile(event.customerProfileId());
+        }
+        return Optional.empty();
     }
 }

@@ -1,9 +1,11 @@
 package com.apontaja.back.appointment.application;
 
+import com.apontaja.back.appointment.application.ClientAppointmentNotification.Kind;
 import com.apontaja.back.appointment.domain.Appointment;
 import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentResourceRepository;
 import com.apontaja.back.appointment.domain.AppointmentStatus;
+import com.apontaja.back.shared.domain.SalonSchedulingLock;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,13 +40,19 @@ class AppointmentStatusServiceTest {
     @Mock
     private AppointmentResourceRepository appointmentResourceRepository;
 
+    @Mock
+    private SalonSchedulingLock schedulingLock;
+
+    @Mock
+    private StaffAppointmentNotifier notifier;
+
     private final UUID salonId = UUID.randomUUID();
     private final UUID resourceId = UUID.randomUUID();
     private final UUID actor = UUID.randomUUID();
 
     private AppointmentStatusService serviceAt(Instant now) {
         return new AppointmentStatusService(appointmentRepository, appointmentResourceRepository,
-                Clock.fixed(now, ZoneOffset.UTC));
+                Clock.fixed(now, ZoneOffset.UTC), schedulingLock, notifier);
     }
 
     private AppointmentStatusService service;
@@ -201,5 +211,65 @@ class AppointmentStatusServiceTest {
 
         assertThatThrownBy(() -> service.complete(salonId, appointment.getId()))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void confirmer_notifie_le_client() {
+        Appointment appointment = appointmentWith(AppointmentStatus.SCHEDULED);
+        persistenceWorks(appointment);
+
+        AppointmentSummary result = service.confirm(salonId, appointment.getId());
+
+        verify(schedulingLock).lock(salonId);
+        verify(notifier).notifyClient(Kind.CONFIRMED, result);
+    }
+
+    @Test
+    void annuler_une_demande_a_valider_notifie_un_refus() {
+        Appointment appointment = appointmentWith(AppointmentStatus.SCHEDULED);
+        persistenceWorks(appointment);
+
+        AppointmentSummary result = service.cancel(salonId, appointment.getId(), actor, null);
+
+        verify(schedulingLock).lock(salonId);
+        verify(notifier).notifyClient(Kind.REQUEST_DECLINED, result);
+    }
+
+    @Test
+    void annuler_un_rdv_confirme_notifie_une_annulation_par_le_salon() {
+        Appointment appointment = appointmentWith(AppointmentStatus.CONFIRMED);
+        persistenceWorks(appointment);
+
+        AppointmentSummary result = service.cancel(salonId, appointment.getId(), actor, "Imprévu");
+
+        verify(notifier).notifyClient(Kind.CANCELLED_BY_SALON, result);
+    }
+
+    @Test
+    void terminer_et_marquer_absent_ne_notifient_pas_mais_prennent_le_verrou() {
+        Appointment confirmed = appointmentWith(AppointmentStatus.CONFIRMED);
+        persistenceWorks(confirmed);
+        Appointment other = appointmentWith(AppointmentStatus.CONFIRMED);
+        persistenceWorks(other);
+
+        service.complete(salonId, confirmed.getId());
+        service.markNoShow(salonId, other.getId());
+
+        verify(schedulingLock, times(2)).lock(salonId);
+        verify(notifier, never()).notifyClient(any(), any());
+    }
+
+    @Test
+    void une_transition_refusee_ne_notifie_personne() {
+        Appointment appointment = appointmentWith(AppointmentStatus.COMPLETED);
+
+        assertThatThrownBy(() -> service.cancel(salonId, appointment.getId(), actor, null))
+                .isInstanceOf(InvalidAppointmentTransitionException.class);
+        assertThatThrownBy(() -> service.confirm(salonId, appointment.getId()))
+                .isInstanceOf(InvalidAppointmentTransitionException.class);
+
+        verify(notifier, never()).notifyClient(eq(Kind.CONFIRMED), any());
+        verify(notifier, never()).notifyClient(eq(Kind.REQUEST_DECLINED), any());
+        verify(notifier, never()).notifyClient(eq(Kind.CANCELLED_BY_SALON), any());
     }
 }

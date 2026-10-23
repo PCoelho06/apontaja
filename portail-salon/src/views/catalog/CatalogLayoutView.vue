@@ -81,6 +81,13 @@ const activeTabClass = "bg-wine! text-paper! hover:bg-wine!";
           >
             Fermetures
           </RouterLink>
+          <RouterLink
+            :to="{ name: 'booking-settings', params: { salonId } }"
+            :class="tabClass"
+            :active-class="activeTabClass"
+          >
+            Réservation en ligne
+          </RouterLink>
         </nav>
       </header>
 

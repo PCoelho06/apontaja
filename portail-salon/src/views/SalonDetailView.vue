@@ -2,7 +2,10 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 
+import { UiBadge } from "@apontaja/ui-kit";
+
 import { ApiError } from "@apontaja/web-core/api-client";
+import { useBookingRequestsStore } from "@/stores/bookingRequests";
 import { useSalonStore } from "@/stores/salon";
 import { useStaffStore } from "@/stores/staff";
 
@@ -11,6 +14,7 @@ const salonId = computed(() => route.params.salonId as string);
 
 const salonStore = useSalonStore();
 const staffStore = useStaffStore();
+const requestsStore = useBookingRequestsStore();
 
 const isLoading = ref(true);
 const loadError = ref("");
@@ -41,7 +45,19 @@ async function loadAll() {
   }
 }
 
-onMounted(loadAll);
+/** Compteur de la navigation : un échec (ex. droits) ne gêne pas la page, le badge reste simplement absent. */
+async function loadRequestCount() {
+  try {
+    await requestsStore.fetchRequests(salonId.value);
+  } catch {
+    requestsStore.requests = [];
+  }
+}
+
+onMounted(async () => {
+  await loadAll();
+  await loadRequestCount();
+});
 
 async function handleInvite() {
   inviteError.value = "";
@@ -132,6 +148,18 @@ async function handleRemove(staffMembershipId: string) {
           class="ml-4"
         >
           Clients
+        </RouterLink>
+        <RouterLink
+          :to="{ name: 'booking-requests', params: { salonId } }"
+          class="ml-4"
+        >
+          Demandes
+          <UiBadge
+            v-if="requestsStore.count > 0"
+            tone="brass"
+          >
+            {{ requestsStore.count }}
+          </UiBadge>
         </RouterLink>
 
         <!-- Équipe -->

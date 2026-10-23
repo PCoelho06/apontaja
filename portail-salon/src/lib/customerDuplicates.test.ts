@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   absorbedIds,
+  canKeep,
   mergeableOthers,
   notMergeableLabel,
   reasonsLabel,
@@ -45,5 +46,35 @@ describe("customerDuplicates", () => {
     expect(reasonsLabel(["EMAIL", "PHONE"])).toBe("Même email · Même téléphone");
     expect(notMergeableLabel("CLAIMED")).toContain("compte client");
     expect(notMergeableLabel(null)).toBe("");
+  });
+
+  it("autorise à conserver un profil réclamé s'il reste un profil à absorber", () => {
+    const claimed: DuplicateMember = {
+      ...member("k", false),
+      notMergeableReason: "CLAIMED",
+      claimed: true,
+    };
+    const withClaimed: DuplicateGroup = {
+      reasons: ["EMAIL"],
+      customers: [claimed, member("a"), member("c", false)],
+    };
+
+    expect(canKeep(withClaimed, claimed)).toBe(true);
+    // « a » n'a rien à absorber : le seul autre profil est réclamé, donc non absorbable.
+    expect(canKeep(withClaimed, member("a"))).toBe(false);
+    expect(
+      canKeep(
+        { ...withClaimed, customers: [...withClaimed.customers, member("b")] },
+        member("a"),
+      ),
+    ).toBe(true);
+    // « c » est partagé avec un autre salon : ni absorbable ni conservable.
+    expect(canKeep(withClaimed, withClaimed.customers[2])).toBe(false);
+    // Rien à lui rattacher : le bouton n'a pas de sens.
+    const alone: DuplicateGroup = {
+      reasons: ["EMAIL"],
+      customers: [claimed, member("c", false)],
+    };
+    expect(canKeep(alone, claimed)).toBe(false);
   });
 });

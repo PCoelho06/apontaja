@@ -69,4 +69,22 @@ class ClientEmailComposerTest {
                 n.appointmentId(), "S", "a", "1", "v", "Europe/Paris", "C", "R", START, START.plusSeconds(60), 5,
                 1, 0), "A").body()).contains("Preço: 0,05 €");
     }
+
+    @Test
+    void pedido_recusado_informe_le_refus_sans_limite_d_annulation() {
+        ClientEmail email = ClientEmailComposer.compose(notification(Kind.REQUEST_DECLINED, 24), "Alice");
+
+        assertThat(email.subject()).isEqualTo("Pedido de marcação recusado - Salon Test");
+        assertThat(email.body()).startsWith("Olá, Alice,").contains("não pôde ser aceite pelo salão")
+                .contains("novo pedido").contains("Serviço: Coupe").doesNotContain("Pode cancelar");
+    }
+
+    @Test
+    void marcacao_cancelada_pelo_salao_presente_des_excuses() {
+        ClientEmail email = ClientEmailComposer.compose(notification(Kind.CANCELLED_BY_SALON, 24), "Alice");
+
+        assertThat(email.subject()).isEqualTo("Marcação cancelada pelo salão - Salon Test");
+        assertThat(email.body()).contains("foi cancelada pelo salão").contains("Pedimos desculpa")
+                .doesNotContain("a seu pedido");
+    }
 }

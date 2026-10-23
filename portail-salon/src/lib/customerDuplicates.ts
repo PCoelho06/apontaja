@@ -12,6 +12,8 @@ export interface DuplicateMember {
   nextVisitAt: string | null;
   mergeable: boolean;
   notMergeableReason: NotMergeableReason | null;
+  /** Profil rattaché à un compte client : peut être conservé (survivant), jamais absorbé. */
+  claimed?: boolean;
 }
 
 export interface DuplicateGroup {
@@ -43,7 +45,7 @@ export function reasonsLabel(reasons: DuplicateReason[]): string {
 
 export function notMergeableLabel(reason: NotMergeableReason | null): string {
   if (reason === "CLAIMED") {
-    return "Profil rattaché à un compte client : fusion impossible.";
+    return "Profil rattaché à un compte client : il peut être conservé, mais pas absorbé.";
   }
   if (reason === "SHARED") {
     return "Profil partagé avec un autre salon : fusion impossible.";
@@ -60,6 +62,20 @@ export function mergeableOthers(
     (member) => member.mergeable && member.customerProfileId !== survivorId,
   );
 }
+
+/**
+ * Un profil peut être conservé s'il est fusionnable, ou rattaché à un compte client (survivant autorisé),
+ * et s'il reste au moins un autre profil fusionnable à lui rattacher.
+ */
+export function canKeep(group: DuplicateGroup, member: DuplicateMember): boolean {
+  return (
+    (member.mergeable || member.claimed === true) &&
+    mergeableOthers(group, member.customerProfileId).length > 0
+  );
+}
+
+export const CLAIMED_SURVIVOR_WARNING =
+  "Ce profil est rattaché à un compte client. Après la fusion, son titulaire verra l'historique de rendez-vous des profils fusionnés.";
 
 /** Identifiants à absorber : les candidats moins ceux que l'utilisateur a exclus. */
 export function absorbedIds(
