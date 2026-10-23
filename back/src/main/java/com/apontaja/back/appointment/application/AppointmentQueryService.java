@@ -4,6 +4,7 @@ import com.apontaja.back.appointment.domain.Appointment;
 import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentResource;
 import com.apontaja.back.appointment.domain.AppointmentResourceRepository;
+import com.apontaja.back.appointment.domain.AppointmentStatus;
 import com.apontaja.back.resource.application.InvalidTimeRangeException;
 import com.apontaja.back.resource.application.ResourceNotFoundException;
 import com.apontaja.back.resource.application.ResourceQueryService;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +51,15 @@ public class AppointmentQueryService {
      * pour la réservation.
      */
     public List<AppointmentSummary> list(UUID salonId, UUID resourceId, String from, String to) {
+        return list(salonId, resourceId, from, to, null);
+    }
+
+    /**
+     * Idem, filtré en option sur un statut (ex. {@code SCHEDULED} : demandes à valider). Statut inconnu : 400.
+     * Le filtre est appliqué en mémoire après la requête de recouvrement.
+     */
+    public List<AppointmentSummary> list(UUID salonId, UUID resourceId, String from, String to, String status) {
+        AppointmentStatus wanted = parseStatus(status);
         if (resourceId != null) {
             resourceQueryService.findAliveInSalon(salonId, resourceId).orElseThrow(ResourceNotFoundException::new);
         }
@@ -58,8 +69,9 @@ public class AppointmentQueryService {
             throw new InvalidTimeRangeException("La fin doit être postérieure au début.");
         }
 
-        List<Appointment> appointments = appointmentRepository.findOverlappingBySalonId(salonId, resourceId,
-                fromInstant, toInstant);
+        List<Appointment> appointments = appointmentRepository
+                .findOverlappingBySalonId(salonId, resourceId, fromInstant, toInstant).stream()
+                .filter(a -> wanted == null || a.getStatus() == wanted).toList();
 
         Map<UUID, UUID> resourceIdByAppointmentId = appointmentResourceRepository
                 .findByAppointmentIds(appointments.stream().map(Appointment::getId).toList()).stream()
@@ -88,6 +100,17 @@ public class AppointmentQueryService {
                     + " : incohérence de données.");
         }
         return resourceId;
+    }
+
+    private static AppointmentStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return AppointmentStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidTimeRangeException("Statut invalide : " + status);
+        }
     }
 
     private static Instant parseInstant(String value) {

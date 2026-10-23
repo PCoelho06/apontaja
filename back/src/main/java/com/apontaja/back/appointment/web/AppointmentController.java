@@ -77,8 +77,8 @@ class AppointmentController {
     @PreAuthorize(CAN_BOOK)
     public ResponseEntity<List<AppointmentResponse>> list(@P("salonId") @PathVariable UUID salonId,
             @RequestParam(required = false) UUID resourceId, @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
-        return ResponseEntity.ok(queryService.list(salonId, resourceId, from, to).stream()
+            @RequestParam(required = false) String to, @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(queryService.list(salonId, resourceId, from, to, status).stream()
                 .map(AppointmentController::toResponse).toList());
     }
 

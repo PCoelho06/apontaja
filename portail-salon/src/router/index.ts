@@ -86,12 +86,23 @@ const router = createRouter({
           name: "catalog-closures",
           component: () => import("@/views/catalog/ClosuresView.vue"),
         },
+        {
+          path: "reservation",
+          name: "booking-settings",
+          component: () => import("@/views/catalog/BookingSettingsView.vue"),
+        },
       ],
     },
     {
       path: "/salons/:salonId/agenda",
       name: "agenda",
       component: () => import("@/views/AgendaView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/salons/:salonId/demandes",
+      name: "booking-requests",
+      component: () => import("@/views/BookingRequestsView.vue"),
       meta: { requiresAuth: true },
     },
     {

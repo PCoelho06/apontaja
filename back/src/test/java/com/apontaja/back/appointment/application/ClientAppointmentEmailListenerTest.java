@@ -91,4 +91,39 @@ class ClientAppointmentEmailListenerTest {
 
         assertThatCode(() -> listener().onNotification(event("Europe/Paris"))).doesNotThrowAnyException();
     }
+
+    private ClientAppointmentNotification staffEvent(UUID profileId) {
+        return new ClientAppointmentNotification(Kind.REQUEST_DECLINED, null, UUID.randomUUID(), "Salon", "1 rue",
+                "06140", "Vence", "Europe/Paris", "Coupe", "Chaise 1", START, START.plusSeconds(3600), 3000, 60, 24,
+                profileId);
+    }
+
+    @Test
+    void un_evenement_du_staff_est_adresse_via_le_profil() {
+        UUID profileId = UUID.randomUUID();
+        when(contactQueryService.findForProfile(profileId))
+                .thenReturn(Optional.of(new ClientContact("p@example.com", "Paul")));
+
+        listener().onNotification(staffEvent(profileId));
+
+        verify(emailSender).send(eq("p@example.com"), eq("Pedido de marcação recusado - Salon"), any());
+        verify(contactQueryService, never()).find(any());
+    }
+
+    @Test
+    void un_profil_sans_email_ne_recoit_rien() {
+        UUID profileId = UUID.randomUUID();
+        when(contactQueryService.findForProfile(profileId)).thenReturn(Optional.empty());
+
+        listener().onNotification(staffEvent(profileId));
+
+        verify(emailSender, never()).send(any(), any(), any());
+    }
+
+    @Test
+    void un_evenement_sans_destinataire_est_ignore() {
+        listener().onNotification(staffEvent(null));
+
+        verify(emailSender, never()).send(any(), any(), any());
+    }
 }

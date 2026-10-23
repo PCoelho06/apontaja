@@ -7,7 +7,9 @@ import { UiAlert, UiButton, UiDialog } from "@apontaja/ui-kit";
 import { ApiError } from "@apontaja/web-core/api-client";
 import { visitLabel } from "@/lib/customerFormat";
 import {
+  CLAIMED_SURVIVOR_WARNING,
   absorbedIds,
+  canKeep,
   memberContact,
   memberName,
   mergeableOthers,
@@ -218,7 +220,7 @@ async function confirmMerge() {
                 </p>
               </div>
               <UiButton
-                v-if="member.mergeable"
+                v-if="canKeep(group, member)"
                 variant="secondary"
                 size="sm"
                 @click="startMerge(group, member)"
@@ -266,6 +268,12 @@ async function confirmMerge() {
               </UiButton>
             </li>
           </ul>
+          <UiAlert
+            v-if="pendingSurvivor.claimed"
+            variant="info"
+          >
+            {{ CLAIMED_SURVIVOR_WARNING }}
+          </UiAlert>
           <UiAlert variant="error">
             Cette opération est irréversible : les profils fusionnés sont
             retirés du carnet et leurs données personnelles effacées.

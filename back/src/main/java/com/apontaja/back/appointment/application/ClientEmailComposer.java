@@ -47,6 +47,8 @@ final class ClientEmailComposer {
             case REQUEST_RECEIVED -> "Pedido de marcação recebido - " + n.salonName();
             case CONFIRMED -> "Marcação confirmada - " + n.salonName();
             case CANCELLED -> "Marcação cancelada - " + n.salonName();
+            case REQUEST_DECLINED -> "Pedido de marcação recusado - " + n.salonName();
+            case CANCELLED_BY_SALON -> "Marcação cancelada pelo salão - " + n.salonName();
         };
     }
 
@@ -57,6 +59,10 @@ final class ClientEmailComposer {
                     + " «As minhas marcações».";
             case CONFIRMED -> "A sua marcação em " + n.salonName() + " está confirmada.";
             case CANCELLED -> "Confirmamos o cancelamento da sua marcação em " + n.salonName() + ", a seu pedido.";
+            case REQUEST_DECLINED -> "Lamentamos informar que o seu pedido de marcação em " + n.salonName()
+                    + " não pôde ser aceite pelo salão.";
+            case CANCELLED_BY_SALON -> "Lamentamos informar que a sua marcação em " + n.salonName()
+                    + " foi cancelada pelo salão.";
         };
     }
 
@@ -67,6 +73,9 @@ final class ClientEmailComposer {
                     : "Pode cancelar até " + n.startAt().minus(n.cancellationDeadlineHours(), ChronoUnit.HOURS)
                             .atZone(zone).format(WHEN) + ".";
             case CANCELLED -> "Se desejar, pode fazer uma nova marcação a qualquer momento.";
+            case REQUEST_DECLINED -> "Se desejar, pode fazer um novo pedido para outro horário.";
+            case CANCELLED_BY_SALON -> "Pedimos desculpa pelo incómodo. Se desejar, pode fazer uma nova marcação"
+                    + " a qualquer momento.";
         };
     }
 
