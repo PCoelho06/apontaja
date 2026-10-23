@@ -61,6 +61,16 @@ const router = createRouter({
       meta: { title: "Politique de confidentialité" },
     },
     {
+      path: "/salons/:salonId",
+      name: "salon",
+      component: () => import("@/views/SalonPublicView.vue"),
+    },
+    {
+      path: "/salons/:salonId/reserver",
+      name: "booking",
+      component: () => import("@/views/BookingView.vue"),
+    },
+    {
       path: "/",
       name: "home",
       component: () => import("@/views/AccountHomeView.vue"),
@@ -76,7 +86,13 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore();
 
-  return resolveNavigation(to.meta, auth.isAuthenticated);
+  return resolveNavigation(to.meta, auth.isAuthenticated, {
+    fullPath: to.fullPath,
+    redirect: to.query.redirect,
+  });
 });
 
 export default router;
+
+
+
