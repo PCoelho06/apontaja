@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { RouterLink, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
+import { safeRedirect } from "@/lib/safeRedirect";
 import { errorMessage } from "@apontaja/web-core/error-message";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
 
+const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 
@@ -21,7 +23,8 @@ async function handleSubmit() {
   isSubmitting.value = true;
   try {
     await auth.login(email.value, password.value);
-    await router.push({ name: "home" });
+    // Retour à la page demandée avant la connexion (ex. une réservation), sinon l'accueil.
+    await router.push(safeRedirect(route.query.redirect) ?? { name: "home" });
   } catch (error) {
     errorText.value = errorMessage(error, "Connexion impossible, réessayez.");
   } finally {
@@ -89,3 +92,6 @@ async function handleSubmit() {
     </p>
   </AuthLayout>
 </template>
+
+
+

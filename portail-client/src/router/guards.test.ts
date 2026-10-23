@@ -27,4 +27,42 @@ describe("resolveNavigation", () => {
     expect(resolveNavigation({}, false)).toBe(true);
     expect(resolveNavigation({}, true)).toBe(true);
   });
+
+  it("mémorise la page demandée quand une page protégée exige la connexion", () => {
+    expect(
+      resolveNavigation({ requiresAuth: true }, false, {
+        fullPath: "/salons/abc/reserver?service=1",
+      }),
+    ).toEqual({
+      name: "login",
+      query: { redirect: "/salons/abc/reserver?service=1" },
+    });
+  });
+
+  it("ne mémorise pas l'accueil ni une destination non sûre", () => {
+    expect(
+      resolveNavigation({ requiresAuth: true }, false, { fullPath: "/" }),
+    ).toEqual({ name: "login" });
+    expect(
+      resolveNavigation({ requiresAuth: true }, false, {
+        fullPath: "//evil.example",
+      }),
+    ).toEqual({ name: "login" });
+  });
+
+  it("renvoie un compte connecté vers la destination sûre demandée", () => {
+    expect(
+      resolveNavigation({ guestOnly: true }, true, {
+        redirect: "/salons/abc/reserver?service=1",
+      }),
+    ).toEqual({ path: "/salons/abc/reserver?service=1" });
+  });
+
+  it("ignore une destination non sûre sur une page de visiteur", () => {
+    expect(
+      resolveNavigation({ guestOnly: true }, true, {
+        redirect: "https://evil.example",
+      }),
+    ).toEqual({ name: "home" });
+  });
 });
