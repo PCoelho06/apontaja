@@ -71,6 +71,12 @@ const router = createRouter({
       component: () => import("@/views/BookingView.vue"),
     },
     {
+      path: "/mes-rendez-vous",
+      name: "my-appointments",
+      component: () => import("@/views/MyAppointmentsView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/",
       name: "home",
       component: () => import("@/views/AccountHomeView.vue"),
@@ -93,6 +99,3 @@ router.beforeEach((to) => {
 });
 
 export default router;
-
-
-

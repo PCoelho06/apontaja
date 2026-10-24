@@ -105,9 +105,14 @@ async function mountView(url: string, signedIn: { verified: boolean } | null) {
     history: createMemoryHistory(),
     routes: [
       { path: "/salons/:salonId", name: "salon", component: EMPTY },
-      { path: "/salons/:salonId/reserver", name: "booking", component: BookingView },
+      {
+        path: "/salons/:salonId/reserver",
+        name: "booking",
+        component: BookingView,
+      },
       { path: "/connexion", name: "login", component: EMPTY },
       { path: "/inscription", name: "register", component: EMPTY },
+      { path: "/mes-rendez-vous", name: "my-appointments", component: EMPTY },
       { path: "/", name: "home", component: EMPTY },
     ],
   });
@@ -117,7 +122,10 @@ async function mountView(url: string, signedIn: { verified: boolean } | null) {
   return { wrapper, router };
 }
 
-function buttonWithText(wrapper: Awaited<ReturnType<typeof mountView>>["wrapper"], text: string) {
+function buttonWithText(
+  wrapper: Awaited<ReturnType<typeof mountView>>["wrapper"],
+  text: string,
+) {
   return wrapper.findAll("button").find((button) => button.text() === text);
 }
 
@@ -131,15 +139,27 @@ describe("BookingView (portail client)", () => {
   });
 
   it("affiche les horaires dans le fuseau du salon", async () => {
-    const { wrapper } = await mountView("/salons/s1/reserver?service=sv1", null);
+    const { wrapper } = await mountView(
+      "/salons/s1/reserver?service=sv1",
+      null,
+    );
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Escolha um horário"));
-    await vi.waitFor(() => expect(buttonWithText(wrapper, "10:00")).toBeDefined());
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Escolha um horário"),
+    );
+    await vi.waitFor(() =>
+      expect(buttonWithText(wrapper, "10:00")).toBeDefined(),
+    );
   });
 
   it("mène un visiteur à la confirmation puis à la connexion avec retour", async () => {
-    const { wrapper, router } = await mountView("/salons/s1/reserver?service=sv1", null);
-    await vi.waitFor(() => expect(buttonWithText(wrapper, "10:00")).toBeDefined());
+    const { wrapper, router } = await mountView(
+      "/salons/s1/reserver?service=sv1",
+      null,
+    );
+    await vi.waitFor(() =>
+      expect(buttonWithText(wrapper, "10:00")).toBeDefined(),
+    );
 
     await buttonWithText(wrapper, "10:00")?.trigger("click");
     await vi.waitFor(() =>
@@ -165,7 +185,9 @@ describe("BookingView (portail client)", () => {
       { verified: true },
     );
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Confirme a sua marcação"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Confirme a sua marcação"),
+    );
 
     const paths = fetchMock.mock.calls.map((call) => call[0]);
     expect(
@@ -200,7 +222,9 @@ describe("BookingView (portail client)", () => {
       `/salons/s1/reserver?service=sv1&start=${START}`,
       { verified: true },
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Confirme a sua marcação"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Confirme a sua marcação"),
+    );
 
     await wrapper.find('input[type="tel"]').setValue("912345678");
     await wrapper.find('input[type="checkbox"]').setValue(true);
@@ -228,11 +252,15 @@ describe("BookingView (portail client)", () => {
       `/salons/s1/reserver?service=sv1&start=${START}`,
       { verified: true },
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Confirme a sua marcação"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Confirme a sua marcação"),
+    );
 
     await wrapper.find("form").trigger("submit");
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Marcação confirmada"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Marcação confirmada"),
+    );
   });
 
   it("revient aux horaires quand le créneau vient d'être pris", async () => {
@@ -243,7 +271,9 @@ describe("BookingView (portail client)", () => {
       `/salons/s1/reserver?service=sv1&start=${START}`,
       { verified: true },
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Confirme a sua marcação"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Confirme a sua marcação"),
+    );
 
     await wrapper.find("form").trigger("submit");
 
@@ -257,13 +287,18 @@ describe("BookingView (portail client)", () => {
 
   it("affiche le consentement requis en portugais, sans le texte du back", async () => {
     stubNetwork(() =>
-      json({ detail: "Consentement requis.", code: "SHARING_CONSENT_REQUIRED" }, 400),
+      json(
+        { detail: "Consentement requis.", code: "SHARING_CONSENT_REQUIRED" },
+        400,
+      ),
     );
     const { wrapper } = await mountView(
       `/salons/s1/reserver?service=sv1&start=${START}`,
       { verified: true },
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Confirme a sua marcação"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Confirme a sua marcação"),
+    );
 
     await wrapper.find("form").trigger("submit");
 
@@ -279,10 +314,32 @@ describe("BookingView (portail client)", () => {
       `/salons/s1/reserver?service=sv1&start=${START}`,
       { verified: false },
     );
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Ainda não confirmou"));
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Ainda não confirmou"),
+    );
 
     const submit = wrapper.find('button[type="submit"]');
     expect(submit.attributes("disabled")).toBeDefined();
+  });
+
+  it("mène à « mes rendez-vous » depuis le résultat de la réservation", async () => {
+    const { wrapper, router } = await mountView(
+      `/salons/s1/reserver?service=sv1&start=${START}`,
+      { verified: true },
+    );
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("Confirme a sua marcação"),
+    );
+    await wrapper.find("form").trigger("submit");
+    await vi.waitFor(() =>
+      expect(buttonWithText(wrapper, "Ver as minhas marcações")).toBeDefined(),
+    );
+
+    await buttonWithText(wrapper, "Ver as minhas marcações")?.trigger("click");
+
+    await vi.waitFor(() =>
+      expect(router.currentRoute.value.name).toBe("my-appointments"),
+    );
   });
 
   it("signale un salon sans réservation en ligne", async () => {
@@ -294,7 +351,10 @@ describe("BookingView (portail client)", () => {
         return json({ detail: "Introuvable." }, 404);
       }),
     );
-    const { wrapper } = await mountView("/salons/s1/reserver?service=sv1", null);
+    const { wrapper } = await mountView(
+      "/salons/s1/reserver?service=sv1",
+      null,
+    );
 
     await vi.waitFor(() =>
       expect(wrapper.text()).toContain("não aceita marcações online"),

@@ -5,7 +5,6 @@ import { useRouter } from "vue-router";
 import AccountLayout from "@/layouts/AccountLayout.vue";
 import { useCooldown } from "@/composables/useCooldown";
 import { ApiError } from "@apontaja/web-core/api-client";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiBadge, UiButton } from "@apontaja/ui-kit";
@@ -29,6 +28,10 @@ async function handleLogout() {
   }
 }
 
+function goToAppointments() {
+  void router.push({ name: "my-appointments" });
+}
+
 async function handleResend() {
   const email = auth.account?.email;
   if (!email) return;
@@ -42,7 +45,7 @@ async function handleResend() {
     cooldown.start();
   } catch (error) {
     if (error instanceof ApiError && error.status === 429) {
-      errorText.value = "Trop de tentatives, réessayez plus tard.";
+      errorText.value = "Demasiadas tentativas. Tente novamente mais tarde.";
     } else {
       isSent.value = true;
       cooldown.start();
@@ -57,8 +60,8 @@ async function handleRefresh() {
   isRefreshing.value = true;
   try {
     await auth.loadAccount();
-  } catch (error) {
-    errorText.value = errorMessage(error, "Impossible d'actualiser votre compte.");
+  } catch {
+    errorText.value = "Não foi possível atualizar a sua conta.";
   } finally {
     isRefreshing.value = false;
   }
@@ -73,22 +76,22 @@ async function handleRefresh() {
         size="sm"
         @click="handleLogout"
       >
-        Se déconnecter
+        Terminar sessão
       </UiButton>
     </template>
 
     <h1 class="font-display text-2xl text-ink">
-      Bonjour {{ auth.account?.firstName }}
+      Olá, {{ auth.account?.firstName }}
     </h1>
 
     <section class="mt-8 rounded-md border border-border bg-white p-5">
       <h2 class="text-sm font-medium text-ink/70">
-        Mon compte
+        A minha conta
       </h2>
       <dl class="mt-4 space-y-3 text-sm">
         <div class="flex justify-between gap-4">
           <dt class="text-ink/70">
-            Nom
+            Nome
           </dt>
           <dd class="text-ink">
             {{ auth.account?.firstName }} {{ auth.account?.lastName }}
@@ -104,15 +107,31 @@ async function handleRefresh() {
         </div>
         <div class="flex items-center justify-between gap-4">
           <dt class="text-ink/70">
-            Statut de l'email
+            Estado do email
           </dt>
           <dd>
             <UiBadge :tone="auth.account?.emailVerified ? 'brass' : 'wine'">
-              {{ auth.account?.emailVerified ? "Email vérifié" : "À vérifier" }}
+              {{ auth.account?.emailVerified ? "Email verificado" : "Por verificar" }}
             </UiBadge>
           </dd>
         </div>
       </dl>
+    </section>
+
+    <section class="mt-6 rounded-md border border-border bg-white p-5">
+      <h2 class="text-sm font-medium text-ink/70">
+        As minhas marcações
+      </h2>
+      <p class="mt-3 text-sm text-ink">
+        Consulte as suas marcações e cancele-as, se necessário.
+      </p>
+      <UiButton
+        class="mt-4"
+        variant="secondary"
+        @click="goToAppointments"
+      >
+        Ver as minhas marcações
+      </UiButton>
     </section>
 
     <section
@@ -120,14 +139,14 @@ async function handleRefresh() {
       class="mt-6 space-y-4"
     >
       <UiAlert variant="info">
-        Votre adresse email n'est pas encore confirmée. Vous en aurez besoin pour réserver :
-        cliquez sur le lien reçu par email.
+        O seu endereço de email ainda não está confirmado. Precisa dele para marcar:
+        clique na ligação que recebeu por email.
       </UiAlert>
       <UiAlert
         v-if="isSent"
         variant="success"
       >
-        Si l'envoi est possible, un nouvel email vient d'être envoyé.
+        Se for possível, enviámos-lhe um novo email.
       </UiAlert>
       <UiAlert
         v-if="errorText"
@@ -145,8 +164,8 @@ async function handleRefresh() {
         >
           {{
             cooldown.isActive.value
-              ? `Renvoyer l'email (${cooldown.remaining.value} s)`
-              : "Renvoyer l'email"
+              ? `Reenviar email (${cooldown.remaining.value} s)`
+              : "Reenviar email"
           }}
         </UiButton>
         <UiButton
@@ -154,7 +173,7 @@ async function handleRefresh() {
           :loading="isRefreshing"
           @click="handleRefresh"
         >
-          J'ai confirmé, actualiser
+          Já confirmei, atualizar
         </UiButton>
       </div>
     </section>
