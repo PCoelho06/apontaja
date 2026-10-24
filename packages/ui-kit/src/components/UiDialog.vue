@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, useId, useTemplateRef, watch } from "vue";
 
-defineProps<{ title: string }>();
+withDefaults(defineProps<{ title: string; closeLabel?: string }>(), {
+  closeLabel: "Fermer",
+});
 
 const open = defineModel<boolean>("open", { default: false });
 
@@ -48,7 +50,7 @@ watch(open, sync, { flush: "post" });
         </h2>
         <button
           type="button"
-          aria-label="Fermer"
+          :aria-label="closeLabel"
           class="rounded-md px-2 text-xl leading-none text-ink/60 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-wine"
           @click="open = false"
         >

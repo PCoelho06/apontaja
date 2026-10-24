@@ -99,4 +99,14 @@ describe("UiDialog", () => {
 
     expect(onUpdate).toHaveBeenCalledWith(false);
   });
+
+  it("permet de traduire le libellé du bouton de fermeture", async () => {
+    const wrapper = mount(UiDialog, {
+      props: { open: true, title: "Cancelar", closeLabel: "Fechar" },
+      slots: { default: "<p>Corpo</p>" },
+    });
+
+    expect(wrapper.find('button[aria-label="Fechar"]').exists()).toBe(true);
+    expect(wrapper.find('button[aria-label="Fermer"]').exists()).toBe(false);
+  });
 });

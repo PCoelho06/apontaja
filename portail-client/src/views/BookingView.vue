@@ -278,6 +278,10 @@ function goToAccount() {
   void router.push({ name: "home" });
 }
 
+function goToMyAppointments() {
+  void router.push({ name: "my-appointments" });
+}
+
 function goToSalon() {
   void router.push({ name: "salon", params: { salonId: salonId.value } });
 }
@@ -391,7 +395,8 @@ onMounted(async () => {
       v-else-if="phase === 'unavailable'"
       variant="info"
     >
-      Este salão não foi encontrado ou não aceita marcações online neste momento.
+      Este salão não foi encontrado ou não aceita marcações online neste
+      momento.
     </UiAlert>
 
     <UiAlert
@@ -542,7 +547,9 @@ onMounted(async () => {
           Confirme a sua marcação
         </h2>
 
-        <dl class="space-y-2 rounded-md border border-border bg-white p-4 text-sm">
+        <dl
+          class="space-y-2 rounded-md border border-border bg-white p-4 text-sm"
+        >
           <div class="flex justify-between gap-4">
             <dt class="text-ink/70">
               Serviço
@@ -633,8 +640,8 @@ onMounted(async () => {
             class="space-y-2"
           >
             <UiAlert variant="info">
-              Ainda não confirmou o seu endereço de email, o que é necessário para marcar.
-              Clique na ligação que lhe enviámos por email.
+              Ainda não confirmou o seu endereço de email, o que é necessário
+              para marcar. Clique na ligação que lhe enviámos por email.
             </UiAlert>
             <div class="flex flex-wrap gap-2">
               <UiButton
@@ -682,7 +689,11 @@ onMounted(async () => {
               :loading="isSubmitting"
               :disabled="isUnverified"
             >
-              {{ salon.autoConfirm ? "Confirmar marcação" : "Enviar pedido de marcação" }}
+              {{
+                salon.autoConfirm
+                  ? "Confirmar marcação"
+                  : "Enviar pedido de marcação"
+              }}
             </UiButton>
             <UiButton
               variant="secondary"
@@ -707,7 +718,9 @@ onMounted(async () => {
           }}
         </UiAlert>
 
-        <dl class="space-y-2 rounded-md border border-border bg-white p-4 text-sm">
+        <dl
+          class="space-y-2 rounded-md border border-border bg-white p-4 text-sm"
+        >
           <div class="flex justify-between gap-4">
             <dt class="text-ink/70">
               Serviço
@@ -760,9 +773,9 @@ onMounted(async () => {
           </UiButton>
           <UiButton
             variant="secondary"
-            @click="goToAccount"
+            @click="goToMyAppointments"
           >
-            A minha conta
+            Ver as minhas marcações
           </UiButton>
         </div>
       </section>
