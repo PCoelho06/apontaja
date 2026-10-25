@@ -140,8 +140,8 @@ class PasswordResetServiceTest {
                 service.requestReset("bob@example.com", FrontendPortal.CLIENT);
 
                 verify(emailSender).send(org.mockito.ArgumentMatchers.eq("bob@example.com"), anyString(),
-                                org.mockito.ArgumentMatchers.contains(
-                                                "http://localhost:5174/reinitialiser-mot-de-passe?token=raw-token"));
+                                org.mockito.ArgumentMatchers
+                                                .contains("http://localhost:5174/repor-palavra-passe?token=raw-token"));
         }
 
         @Test

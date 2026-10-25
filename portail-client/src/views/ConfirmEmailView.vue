@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import { describeConfirmError } from "@/lib/authErrors";
 import { useAuthStore } from "@/stores/auth";
 import { useVerificationStore } from "@/stores/verification";
 
@@ -27,10 +27,7 @@ onMounted(async () => {
     verification.clear();
     status.value = "success";
   } catch (error) {
-    errorText.value = errorMessage(
-      error,
-      "Ce lien est invalide ou a expiré. Demandez un nouvel email de confirmation.",
-    );
+    errorText.value = describeConfirmError(error);
     status.value = "error";
     return;
   }
@@ -43,19 +40,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AuthLayout title="Confirmation de votre email">
+  <AuthLayout title="Confirmação do seu email">
     <p
       v-if="status === 'loading'"
       class="text-sm text-ink/70"
     >
-      Confirmation en cours...
+      A confirmar...
     </p>
 
     <UiAlert
       v-else-if="status === 'missing'"
       variant="error"
     >
-      Lien invalide — merci de repartir depuis l'email reçu.
+      Ligação inválida. Utilize a ligação do email que recebeu.
     </UiAlert>
 
     <div
@@ -69,7 +66,7 @@ onMounted(async () => {
         :to="{ name: 'verify-email' }"
         class="text-sm text-wine hover:underline"
       >
-        Renvoyer l'email de confirmation
+        Reenviar o email de confirmação
       </RouterLink>
     </div>
 
@@ -78,14 +75,16 @@ onMounted(async () => {
       class="space-y-4"
     >
       <UiAlert variant="success">
-        Votre adresse email est confirmée.
+        O seu endereço de email foi confirmado.
       </UiAlert>
       <RouterLink
         :to="{ name: auth.isAuthenticated ? 'home' : 'login' }"
         class="inline-block text-sm text-wine hover:underline"
       >
-        {{ auth.isAuthenticated ? "Aller à mon compte" : "Se connecter" }}
+        {{ auth.isAuthenticated ? "Ir para a minha conta" : "Entrar" }}
       </RouterLink>
     </div>
   </AuthLayout>
 </template>
+
+

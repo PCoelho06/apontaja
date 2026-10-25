@@ -31,11 +31,11 @@ describe("resolveNavigation", () => {
   it("mémorise la page demandée quand une page protégée exige la connexion", () => {
     expect(
       resolveNavigation({ requiresAuth: true }, false, {
-        fullPath: "/salons/abc/reserver?service=1",
+        fullPath: "/salao/abc/reservar?service=1",
       }),
     ).toEqual({
       name: "login",
-      query: { redirect: "/salons/abc/reserver?service=1" },
+      query: { redirect: "/salao/abc/reservar?service=1" },
     });
   });
 
@@ -53,9 +53,9 @@ describe("resolveNavigation", () => {
   it("renvoie un compte connecté vers la destination sûre demandée", () => {
     expect(
       resolveNavigation({ guestOnly: true }, true, {
-        redirect: "/salons/abc/reserver?service=1",
+        redirect: "/salao/abc/reservar?service=1",
       }),
-    ).toEqual({ path: "/salons/abc/reserver?service=1" });
+    ).toEqual({ path: "/salao/abc/reservar?service=1" });
   });
 
   it("ignore une destination non sûre sur une page de visiteur", () => {
@@ -66,3 +66,5 @@ describe("resolveNavigation", () => {
     ).toEqual({ name: "home" });
   });
 });
+
+

@@ -98,7 +98,7 @@ class EmailVerificationServiceTest {
         service.issueAndSend(account, FrontendPortal.CLIENT);
 
         verify(emailSender).send(eq("alice@example.com"), anyString(),
-                org.mockito.ArgumentMatchers.contains("http://localhost:5174/confirmer-email?token=raw-token"));
+                org.mockito.ArgumentMatchers.contains("http://localhost:5174/confirmar-email?token=raw-token"));
     }
 
     @Test

@@ -5,6 +5,7 @@ import { RouterLink } from "vue-router";
 import AuthLayout from "@/layouts/AuthLayout.vue";
 import { useCooldown } from "@/composables/useCooldown";
 import { ApiError } from "@apontaja/web-core/api-client";
+import { TOO_MANY_ATTEMPTS } from "@/lib/authErrors";
 import { useAuthStore } from "@/stores/auth";
 import { useVerificationStore } from "@/stores/verification";
 
@@ -31,7 +32,7 @@ async function resend(email: string) {
     cooldown.start();
   } catch (error) {
     if (error instanceof ApiError && error.status === 429) {
-      errorText.value = "Trop de tentatives, réessayez plus tard.";
+      errorText.value = TOO_MANY_ATTEMPTS;
     } else {
       // Réponse volontairement neutre : on ne révèle pas si l'adresse correspond à un compte.
       isSent.value = true;
@@ -56,22 +57,22 @@ async function handleSubmitEmail() {
 </script>
 
 <template>
-  <AuthLayout title="Vérifiez votre email">
+  <AuthLayout title="Verifique o seu email">
     <div
       v-if="verification.pendingEmail"
       class="space-y-4"
     >
       <p class="text-sm text-ink">
-        Nous avons envoyé un lien de confirmation à
+        Enviámos uma ligação de confirmação para
         <strong>{{ verification.pendingEmail }}</strong>.
-        Cliquez dessus pour activer votre compte, puis connectez-vous.
+        Clique nela para ativar a sua conta e depois inicie sessão.
       </p>
 
       <UiAlert
         v-if="isSent"
         variant="success"
       >
-        Si l'envoi est possible, un nouvel email vient d'être envoyé.
+        Se for possível o envio, acabámos de enviar um novo email.
       </UiAlert>
       <UiAlert
         v-if="errorText"
@@ -88,8 +89,8 @@ async function handleSubmitEmail() {
       >
         {{
           cooldown.isActive.value
-            ? `Renvoyer l'email (${cooldown.remaining.value} s)`
-            : "Renvoyer l'email"
+            ? `Reenviar o email (${cooldown.remaining.value} s)`
+            : "Reenviar o email"
         }}
       </UiButton>
     </div>
@@ -100,8 +101,8 @@ async function handleSubmitEmail() {
       @submit.prevent="handleSubmitEmail"
     >
       <p class="text-sm text-ink">
-        Indiquez l'adresse utilisée pour votre inscription : nous vous renverrons le lien de
-        confirmation.
+        Indique o endereço usado na inscrição: voltaremos a enviar-lhe a ligação de
+        confirmação.
       </p>
       <UiInput
         v-model="emailInput"
@@ -123,7 +124,7 @@ async function handleSubmitEmail() {
         class="w-full"
         :loading="isSubmitting"
       >
-        Renvoyer l'email
+        Reenviar o email
       </UiButton>
     </form>
 
@@ -132,8 +133,10 @@ async function handleSubmitEmail() {
         :to="{ name: 'login' }"
         class="text-wine hover:underline"
       >
-        Retour à la connexion
+        Voltar ao início de sessão
       </RouterLink>
     </p>
   </AuthLayout>
 </template>
+
+

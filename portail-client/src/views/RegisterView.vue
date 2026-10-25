@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import { ApiError } from "@apontaja/web-core/api-client";
+import { describeRegisterError } from "@/lib/authErrors";
 import { useAuthStore } from "@/stores/auth";
 import { useVerificationStore } from "@/stores/verification";
 
@@ -34,7 +34,7 @@ async function handleSubmit() {
 
   if (!acceptTerms.value) {
     errorText.value =
-      "Vous devez accepter les CGU et la politique de confidentialité pour créer un compte.";
+      "Tem de aceitar os Termos e Condições e a Política de Privacidade para criar uma conta.";
     return;
   }
 
@@ -50,12 +50,9 @@ async function handleSubmit() {
     verification.remember(email.value);
     await router.push({ name: "verify-email" });
   } catch (error) {
-    if (error instanceof ApiError) {
-      errorText.value = error.message;
-      fieldErrors.value = error.fieldErrors ?? {};
-    } else {
-      errorText.value = "Impossible de créer le compte, réessayez.";
-    }
+    const failure = describeRegisterError(error);
+    errorText.value = failure.message;
+    fieldErrors.value = failure.fieldErrors;
   } finally {
     isSubmitting.value = false;
   }
@@ -64,8 +61,8 @@ async function handleSubmit() {
 
 <template>
   <AuthLayout
-    title="Créer un compte"
-    subtitle="Un compte pour réserver dans tous vos salons."
+    title="Criar conta"
+    subtitle="Uma conta para fazer marcações em todos os seus salões."
   >
     <form
       class="space-y-5"
@@ -74,7 +71,7 @@ async function handleSubmit() {
       <div class="grid grid-cols-2 gap-4">
         <UiInput
           v-model="firstName"
-          label="Prénom"
+          label="Nome próprio"
           autocomplete="given-name"
           maxlength="100"
           required
@@ -82,7 +79,7 @@ async function handleSubmit() {
         />
         <UiInput
           v-model="lastName"
-          label="Nom"
+          label="Apelido"
           autocomplete="family-name"
           maxlength="100"
           required
@@ -100,8 +97,8 @@ async function handleSubmit() {
       <UiInput
         v-model="password"
         type="password"
-        label="Mot de passe"
-        hint="12 caractères minimum"
+        label="Palavra-passe"
+        hint="Mínimo de 12 caracteres"
         autocomplete="new-password"
         minlength="12"
         required
@@ -111,7 +108,7 @@ async function handleSubmit() {
       <div>
         <UiCheckbox
           v-model="acceptTerms"
-          label="J'accepte les CGU et la politique de confidentialité"
+          label="Aceito os Termos e Condições e a Política de Privacidade"
         />
         <div class="mt-1 flex gap-4 pl-6 text-xs">
           <RouterLink
@@ -120,7 +117,7 @@ async function handleSubmit() {
             rel="noopener"
             class="text-wine hover:underline"
           >
-            Lire les CGU
+            Ler os Termos e Condições
           </RouterLink>
           <RouterLink
             :to="{ name: 'privacy' }"
@@ -128,7 +125,7 @@ async function handleSubmit() {
             rel="noopener"
             class="text-wine hover:underline"
           >
-            Lire la politique de confidentialité
+            Ler a Política de Privacidade
           </RouterLink>
         </div>
       </div>
@@ -145,18 +142,20 @@ async function handleSubmit() {
         class="w-full"
         :loading="isSubmitting"
       >
-        {{ isSubmitting ? "Création..." : "Créer mon compte" }}
+        {{ isSubmitting ? "A criar..." : "Criar a minha conta" }}
       </UiButton>
     </form>
 
     <p class="mt-6 text-sm text-ink/70">
-      Déjà un compte ?
+      Já tem conta?
       <RouterLink
         :to="{ name: 'login' }"
         class="text-wine hover:underline"
       >
-        Se connecter
+        Entrar
       </RouterLink>
     </p>
   </AuthLayout>
 </template>
+
+

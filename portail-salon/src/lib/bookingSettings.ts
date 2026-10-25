@@ -124,9 +124,9 @@ export function readinessWarnings(readiness: Readiness): string[] {
   return warnings;
 }
 
-/** Lien public du salon sur le portail client (URL par identifiant). */
+/** Lien public du salon sur le portail client (URL par identifiant ; chemin en portugais, voir `portail-client`). */
 export function publicSalonUrl(baseUrl: string, salonId: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/salons/${encodeURIComponent(salonId)}`;
+  return `${baseUrl.replace(/\/+$/, "")}/salao/${encodeURIComponent(salonId)}`;
 }
 
 export const DEFAULT_CLIENT_PORTAL_URL = "http://localhost:5174";

@@ -3,8 +3,8 @@ import { ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
+import { describeLoginError } from "@/lib/authErrors";
 import { safeRedirect } from "@/lib/safeRedirect";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
@@ -26,7 +26,7 @@ async function handleSubmit() {
     // Retour à la page demandée avant la connexion (ex. une réservation), sinon l'accueil.
     await router.push(safeRedirect(route.query.redirect) ?? { name: "home" });
   } catch (error) {
-    errorText.value = errorMessage(error, "Connexion impossible, réessayez.");
+    errorText.value = describeLoginError(error);
   } finally {
     isSubmitting.value = false;
   }
@@ -35,8 +35,8 @@ async function handleSubmit() {
 
 <template>
   <AuthLayout
-    title="Se connecter"
-    subtitle="Accédez à votre compte pour réserver."
+    title="Entrar"
+    subtitle="Aceda à sua conta para fazer marcações."
   >
     <form
       class="space-y-5"
@@ -52,7 +52,7 @@ async function handleSubmit() {
       <UiInput
         v-model="password"
         type="password"
-        label="Mot de passe"
+        label="Palavra-passe"
         autocomplete="current-password"
         required
       />
@@ -69,7 +69,7 @@ async function handleSubmit() {
         class="w-full"
         :loading="isSubmitting"
       >
-        {{ isSubmitting ? "Connexion..." : "Se connecter" }}
+        {{ isSubmitting ? "A entrar..." : "Entrar" }}
       </UiButton>
     </form>
 
@@ -78,20 +78,22 @@ async function handleSubmit() {
         :to="{ name: 'forgot-password' }"
         class="text-wine hover:underline"
       >
-        Mot de passe oublié ?
+        Esqueceu-se da palavra-passe?
       </RouterLink>
     </p>
     <p class="mt-2 text-sm text-ink/70">
-      Pas encore de compte ?
+      Ainda não tem conta?
       <RouterLink
         :to="{ name: 'register' }"
         class="text-wine hover:underline"
       >
-        Créer un compte
+        Criar conta
       </RouterLink>
     </p>
   </AuthLayout>
 </template>
+
+
 
 
 

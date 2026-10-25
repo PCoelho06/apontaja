@@ -4,8 +4,8 @@ import { safeRedirect } from "@/lib/safeRedirect";
 
 describe("safeRedirect", () => {
   it("accepte un chemin interne, avec query", () => {
-    expect(safeRedirect("/salons/abc/reserver?service=1&start=2099-06-10T09%3A00%3A00Z")).toBe(
-      "/salons/abc/reserver?service=1&start=2099-06-10T09%3A00%3A00Z",
+    expect(safeRedirect("/salao/abc/reservar?service=1&start=2099-06-10T09%3A00%3A00Z")).toBe(
+      "/salao/abc/reservar?service=1&start=2099-06-10T09%3A00%3A00Z",
     );
     expect(safeRedirect("/")).toBe("/");
   });
@@ -29,3 +29,5 @@ describe("safeRedirect", () => {
     expect(safeRedirect(42)).toBeNull();
   });
 });
+
+

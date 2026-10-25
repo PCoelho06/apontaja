@@ -1,9 +1,12 @@
 # portail-client
 
-Portail client final : inscription, connexion, compte. La réservation arrive en 4g.
+Portail client final : inscription, connexion, compte, réservation en ligne, « mes marcações ».
+**Toute l'interface est en portugais du Portugal (pt-PT)**, y compris les chemins des routes.
 
-**État (4d-2)** : socle d'authentification (connexion, inscription, vérification de l'email,
-mot de passe oublié/réinitialisation, accueil du compte). Pas de liste de salons ni de réservation.
+**État (4g-3)** : authentification (entrar, registar, verificar/confirmar email, palavra-passe
+esquecida/reposta), page publique du salon, réservation, « as minhas marcações ». Pas d'annuaire de salons.
+Les messages d'erreur du back (en français) ne sont jamais affichés : `lib/authErrors.ts` et
+`lib/bookingErrors.ts` traduisent d'après le statut ou le `code`.
 
 ```
 pnpm dev:client   # http://localhost:5174, proxy /api -> http://localhost:8080
@@ -18,5 +21,7 @@ de l'autre au prochain rafraîchissement. En production, les deux portails auron
 ## Choix
 
 - Même `Account` pour les deux portails ; le store envoie `portal: "CLIENT"` (`defineAuthStore`).
-- Les liens d'email pointent vers `/confirmer-email?token=` et `/reinitialiser-mot-de-passe?token=`.
-- `/cgu` et `/confidentialite` sont des pages provisoires (texte à rédiger).
+- Les liens d'email pointent vers `/confirmar-email?token=` et `/repor-palavra-passe?token=`.
+- `/termos` et `/privacidade` sont des pages provisoires (texte à rédiger).
+
+

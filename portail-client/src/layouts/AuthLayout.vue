@@ -12,7 +12,7 @@ defineProps<{
         Apontaja
       </p>
       <p class="mt-4 max-w-sm text-sm text-paper/80">
-        Réservez vos rendez-vous chez vos coiffeurs et salons de beauté, en quelques clics.
+        Marque as suas marcações em cabeleireiros e salões de beleza, em poucos cliques.
       </p>
     </aside>
 
@@ -35,3 +35,5 @@ defineProps<{
     </main>
   </div>
 </template>
+
+

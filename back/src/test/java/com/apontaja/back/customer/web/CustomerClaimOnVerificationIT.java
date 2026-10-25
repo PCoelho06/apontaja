@@ -115,7 +115,7 @@ class CustomerClaimOnVerificationIT {
     private String capturedVerificationBody(String email) {
         ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
         verify(emailSender, atLeastOnce()).send(eq(email), anyString(), bodyCaptor.capture());
-        return bodyCaptor.getAllValues().stream().filter(body -> body.contains("confirmer-email")).findFirst()
+        return bodyCaptor.getAllValues().stream().filter(body -> body.contains("confirmar-email")).findFirst()
                 .orElseThrow(() -> new AssertionError("Aucun email de vérification capturé"));
     }
 
@@ -145,7 +145,7 @@ class CustomerClaimOnVerificationIT {
         assertThat(accountIdOf(inB)).isNull();
 
         String body = capturedVerificationBody(email);
-        assertThat(body).contains("http://localhost:5174/confirmer-email?token=");
+        assertThat(body).contains("http://localhost:5174/confirmar-email?token=");
         confirm(body);
 
         UUID accountId = accountRepository.findAliveByEmail(email).orElseThrow().getId();

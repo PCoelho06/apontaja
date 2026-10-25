@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import { ApiError } from "@apontaja/web-core/api-client";
+import { describeResetError } from "@/lib/authErrors";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
@@ -26,12 +26,9 @@ async function handleSubmit() {
     await auth.resetPassword(token, newPassword.value);
     isDone.value = true;
   } catch (error) {
-    if (error instanceof ApiError) {
-      errorText.value = error.message;
-      fieldErrors.value = error.fieldErrors ?? {};
-    } else {
-      errorText.value = "Impossible de réinitialiser le mot de passe.";
-    }
+    const failure = describeResetError(error);
+    errorText.value = failure.message;
+    fieldErrors.value = failure.fieldErrors;
   } finally {
     isSubmitting.value = false;
   }
@@ -39,12 +36,12 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthLayout title="Nouveau mot de passe">
+  <AuthLayout title="Nova palavra-passe">
     <UiAlert
       v-if="!token"
       variant="error"
     >
-      Lien invalide — merci de repartir depuis l'email reçu.
+      Ligação inválida. Utilize a ligação do email que recebeu.
     </UiAlert>
 
     <div
@@ -52,13 +49,13 @@ async function handleSubmit() {
       class="space-y-4"
     >
       <UiAlert variant="success">
-        Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter.
+        A sua palavra-passe foi atualizada. Já pode iniciar sessão.
       </UiAlert>
       <RouterLink
         :to="{ name: 'login' }"
         class="text-sm text-wine hover:underline"
       >
-        Se connecter
+        Entrar
       </RouterLink>
     </div>
 
@@ -70,8 +67,8 @@ async function handleSubmit() {
       <UiInput
         v-model="newPassword"
         type="password"
-        label="Nouveau mot de passe"
-        hint="12 caractères minimum"
+        label="Nova palavra-passe"
+        hint="Mínimo de 12 caracteres"
         autocomplete="new-password"
         minlength="12"
         required
@@ -90,8 +87,10 @@ async function handleSubmit() {
         class="w-full"
         :loading="isSubmitting"
       >
-        {{ isSubmitting ? "Enregistrement..." : "Enregistrer" }}
+        {{ isSubmitting ? "A guardar..." : "Guardar" }}
       </UiButton>
     </form>
   </AuthLayout>
 </template>
+
+

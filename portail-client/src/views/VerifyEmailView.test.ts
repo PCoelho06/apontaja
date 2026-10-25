@@ -14,7 +14,7 @@ function mountView(pendingEmail: string | null) {
   useVerificationStore().pendingEmail = pendingEmail;
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: "/connexion", name: "login", component: EMPTY }],
+    routes: [{ path: "/entrar", name: "login", component: EMPTY }],
   });
   return mount(VerifyEmailView, { global: { plugins: [pinia, router] } });
 }
@@ -43,7 +43,7 @@ describe("VerifyEmailView", () => {
     const wrapper = mountView("alice@example.com");
     expect(wrapper.text()).toContain("alice@example.com");
 
-    const button = wrapper.findAll("button").find((b) => b.text().includes("Renvoyer"));
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Reenviar"));
     await button?.trigger("click");
     await flushPromises();
 
@@ -55,11 +55,11 @@ describe("VerifyEmailView", () => {
   it("désactive le renvoi pendant le délai d'attente", async () => {
     const wrapper = mountView("alice@example.com");
 
-    const button = wrapper.findAll("button").find((b) => b.text().includes("Renvoyer"));
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Reenviar"));
     await button?.trigger("click");
     await flushPromises();
 
-    const after = wrapper.findAll("button").find((b) => b.text().includes("Renvoyer"));
+    const after = wrapper.findAll("button").find((b) => b.text().includes("Reenviar"));
     expect(after?.attributes("disabled")).toBeDefined();
     expect(after?.text()).toContain("60 s");
     wrapper.unmount();
@@ -77,3 +77,5 @@ describe("VerifyEmailView", () => {
     wrapper.unmount();
   });
 });
+
+

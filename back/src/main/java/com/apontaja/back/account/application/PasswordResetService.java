@@ -76,7 +76,7 @@ public class PasswordResetService {
                     AccountTokenType.PASSWORD_RESET, tokenHasher.hash(rawToken), now.plus(tokenTtl), now);
             accountTokenRepository.save(token);
 
-            String link = frontendLinks.link(portal, "/reinitialiser-mot-de-passe?token=" + rawToken);
+            String link = frontendLinks.resetPasswordLink(portal, rawToken);
             emailSender.send(account.getEmail(), "Réinitialisation de votre mot de passe",
                     "Cliquez sur ce lien pour choisir un nouveau mot de passe (valable " + tokenTtl.toMinutes()
                             + " min) : " + link);

@@ -12,11 +12,11 @@ function buildRouter() {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: "/inscription", name: "register", component: EMPTY },
-      { path: "/connexion", name: "login", component: EMPTY },
-      { path: "/verifiez-votre-email", name: "verify-email", component: EMPTY },
-      { path: "/cgu", name: "terms", component: EMPTY },
-      { path: "/confidentialite", name: "privacy", component: EMPTY },
+      { path: "/registar", name: "register", component: EMPTY },
+      { path: "/entrar", name: "login", component: EMPTY },
+      { path: "/verificar-email", name: "verify-email", component: EMPTY },
+      { path: "/termos", name: "terms", component: EMPTY },
+      { path: "/privacidade", name: "privacy", component: EMPTY },
     ],
   });
 }
@@ -25,7 +25,7 @@ async function mountView() {
   const pinia = createPinia();
   setActivePinia(pinia);
   const router = buildRouter();
-  await router.push("/inscription");
+  await router.push("/registar");
   await router.isReady();
   const wrapper = mount(RegisterView, { global: { plugins: [pinia, router] } });
   return { wrapper, router };
@@ -60,7 +60,7 @@ describe("RegisterView (portail client)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("refuse l'envoi tant que la case CGU n'est pas cochée", async () => {
+  it("refuse l'envoi tant que la case des conditions n'est pas cochée", async () => {
     const { wrapper } = await mountView();
     await fillForm(wrapper);
 
@@ -68,7 +68,7 @@ describe("RegisterView (portail client)", () => {
     await flushPromises();
 
     expect(fetch).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain("Vous devez accepter les CGU");
+    expect(wrapper.text()).toContain("Tem de aceitar os Termos e Condições");
   });
 
   it("inscrit avec le portail CLIENT puis ouvre « vérifiez votre email »", async () => {
@@ -95,7 +95,7 @@ describe("RegisterView (portail client)", () => {
     expect(router.currentRoute.value.name).toBe("verify-email");
   });
 
-  it("affiche l'erreur du back et reste sur la page", async () => {
+  it("traduit un email déjà utilisé (409) sans afficher le message du back", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (path: string, init?: RequestInit) => {
@@ -117,7 +117,42 @@ describe("RegisterView (portail client)", () => {
     await wrapper.find("form").trigger("submit");
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Adresse déjà utilisée.");
+    expect(wrapper.text()).toContain("Já existe uma conta com este email.");
+    expect(wrapper.text()).not.toContain("Adresse déjà utilisée.");
+    expect(router.currentRoute.value.name).toBe("register");
+  });
+
+  it("traduit les erreurs de champ du back (400) champ par champ", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init?: RequestInit) => {
+        void path;
+        void init;
+        return new Response(
+          JSON.stringify({
+            detail: "Données invalides.",
+            fieldErrors: { email: "Adresse email invalide.", unknownField: "Champ inconnu." },
+          }),
+          {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }),
+    );
+    const { wrapper, router } = await mountView();
+    await fillForm(wrapper);
+    await wrapper.find('input[type="checkbox"]').setValue(true);
+
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Verifique os dados introduzidos.");
+    expect(wrapper.text()).toContain("Indique um endereço de email válido.");
+    expect(wrapper.text()).not.toContain("Adresse email invalide.");
+    expect(wrapper.text()).not.toContain("Champ inconnu.");
     expect(router.currentRoute.value.name).toBe("register");
   });
 });
+
+

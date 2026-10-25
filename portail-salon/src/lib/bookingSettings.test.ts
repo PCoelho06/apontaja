@@ -97,10 +97,10 @@ describe("bookingSettings", () => {
 
   it("construit le lien public sans double barre", () => {
     expect(publicSalonUrl("https://client.example.com/", "abc")).toBe(
-      "https://client.example.com/salons/abc",
+      "https://client.example.com/salao/abc",
     );
     expect(publicSalonUrl("http://localhost:5174", "abc")).toBe(
-      "http://localhost:5174/salons/abc",
+      "http://localhost:5174/salao/abc",
     );
   });
 

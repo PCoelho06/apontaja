@@ -4,6 +4,7 @@ import { RouterLink } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
 import { ApiError } from "@apontaja/web-core/api-client";
+import { TOO_MANY_ATTEMPTS } from "@/lib/authErrors";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
@@ -23,7 +24,7 @@ async function handleSubmit() {
     isDone.value = true;
   } catch (error) {
     if (error instanceof ApiError && error.status === 429) {
-      errorText.value = "Trop de tentatives, réessayez plus tard.";
+      errorText.value = TOO_MANY_ATTEMPTS;
     } else {
       // Réponse volontairement neutre (anti-énumération de comptes), comme côté back.
       isDone.value = true;
@@ -36,22 +37,22 @@ async function handleSubmit() {
 
 <template>
   <AuthLayout
-    title="Mot de passe oublié"
-    subtitle="Recevez un lien pour en choisir un nouveau."
+    title="Palavra-passe esquecida"
+    subtitle="Receba uma ligação para escolher uma nova."
   >
     <div
       v-if="isDone"
       class="space-y-4"
     >
       <UiAlert variant="success">
-        Si un compte existe pour cette adresse, un email contenant un lien de
-        réinitialisation vient d'être envoyé.
+        Se existir uma conta para este endereço, acabámos de enviar um email com uma
+        ligação para repor a palavra-passe.
       </UiAlert>
       <RouterLink
         :to="{ name: 'login' }"
         class="text-sm text-wine hover:underline"
       >
-        Retour à la connexion
+        Voltar ao início de sessão
       </RouterLink>
     </div>
 
@@ -80,7 +81,7 @@ async function handleSubmit() {
         class="w-full"
         :loading="isSubmitting"
       >
-        {{ isSubmitting ? "Envoi..." : "Envoyer le lien" }}
+        {{ isSubmitting ? "A enviar..." : "Enviar a ligação" }}
       </UiButton>
     </form>
 
@@ -92,8 +93,10 @@ async function handleSubmit() {
         :to="{ name: 'login' }"
         class="text-wine hover:underline"
       >
-        Retour à la connexion
+        Voltar ao início de sessão
       </RouterLink>
     </p>
   </AuthLayout>
 </template>
+
+
