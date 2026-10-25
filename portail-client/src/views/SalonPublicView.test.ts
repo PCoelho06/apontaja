@@ -49,13 +49,13 @@ async function mountView() {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: "/salons/:salonId", name: "salon", component: SalonPublicView },
-      { path: "/salons/:salonId/reserver", name: "booking", component: EMPTY },
-      { path: "/connexion", name: "login", component: EMPTY },
+      { path: "/salao/:salonId", name: "salon", component: SalonPublicView },
+      { path: "/salao/:salonId/reservar", name: "booking", component: EMPTY },
+      { path: "/entrar", name: "login", component: EMPTY },
       { path: "/", name: "home", component: EMPTY },
     ],
   });
-  await router.push("/salons/s1");
+  await router.push("/salao/s1");
   await router.isReady();
   const wrapper = mount(SalonPublicView, { global: { plugins: [pinia, router] } });
   return { wrapper, router };
@@ -120,3 +120,5 @@ describe("SalonPublicView (portail client)", () => {
     );
   });
 });
+
+

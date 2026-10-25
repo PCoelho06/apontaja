@@ -15,63 +15,63 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: "/connexion",
+      path: "/entrar",
       name: "login",
       component: () => import("@/views/LoginView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/inscription",
+      path: "/registar",
       name: "register",
       component: () => import("@/views/RegisterView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/verifiez-votre-email",
+      path: "/verificar-email",
       name: "verify-email",
       component: () => import("@/views/VerifyEmailView.vue"),
     },
     {
-      path: "/confirmer-email",
+      path: "/confirmar-email",
       name: "confirm-email",
       component: () => import("@/views/ConfirmEmailView.vue"),
     },
     {
-      path: "/mot-de-passe-oublie",
+      path: "/recuperar-palavra-passe",
       name: "forgot-password",
       component: () => import("@/views/ForgotPasswordView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/reinitialiser-mot-de-passe",
+      path: "/repor-palavra-passe",
       name: "reset-password",
       component: () => import("@/views/ResetPasswordView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/cgu",
+      path: "/termos",
       name: "terms",
       component: () => import("@/views/LegalPlaceholderView.vue"),
-      meta: { title: "Conditions générales d'utilisation" },
+      meta: { title: "Termos e Condições de Utilização" },
     },
     {
-      path: "/confidentialite",
+      path: "/privacidade",
       name: "privacy",
       component: () => import("@/views/LegalPlaceholderView.vue"),
-      meta: { title: "Politique de confidentialité" },
+      meta: { title: "Política de Privacidade" },
     },
     {
-      path: "/salons/:salonId",
+      path: "/salao/:salonId",
       name: "salon",
       component: () => import("@/views/SalonPublicView.vue"),
     },
     {
-      path: "/salons/:salonId/reserver",
+      path: "/salao/:salonId/reservar",
       name: "booking",
       component: () => import("@/views/BookingView.vue"),
     },
     {
-      path: "/mes-rendez-vous",
+      path: "/marcacoes",
       name: "my-appointments",
       component: () => import("@/views/MyAppointmentsView.vue"),
       meta: { requiresAuth: true },
@@ -99,3 +99,5 @@ router.beforeEach((to) => {
 });
 
 export default router;
+
+

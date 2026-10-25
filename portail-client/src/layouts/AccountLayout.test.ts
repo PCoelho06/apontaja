@@ -18,7 +18,7 @@ async function mountLayout(signedIn: boolean) {
     history: createMemoryHistory(),
     routes: [
       { path: "/", name: "home", component: EMPTY },
-      { path: "/mes-rendez-vous", name: "my-appointments", component: EMPTY },
+      { path: "/marcacoes", name: "my-appointments", component: EMPTY },
     ],
   });
   await router.push("/");
@@ -52,3 +52,5 @@ describe("AccountLayout (portail client)", () => {
     expect(linkButton(wrapper)).toBeUndefined();
   });
 });
+
+

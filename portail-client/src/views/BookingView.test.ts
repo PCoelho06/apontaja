@@ -104,15 +104,15 @@ async function mountView(url: string, signedIn: { verified: boolean } | null) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: "/salons/:salonId", name: "salon", component: EMPTY },
+      { path: "/salao/:salonId", name: "salon", component: EMPTY },
       {
-        path: "/salons/:salonId/reserver",
+        path: "/salao/:salonId/reservar",
         name: "booking",
         component: BookingView,
       },
-      { path: "/connexion", name: "login", component: EMPTY },
-      { path: "/inscription", name: "register", component: EMPTY },
-      { path: "/mes-rendez-vous", name: "my-appointments", component: EMPTY },
+      { path: "/entrar", name: "login", component: EMPTY },
+      { path: "/registar", name: "register", component: EMPTY },
+      { path: "/marcacoes", name: "my-appointments", component: EMPTY },
       { path: "/", name: "home", component: EMPTY },
     ],
   });
@@ -140,7 +140,7 @@ describe("BookingView (portail client)", () => {
 
   it("affiche les horaires dans le fuseau du salon", async () => {
     const { wrapper } = await mountView(
-      "/salons/s1/reserver?service=sv1",
+      "/salao/s1/reservar?service=sv1",
       null,
     );
 
@@ -154,7 +154,7 @@ describe("BookingView (portail client)", () => {
 
   it("mène un visiteur à la confirmation puis à la connexion avec retour", async () => {
     const { wrapper, router } = await mountView(
-      "/salons/s1/reserver?service=sv1",
+      "/salao/s1/reservar?service=sv1",
       null,
     );
     await vi.waitFor(() =>
@@ -173,7 +173,7 @@ describe("BookingView (portail client)", () => {
 
     expect(router.currentRoute.value.name).toBe("login");
     const redirect = String(router.currentRoute.value.query.redirect);
-    expect(redirect.startsWith("/salons/s1/reserver?")).toBe(true);
+    expect(redirect.startsWith("/salao/s1/reservar?")).toBe(true);
     expect(redirect).toContain("service=sv1");
     expect(redirect).toContain("start=");
   });
@@ -181,7 +181,7 @@ describe("BookingView (portail client)", () => {
   it("revérifie le créneau de l'URL au retour après connexion", async () => {
     const fetchMock = stubNetwork();
     const { wrapper } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
 
@@ -206,7 +206,7 @@ describe("BookingView (portail client)", () => {
       }),
     );
     const { wrapper, router } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
 
@@ -219,7 +219,7 @@ describe("BookingView (portail client)", () => {
   it("envoie la réservation et affiche « demande envoyée » si le salon confirme à la main", async () => {
     const fetchMock = stubNetwork();
     const { wrapper, router } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
     await vi.waitFor(() =>
@@ -249,7 +249,7 @@ describe("BookingView (portail client)", () => {
   it("affiche « marcação confirmada » quand le back renvoie CONFIRMED", async () => {
     stubNetwork(() => json({ ...BOOKED, status: "CONFIRMED" }, 201));
     const { wrapper } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
     await vi.waitFor(() =>
@@ -268,7 +268,7 @@ describe("BookingView (portail client)", () => {
       json({ detail: "Créneau indisponible.", code: "SLOT_UNAVAILABLE" }, 409),
     );
     const { wrapper, router } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
     await vi.waitFor(() =>
@@ -293,7 +293,7 @@ describe("BookingView (portail client)", () => {
       ),
     );
     const { wrapper } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
     await vi.waitFor(() =>
@@ -311,7 +311,7 @@ describe("BookingView (portail client)", () => {
 
   it("bloque l'envoi tant que l'email du compte n'est pas vérifié", async () => {
     const { wrapper } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: false },
     );
     await vi.waitFor(() =>
@@ -324,7 +324,7 @@ describe("BookingView (portail client)", () => {
 
   it("mène à « mes rendez-vous » depuis le résultat de la réservation", async () => {
     const { wrapper, router } = await mountView(
-      `/salons/s1/reserver?service=sv1&start=${START}`,
+      `/salao/s1/reservar?service=sv1&start=${START}`,
       { verified: true },
     );
     await vi.waitFor(() =>
@@ -352,7 +352,7 @@ describe("BookingView (portail client)", () => {
       }),
     );
     const { wrapper } = await mountView(
-      "/salons/s1/reserver?service=sv1",
+      "/salao/s1/reservar?service=sv1",
       null,
     );
 
@@ -361,3 +361,5 @@ describe("BookingView (portail client)", () => {
     );
   });
 });
+
+

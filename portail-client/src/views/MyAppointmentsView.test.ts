@@ -82,12 +82,12 @@ async function mountView() {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: "/mes-rendez-vous", name: "my-appointments", component: MyAppointmentsView },
-      { path: "/connexion", name: "login", component: EMPTY },
+      { path: "/marcacoes", name: "my-appointments", component: MyAppointmentsView },
+      { path: "/entrar", name: "login", component: EMPTY },
       { path: "/", name: "home", component: EMPTY },
     ],
   });
-  await router.push("/mes-rendez-vous");
+  await router.push("/marcacoes");
   await router.isReady();
   const wrapper = mount(MyAppointmentsView, { global: { plugins: [pinia, router] } });
   return { wrapper, router };
@@ -273,3 +273,5 @@ describe("MyAppointmentsView (portail client)", () => {
     });
   });
 });
+
+

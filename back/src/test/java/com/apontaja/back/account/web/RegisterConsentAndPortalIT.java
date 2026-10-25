@@ -52,8 +52,7 @@ class RegisterConsentAndPortalIT {
                 return """
                                 {"email":"%s","password":"un-mot-de-passe-solide","firstName":"Alice",
                                 "lastName":"Martin"%s}
-                                """
-                                .formatted(email, extraFields);
+                                """.formatted(email, extraFields);
         }
 
         private String captureBody(String email, String marker) {
@@ -111,9 +110,9 @@ class RegisterConsentAndPortalIT {
                 call("/api/auth/forgot-password", "{\"email\":\"%s\",\"portal\":\"CLIENT\"}".formatted(email))
                                 .andExpect(status().isNoContent());
 
-                assertThat(captureBody(email, "http://localhost:5174/confirmer-email?token="))
-                                .contains("http://localhost:5174/confirmer-email?token=");
-                assertThat(captureBody(email, "http://localhost:5174/reinitialiser-mot-de-passe?token="))
-                                .contains("http://localhost:5174/reinitialiser-mot-de-passe?token=");
+                assertThat(captureBody(email, "http://localhost:5174/confirmar-email?token="))
+                                .contains("http://localhost:5174/confirmar-email?token=");
+                assertThat(captureBody(email, "http://localhost:5174/repor-palavra-passe?token="))
+                                .contains("http://localhost:5174/repor-palavra-passe?token=");
         }
 }

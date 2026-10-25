@@ -65,7 +65,7 @@ public class EmailVerificationService {
                 AccountTokenType.EMAIL_VERIFICATION, tokenHasher.hash(rawToken), now.plus(tokenTtl), now);
         accountTokenRepository.save(token);
 
-        String link = frontendLinks.link(portal, "/confirmer-email?token=" + rawToken);
+        String link = frontendLinks.confirmEmailLink(portal, rawToken);
         emailSender.send(account.getEmail(), "Confirmez votre adresse email",
                 "Cliquez sur ce lien pour confirmer votre email (valable " + tokenTtl.toHours() + "h) : " + link);
     }
