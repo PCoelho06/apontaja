@@ -66,8 +66,8 @@ public class EmailVerificationService {
         accountTokenRepository.save(token);
 
         String link = frontendLinks.confirmEmailLink(portal, rawToken);
-        emailSender.send(account.getEmail(), "Confirmez votre adresse email",
-                "Cliquez sur ce lien pour confirmer votre email (valable " + tokenTtl.toHours() + "h) : " + link);
+        AuthEmailComposer.AuthEmail email = AuthEmailComposer.verification(portal, link, tokenTtl);
+        emailSender.send(account.getEmail(), email.subject(), email.body());
     }
 
     @Transactional
@@ -90,7 +90,8 @@ public class EmailVerificationService {
         token.markUsed(now);
         accountTokenRepository.save(token);
 
-        // Même transaction : si un écouteur échoue, la vérification est annulée (rien de partiel).
+        // Même transaction : si un écouteur échoue, la vérification est annulée (rien
+        // de partiel).
         for (AccountEmailVerifiedListener listener : verifiedListeners) {
             listener.onEmailVerified(account.getId(), account.getEmail());
         }

@@ -40,8 +40,7 @@ public class PasswordResetService {
             TokenHasher tokenHasher, PasswordEncoder passwordEncoder, EmailSender emailSender, IdGenerator idGenerator,
             Clock clock,
             // Fenêtre volontairement courte : plus sensible qu'une vérification d'email.
-            @Value("${apontaja.security.password-reset.ttl:1h}") Duration tokenTtl,
-            FrontendLinks frontendLinks) {
+            @Value("${apontaja.security.password-reset.ttl:1h}") Duration tokenTtl, FrontendLinks frontendLinks) {
         this.accountRepository = accountRepository;
         this.accountTokenRepository = accountTokenRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -77,9 +76,8 @@ public class PasswordResetService {
             accountTokenRepository.save(token);
 
             String link = frontendLinks.resetPasswordLink(portal, rawToken);
-            emailSender.send(account.getEmail(), "Réinitialisation de votre mot de passe",
-                    "Cliquez sur ce lien pour choisir un nouveau mot de passe (valable " + tokenTtl.toMinutes()
-                            + " min) : " + link);
+            AuthEmailComposer.AuthEmail resetEmail = AuthEmailComposer.passwordReset(portal, link, tokenTtl);
+            emailSender.send(account.getEmail(), resetEmail.subject(), resetEmail.body());
         });
     }
 

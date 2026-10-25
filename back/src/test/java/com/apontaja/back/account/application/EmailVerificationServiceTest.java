@@ -102,6 +102,19 @@ class EmailVerificationServiceTest {
     }
 
     @Test
+    void issueAndSend_portail_client_envoie_un_email_en_portugais_et_salon_en_francais() {
+        Account account = unverifiedAccount();
+        when(opaqueTokenGenerator.generate()).thenReturn("raw-token");
+        when(tokenHasher.hash("raw-token")).thenReturn("hashed-token");
+
+        service.issueAndSend(account, FrontendPortal.CLIENT);
+        service.issueAndSend(account, FrontendPortal.SALON);
+
+        verify(emailSender).send(eq("alice@example.com"), eq("Confirme o seu endereço de email"), anyString());
+        verify(emailSender).send(eq("alice@example.com"), eq("Confirmez votre adresse email"), anyString());
+    }
+
+    @Test
     void confirm_marque_le_compte_verifie_et_le_token_utilise() {
         AccountToken token = new AccountToken(UUID.randomUUID(), accountId, AccountTokenType.EMAIL_VERIFICATION,
                 "hashed-token", fixedNow.plus(1, ChronoUnit.DAYS), fixedNow.minus(1, ChronoUnit.HOURS));
