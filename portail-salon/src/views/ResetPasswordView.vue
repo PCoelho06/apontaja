@@ -1,55 +1,59 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { ref } from "vue";
+import { RouterLink, useRoute } from "vue-router";
 
-import AuthTextField from '@/components/AuthTextField.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import { ApiError } from '@apontaja/web-core/api-client'
-import { useAuthStore } from '@/stores/auth'
+import AuthLayout from "@/layouts/AuthLayout.vue";
+import { describeResetError } from "@apontaja/web-core/auth-errors";
+import { useAuthStore } from "@/stores/auth";
 
-const route = useRoute()
-const auth = useAuthStore()
+import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
 
-const token = typeof route.query.token === 'string' ? route.query.token : ''
-const newPassword = ref('')
-const errorMessage = ref('')
-const isSubmitting = ref(false)
-const isDone = ref(false)
+const route = useRoute();
+const auth = useAuthStore();
+
+const token = typeof route.query.token === "string" ? route.query.token : "";
+const newPassword = ref("");
+const errorMessage = ref("");
+const fieldErrors = ref<Record<string, string>>({});
+const isSubmitting = ref(false);
+const isDone = ref(false);
 
 async function handleSubmit() {
-  errorMessage.value = ''
-  isSubmitting.value = true
+  errorMessage.value = "";
+  fieldErrors.value = {};
+  isSubmitting.value = true;
   try {
-    await auth.resetPassword(token, newPassword.value)
-    isDone.value = true
+    await auth.resetPassword(token, newPassword.value);
+    isDone.value = true;
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : 'Impossible de réinitialiser le mot de passe.'
+    const failure = describeResetError(error);
+    errorMessage.value = failure.message;
+    fieldErrors.value = failure.fieldErrors;
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 </script>
 
 <template>
-  <AuthLayout title="Nouveau mot de passe">
-    <p
+  <AuthLayout title="Nova palavra-passe">
+    <UiAlert
       v-if="!token"
-      class="text-sm text-danger"
-      role="alert"
+      variant="error"
     >
-      Lien invalide — merci de repartir depuis l'email reçu.
-    </p>
+      Ligação inválida — volte a abrir a ligação que recebeu por email.
+    </UiAlert>
 
     <div
       v-else-if="isDone"
       class="space-y-4 text-sm text-ink"
     >
-      <p>Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter.</p>
+      <p>A sua palavra-passe foi atualizada. Já pode iniciar sessão.</p>
       <RouterLink
         :to="{ name: 'login' }"
         class="text-wine hover:underline"
       >
-        Se connecter
+        Iniciar sessão
       </RouterLink>
     </div>
 
@@ -58,30 +62,31 @@ async function handleSubmit() {
       class="space-y-5"
       @submit.prevent="handleSubmit"
     >
-      <AuthTextField
-        id="newPassword"
+      <UiInput
         v-model="newPassword"
-        label="Nouveau mot de passe"
         type="password"
+        label="Nova palavra-passe"
+        hint="Mínimo de 12 caracteres"
         autocomplete="new-password"
+        minlength="12"
+        required
+        :error="fieldErrors.newPassword"
       />
 
-      <p
+      <UiAlert
         v-if="errorMessage"
-        class="text-sm text-danger"
-        role="alert"
+        variant="error"
       >
         {{ errorMessage }}
-      </p>
+      </UiAlert>
 
-      <button
+      <UiButton
         type="submit"
-        :disabled="isSubmitting"
-        class="w-full rounded-md bg-wine px-4 py-2.5 text-sm font-medium text-paper transition
-               hover:bg-wine-hover disabled:opacity-60"
+        class="w-full"
+        :loading="isSubmitting"
       >
-        {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
-      </button>
+        {{ isSubmitting ? "A guardar..." : "Guardar" }}
+      </UiButton>
     </form>
   </AuthLayout>
 </template>

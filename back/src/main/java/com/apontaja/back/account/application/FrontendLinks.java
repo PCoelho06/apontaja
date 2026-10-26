@@ -7,11 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 class FrontendLinks {
 
-    // Chemins du portail salon (français) et du portail client (portugais du Portugal).
-    private static final String SALON_CONFIRM_EMAIL = "/confirmer-email?token=";
-    private static final String CLIENT_CONFIRM_EMAIL = "/confirmar-email?token=";
-    private static final String SALON_RESET_PASSWORD = "/reinitialiser-mot-de-passe?token=";
-    private static final String CLIENT_RESET_PASSWORD = "/repor-palavra-passe?token=";
+    // Chemins communs aux deux portails (portugais du Portugal, alignés sur leurs routeurs).
+    private static final String CONFIRM_EMAIL = "/confirmar-email?token=";
+    private static final String RESET_PASSWORD = "/repor-palavra-passe?token=";
 
     private final String salonBaseUrl;
     private final String clientBaseUrl;
@@ -33,15 +31,11 @@ class FrontendLinks {
 
     /** Lien de confirmation d'email vers la page du portail visé ({@code null} = portail salon). */
     String confirmEmailLink(FrontendPortal portal, String rawToken) {
-        return link(portal, (isClient(portal) ? CLIENT_CONFIRM_EMAIL : SALON_CONFIRM_EMAIL) + rawToken);
+        return link(portal, CONFIRM_EMAIL + rawToken);
     }
 
     /** Lien de réinitialisation du mot de passe vers la page du portail visé ({@code null} = portail salon). */
     String resetPasswordLink(FrontendPortal portal, String rawToken) {
-        return link(portal, (isClient(portal) ? CLIENT_RESET_PASSWORD : SALON_RESET_PASSWORD) + rawToken);
-    }
-
-    private static boolean isClient(FrontendPortal portal) {
-        return portal == FrontendPortal.CLIENT;
+        return link(portal, RESET_PASSWORD + rawToken);
     }
 }

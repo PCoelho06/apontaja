@@ -1,74 +1,73 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { ref } from "vue";
+import { RouterLink, useRouter } from "vue-router";
 
-import AuthTextField from '@/components/AuthTextField.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import { ApiError } from '@apontaja/web-core/api-client'
-import { useAuthStore } from '@/stores/auth'
+import AuthLayout from "@/layouts/AuthLayout.vue";
+import { describeLoginError } from "@apontaja/web-core/auth-errors";
+import { useAuthStore } from "@/stores/auth";
 
-const router = useRouter()
-const auth = useAuthStore()
+import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
 
-const email = ref('')
-const password = ref('')
-const errorMessage = ref('')
-const isSubmitting = ref(false)
+const router = useRouter();
+const auth = useAuthStore();
+
+const email = ref("");
+const password = ref("");
+const errorMessage = ref("");
+const isSubmitting = ref(false);
 
 async function handleSubmit() {
-  errorMessage.value = ''
-  isSubmitting.value = true
+  errorMessage.value = "";
+  isSubmitting.value = true;
   try {
-    await auth.login(email.value, password.value)
-    await router.push({ name: 'home' })
+    await auth.login(email.value, password.value);
+    await router.push({ name: "home" });
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : 'Impossible de se connecter, réessayez.'
+    errorMessage.value = describeLoginError(error);
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 </script>
 
 <template>
   <AuthLayout
-    title="Se connecter"
-    subtitle="Accédez à l'espace de gestion de votre salon."
+    title="Iniciar sessão"
+    subtitle="Aceda ao espaço de gestão do seu salão."
   >
     <form
       class="space-y-5"
       @submit.prevent="handleSubmit"
     >
-      <AuthTextField
-        id="email"
+      <UiInput
         v-model="email"
-        label="Email"
         type="email"
+        label="Email"
         autocomplete="email"
+        required
       />
-      <AuthTextField
-        id="password"
+      <UiInput
         v-model="password"
-        label="Mot de passe"
         type="password"
+        label="Palavra-passe"
         autocomplete="current-password"
+        required
       />
 
-      <p
+      <UiAlert
         v-if="errorMessage"
-        class="text-sm text-danger"
-        role="alert"
+        variant="error"
       >
         {{ errorMessage }}
-      </p>
+      </UiAlert>
 
-      <button
+      <UiButton
         type="submit"
-        :disabled="isSubmitting"
-        class="w-full rounded-md bg-wine px-4 py-2.5 text-sm font-medium text-paper transition
-               hover:bg-wine-hover disabled:opacity-60"
+        class="w-full"
+        :loading="isSubmitting"
       >
-        {{ isSubmitting ? 'Connexion...' : 'Se connecter' }}
-      </button>
+        {{ isSubmitting ? "A iniciar sessão..." : "Iniciar sessão" }}
+      </UiButton>
     </form>
 
     <p class="mt-6 text-sm text-ink/70">
@@ -76,16 +75,16 @@ async function handleSubmit() {
         :to="{ name: 'forgot-password' }"
         class="text-wine hover:underline"
       >
-        Mot de passe oublié ?
+        Esqueceu-se da palavra-passe?
       </RouterLink>
     </p>
     <p class="mt-2 text-sm text-ink/70">
-      Pas encore de compte ?
+      Ainda não tem conta?
       <RouterLink
         :to="{ name: 'register' }"
         class="text-wine hover:underline"
       >
-        Créer un compte
+        Criar conta
       </RouterLink>
     </p>
   </AuthLayout>

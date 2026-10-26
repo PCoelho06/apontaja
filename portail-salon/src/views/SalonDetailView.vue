@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { RouterLink, useRoute } from "vue-router";
 
-import { UiBadge } from "@apontaja/ui-kit";
+import { UiAlert, UiBadge, UiButton, UiInput, UiSelect } from "@apontaja/ui-kit";
 
-import { ApiError } from "@apontaja/web-core/api-client";
+import {
+  describeInviteError,
+  describeMemberActionError,
+  describeSalonLoadError,
+} from "@/lib/salonErrors";
+import { STAFF_ROLES, formatDate, roleLabel } from "@/lib/staffRoles";
 import { useBookingRequestsStore } from "@/stores/bookingRequests";
 import { useSalonStore } from "@/stores/salon";
 import { useStaffStore } from "@/stores/staff";
@@ -36,10 +41,7 @@ async function loadAll() {
       staffStore.fetchInvitations(salonId.value),
     ]);
   } catch (error) {
-    loadError.value =
-      error instanceof ApiError
-        ? error.message
-        : "Impossible de charger ce salon.";
+    loadError.value = describeSalonLoadError(error);
   } finally {
     isLoading.value = false;
   }
@@ -70,10 +72,7 @@ async function handleInvite() {
     );
     inviteEmail.value = "";
   } catch (error) {
-    inviteError.value =
-      error instanceof ApiError
-        ? error.message
-        : "Impossible d'envoyer l'invitation.";
+    inviteError.value = describeInviteError(error);
   } finally {
     isInviting.value = false;
   }
@@ -86,8 +85,7 @@ async function handleChangeRole(staffMembershipId: string, newRole: string) {
   } catch (error) {
     rowErrors.value = {
       ...rowErrors.value,
-      [staffMembershipId]:
-        error instanceof ApiError ? error.message : "Action impossible.",
+      [staffMembershipId]: describeMemberActionError(error),
     };
   }
 }
@@ -99,8 +97,7 @@ async function handleRemove(staffMembershipId: string) {
   } catch (error) {
     rowErrors.value = {
       ...rowErrors.value,
-      [staffMembershipId]:
-        error instanceof ApiError ? error.message : "Action impossible.",
+      [staffMembershipId]: describeMemberActionError(error),
     };
   }
 }
@@ -113,21 +110,22 @@ async function handleRemove(staffMembershipId: string) {
         :to="{ name: 'home' }"
         class="text-sm text-wine hover:underline"
       >
-        ← Retour à vos salons
+        ← Voltar aos seus salões
       </RouterLink>
 
       <p
         v-if="isLoading"
         class="mt-4 text-sm text-ink/70"
       >
-        Chargement...
+        A carregar...
       </p>
-      <p
+      <UiAlert
         v-else-if="loadError"
-        class="mt-4 text-sm text-danger"
+        variant="error"
+        class="mt-4"
       >
         {{ loadError }}
-      </p>
+      </UiAlert>
 
       <template v-else-if="salonStore.currentSalon">
         <h1 class="mt-4 font-display text-2xl text-ink">
@@ -141,19 +139,19 @@ async function handleRemove(staffMembershipId: string) {
         </p>
 
         <RouterLink :to="{ name: 'catalog-resources', params: { salonId } }">
-          Catalogue
+          Catálogo
         </RouterLink>
         <RouterLink
           :to="{ name: 'customers', params: { salonId } }"
           class="ml-4"
         >
-          Clients
+          Clientes
         </RouterLink>
         <RouterLink
           :to="{ name: 'booking-requests', params: { salonId } }"
           class="ml-4"
         >
-          Demandes
+          Pedidos
           <UiBadge
             v-if="requestsStore.count > 0"
             tone="brass"
@@ -162,10 +160,10 @@ async function handleRemove(staffMembershipId: string) {
           </UiBadge>
         </RouterLink>
 
-        <!-- Équipe -->
+        <!-- Equipa -->
         <section class="mt-8">
           <h2 class="text-lg font-medium text-ink">
-            Équipe
+            Equipa
           </h2>
 
           <ul
@@ -186,37 +184,32 @@ async function handleRemove(staffMembershipId: string) {
                 >{{
                   member.email
                 }}</span>
-                <span class="block text-xs text-ink/50">Membre depuis
-                  {{ new Date(member.since).toLocaleDateString() }}</span>
+                <span class="block text-xs text-ink/50">Membro desde
+                  {{ formatDate(member.since) }}</span>
               </div>
-              <div class="flex items-center gap-2">
-                <select
-                  :value="member.role"
-                  class="rounded-md border border-border bg-white px-2 py-1 text-sm text-ink"
-                  @change="
-                    handleChangeRole(
-                      member.staffMembershipId,
-                      ($event.target as HTMLSelectElement).value,
-                    )
+              <div class="flex items-end gap-2">
+                <UiSelect
+                  label="Função"
+                  :model-value="member.role"
+                  @update:model-value="
+                    handleChangeRole(member.staffMembershipId, String($event))
                   "
                 >
-                  <option value="OWNER">
-                    OWNER
+                  <option
+                    v-for="role in STAFF_ROLES"
+                    :key="role"
+                    :value="role"
+                  >
+                    {{ roleLabel(role) }}
                   </option>
-                  <option value="MANAGER">
-                    MANAGER
-                  </option>
-                  <option value="EMPLOYEE">
-                    EMPLOYEE
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="rounded-md border border-danger px-2 py-1 text-xs font-medium text-danger hover:bg-danger hover:text-paper"
+                </UiSelect>
+                <UiButton
+                  variant="danger"
+                  size="sm"
                   @click="handleRemove(member.staffMembershipId)"
                 >
-                  Retirer
-                </button>
+                  Retirar
+                </UiButton>
               </div>
               <p
                 v-if="rowErrors[member.staffMembershipId]"
@@ -229,15 +222,15 @@ async function handleRemove(staffMembershipId: string) {
               v-if="staffStore.members.length === 0"
               class="px-4 py-3 text-sm text-ink/60"
             >
-              Aucun membre.
+              Nenhum membro.
             </li>
           </ul>
         </section>
 
-        <!-- Invitations en attente -->
+        <!-- Convites pendentes -->
         <section class="mt-8">
           <h2 class="text-lg font-medium text-ink">
-            Invitations en attente
+            Convites pendentes
           </h2>
           <ul
             class="mt-3 divide-y divide-border rounded-md border border-border bg-white"
@@ -249,75 +242,62 @@ async function handleRemove(staffMembershipId: string) {
             >
               <span class="text-sm text-ink">{{ invitation.email }}</span>
               <span class="text-xs font-medium uppercase text-wine">{{
-                invitation.role
+                roleLabel(invitation.role)
               }}</span>
             </li>
             <li
               v-if="staffStore.pendingInvitations.length === 0"
               class="px-4 py-3 text-sm text-ink/60"
             >
-              Aucune invitation en attente.
+              Nenhum convite pendente.
             </li>
           </ul>
         </section>
 
-        <!-- Nouvelle invitation -->
+        <!-- Novo convite -->
         <section class="mt-8">
           <h2 class="text-lg font-medium text-ink">
-            Inviter un membre
+            Convidar um membro
           </h2>
           <form
             class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end"
             @submit.prevent="handleInvite"
           >
             <div class="flex-1">
-              <label
-                for="inviteEmail"
-                class="block text-sm font-medium text-ink"
-              >Email</label>
-              <input
-                id="inviteEmail"
+              <UiInput
                 v-model="inviteEmail"
                 type="email"
+                label="Email"
+                autocomplete="off"
                 required
-                class="mt-1.5 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-ink focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine"
-              >
+              />
             </div>
-            <div>
-              <label
-                for="inviteRole"
-                class="block text-sm font-medium text-ink"
-              >Rôle</label>
-              <select
-                id="inviteRole"
-                v-model="inviteRole"
-                class="mt-1.5 rounded-md border border-border bg-white px-3 py-2 text-sm text-ink"
-              >
-                <option value="OWNER">
-                  OWNER
-                </option>
-                <option value="MANAGER">
-                  MANAGER
-                </option>
-                <option value="EMPLOYEE">
-                  EMPLOYEE
-                </option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              :disabled="isInviting"
-              class="rounded-md bg-wine px-4 py-2 text-sm font-medium text-paper hover:bg-wine/90 disabled:opacity-50"
+            <UiSelect
+              v-model="inviteRole"
+              label="Função"
             >
-              {{ isInviting ? "Envoi..." : "Inviter" }}
-            </button>
+              <option
+                v-for="role in STAFF_ROLES"
+                :key="role"
+                :value="role"
+              >
+                {{ roleLabel(role) }}
+              </option>
+            </UiSelect>
+            <UiButton
+              type="submit"
+              :loading="isInviting"
+            >
+              {{ isInviting ? "A enviar..." : "Convidar" }}
+            </UiButton>
           </form>
-          <p
+          <UiAlert
             v-if="inviteError"
-            class="mt-2 text-sm text-danger"
+            variant="error"
+            class="mt-2"
           >
             {{ inviteError }}
-          </p>
+          </UiAlert>
         </section>
       </template>
     </div>

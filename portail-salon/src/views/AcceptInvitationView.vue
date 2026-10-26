@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { RouterLink, useRoute } from "vue-router";
 
-import { ApiError, apiGet, apiPost } from "@apontaja/web-core/api-client";
+import { apiGet, apiPost } from "@apontaja/web-core/api-client";
+import {
+  describeLoginError,
+  describeRegisterError,
+} from "@apontaja/web-core/auth-errors";
+import { describeAcceptInvitationError } from "@/lib/salonErrors";
+import { roleLabel } from "@/lib/staffRoles";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiCheckbox, UiInput } from "@apontaja/ui-kit";
@@ -79,10 +85,7 @@ async function acceptInvitation() {
     );
     step.value = "success";
   } catch (error) {
-    errorMessage.value =
-      error instanceof ApiError
-        ? error.message
-        : "Impossible d'accepter l'invitation.";
+    errorMessage.value = describeAcceptInvitationError(error);
     step.value = "error";
   } finally {
     isSubmitting.value = false;
@@ -95,19 +98,19 @@ async function handleLogin() {
   errorMessage.value = "";
   try {
     await auth.login(lookup.value.email, password.value);
-    await acceptInvitation();
   } catch (error) {
-    errorMessage.value =
-      error instanceof ApiError ? error.message : "Connexion impossible.";
+    errorMessage.value = describeLoginError(error);
     isSubmitting.value = false;
+    return;
   }
+  await acceptInvitation();
 }
 
 async function handleRegisterThenLogin() {
   if (!lookup.value) return;
   if (!acceptTerms.value) {
     errorMessage.value =
-      "Vous devez accepter les CGU et la politique de confidentialité.";
+      "Tem de aceitar os Termos e Condições e a Política de Privacidade.";
     return;
   }
   isSubmitting.value = true;
@@ -122,14 +125,14 @@ async function handleRegisterThenLogin() {
     });
     // Pas de connexion automatique après /register (voir stores/auth.ts) — on enchaîne nous-mêmes.
     await auth.login(lookup.value.email, password.value);
-    await acceptInvitation();
   } catch (error) {
+    const failure = describeRegisterError(error);
     errorMessage.value =
-      error instanceof ApiError
-        ? (Object.values(error.fieldErrors ?? {})[0] ?? error.message)
-        : "Impossible de créer le compte.";
+      Object.values(failure.fieldErrors)[0] ?? failure.message;
     isSubmitting.value = false;
+    return;
   }
+  await acceptInvitation();
 }
 </script>
 
@@ -142,49 +145,54 @@ async function handleRegisterThenLogin() {
         v-if="step === 'loading'"
         class="text-sm text-ink/70"
       >
-        Chargement...
+        A carregar...
       </p>
 
-      <p
+      <UiAlert
         v-else-if="step === 'invalid'"
-        class="text-sm text-danger"
+        variant="error"
       >
-        Ce lien d'invitation est invalide ou a expiré.
-      </p>
+        Esta ligação de convite é inválida ou expirou.
+      </UiAlert>
 
-      <p
+      <UiAlert
         v-else-if="step === 'mismatch'"
-        class="text-sm text-danger"
+        variant="error"
       >
-        Cette invitation a été envoyée à {{ lookup?.email }}, une adresse
-        différente de votre compte connecté ({{ auth.account?.email }}).
-        Déconnectez-vous puis réessayez avec le bon compte.
-      </p>
+        Este convite foi enviado para {{ lookup?.email }}, um endereço
+        diferente do da conta com sessão iniciada ({{ auth.account?.email }}).
+        Termine a sessão e volte a tentar com a conta correta.
+      </UiAlert>
 
       <template v-else-if="step === 'ready'">
         <p class="font-display text-xl text-ink">
-          Rejoindre {{ lookup?.salonName }}
+          Juntar-se a {{ lookup?.salonName }}
         </p>
         <p class="mt-2 text-sm text-ink/70">
-          Rôle proposé : {{ lookup?.role }}
+          Função proposta: {{ roleLabel(lookup?.role ?? "") }}
         </p>
-        <button
-          type="button"
-          :disabled="isSubmitting"
-          class="mt-6 w-full rounded-md bg-wine px-4 py-2.5 text-sm font-medium text-paper hover:bg-wine/90 disabled:opacity-60"
+        <UiAlert
+          v-if="errorMessage"
+          variant="error"
+          class="mt-4"
+        >
+          {{ errorMessage }}
+        </UiAlert>
+        <UiButton
+          class="mt-6 w-full"
+          :loading="isSubmitting"
           @click="acceptInvitation"
         >
-          {{ isSubmitting ? "Acceptation..." : "Accepter l'invitation" }}
-        </button>
+          {{ isSubmitting ? "A aceitar..." : "Aceitar o convite" }}
+        </UiButton>
       </template>
 
       <template v-else-if="step === 'need-login'">
         <p class="font-display text-xl text-ink">
-          Rejoindre {{ lookup?.salonName }}
+          Juntar-se a {{ lookup?.salonName }}
         </p>
         <p class="mt-2 text-sm text-ink/70">
-          Connectez-vous avec {{ lookup?.email }} pour accepter cette
-          invitation.
+          Inicie sessão com {{ lookup?.email }} para aceitar este convite.
         </p>
         <form
           class="mt-4 space-y-4"
@@ -193,7 +201,7 @@ async function handleRegisterThenLogin() {
           <UiInput
             v-model="password"
             type="password"
-            label="Mot de passe"
+            label="Palavra-passe"
             autocomplete="current-password"
             required
           />
@@ -208,18 +216,17 @@ async function handleRegisterThenLogin() {
             class="w-full"
             :loading="isSubmitting"
           >
-            {{ isSubmitting ? "Connexion..." : "Se connecter et accepter" }}
+            {{ isSubmitting ? "A iniciar sessão..." : "Iniciar sessão e aceitar" }}
           </UiButton>
         </form>
       </template>
 
       <template v-else-if="step === 'need-register'">
         <p class="font-display text-xl text-ink">
-          Rejoindre {{ lookup?.salonName }}
+          Juntar-se a {{ lookup?.salonName }}
         </p>
         <p class="mt-2 text-sm text-ink/70">
-          Créez un compte avec {{ lookup?.email }} pour accepter cette
-          invitation.
+          Crie uma conta com {{ lookup?.email }} para aceitar este convite.
         </p>
         <form
           class="mt-4 space-y-4"
@@ -228,14 +235,14 @@ async function handleRegisterThenLogin() {
           <div class="grid grid-cols-2 gap-4">
             <UiInput
               v-model="firstName"
-              label="Prénom"
+              label="Nome próprio"
               autocomplete="given-name"
               maxlength="100"
               required
             />
             <UiInput
               v-model="lastName"
-              label="Nom"
+              label="Apelido"
               autocomplete="family-name"
               maxlength="100"
               required
@@ -244,8 +251,8 @@ async function handleRegisterThenLogin() {
           <UiInput
             v-model="password"
             type="password"
-            label="Mot de passe"
-            hint="12 caractères minimum"
+            label="Palavra-passe"
+            hint="Mínimo de 12 caracteres"
             autocomplete="new-password"
             minlength="12"
             required
@@ -253,7 +260,7 @@ async function handleRegisterThenLogin() {
           <div>
             <UiCheckbox
               v-model="acceptTerms"
-              label="J'accepte les CGU et la politique de confidentialité"
+              label="Aceito os Termos e Condições e a Política de Privacidade"
             />
             <div class="mt-1 flex gap-4 pl-6 text-xs">
               <RouterLink
@@ -262,7 +269,7 @@ async function handleRegisterThenLogin() {
                 rel="noopener"
                 class="text-wine hover:underline"
               >
-                Lire les CGU
+                Ler os Termos e Condições
               </RouterLink>
               <RouterLink
                 :to="{ name: 'privacy' }"
@@ -270,7 +277,7 @@ async function handleRegisterThenLogin() {
                 rel="noopener"
                 class="text-wine hover:underline"
               >
-                Lire la politique de confidentialité
+                Ler a Política de Privacidade
               </RouterLink>
             </div>
           </div>
@@ -285,7 +292,7 @@ async function handleRegisterThenLogin() {
             class="w-full"
             :loading="isSubmitting"
           >
-            {{ isSubmitting ? "Création..." : "Créer le compte et accepter" }}
+            {{ isSubmitting ? "A criar..." : "Criar a conta e aceitar" }}
           </UiButton>
         </form>
       </template>
@@ -294,22 +301,21 @@ async function handleRegisterThenLogin() {
         v-else-if="step === 'success'"
         class="text-sm text-ink"
       >
-        Invitation acceptée ! Vous pouvez maintenant accéder à ce salon depuis
-        votre espace.
+        Convite aceite! Já pode aceder a este salão a partir do seu espaço.
         <RouterLink
           :to="{ name: 'home' }"
           class="text-wine hover:underline"
         >
-          Retour à l'accueil
+          Voltar ao início
         </RouterLink>
       </p>
 
-      <p
+      <UiAlert
         v-else-if="step === 'error'"
-        class="text-sm text-danger"
+        variant="error"
       >
         {{ errorMessage }}
-      </p>
+      </UiAlert>
     </div>
   </main>
 </template>

@@ -9,11 +9,11 @@ class FrontendLinksEmailPathsTest {
     private final FrontendLinks links = new FrontendLinks("http://salon.test", "http://client.test");
 
     @Test
-    void le_portail_salon_garde_les_chemins_francais() {
+    void le_portail_salon_utilise_les_chemins_portugais() {
         assertThat(links.confirmEmailLink(FrontendPortal.SALON, "abc"))
-                .isEqualTo("http://salon.test/confirmer-email?token=abc");
+                .isEqualTo("http://salon.test/confirmar-email?token=abc");
         assertThat(links.resetPasswordLink(FrontendPortal.SALON, "abc"))
-                .isEqualTo("http://salon.test/reinitialiser-mot-de-passe?token=abc");
+                .isEqualTo("http://salon.test/repor-palavra-passe?token=abc");
     }
 
     @Test
@@ -26,8 +26,8 @@ class FrontendLinksEmailPathsTest {
 
     @Test
     void sans_portail_le_comportement_historique_du_salon_est_conserve() {
-        assertThat(links.confirmEmailLink(null, "abc")).isEqualTo("http://salon.test/confirmer-email?token=abc");
+        assertThat(links.confirmEmailLink(null, "abc")).isEqualTo("http://salon.test/confirmar-email?token=abc");
         assertThat(links.resetPasswordLink(null, "abc"))
-                .isEqualTo("http://salon.test/reinitialiser-mot-de-passe?token=abc");
+                .isEqualTo("http://salon.test/repor-palavra-passe?token=abc");
     }
 }

@@ -4,7 +4,7 @@ import { RouterLink } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
 import { ApiError } from "@apontaja/web-core/api-client";
-import { TOO_MANY_ATTEMPTS } from "@/lib/authErrors";
+import { TOO_MANY_ATTEMPTS } from "@apontaja/web-core/auth-errors";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";

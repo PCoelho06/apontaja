@@ -73,7 +73,7 @@ class PasswordResetControllerIT {
                                 org.mockito.ArgumentMatchers.anyString(), bodyCaptor.capture());
 
                 String resetBody = bodyCaptor.getAllValues().stream()
-                                .filter(body -> body.contains("reinitialiser-mot-de-passe")).findFirst()
+                                .filter(body -> body.contains("repor-palavra-passe")).findFirst()
                                 .orElseThrow(() -> new AssertionError("Aucun email de reset capturé"));
 
                 Matcher matcher = TOKEN_PATTERN.matcher(resetBody);

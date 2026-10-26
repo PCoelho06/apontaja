@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError } from "@apontaja/web-core/api-client";
-
+import { ApiError } from "./apiClient";
 import {
   TOO_MANY_ATTEMPTS,
   describeConfirmError,
   describeLoginError,
   describeRegisterError,
   describeResetError,
-} from "@/lib/authErrors";
+} from "./authErrors";
 
 const FRENCH = "Message en français du back";
 

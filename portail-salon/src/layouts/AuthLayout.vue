@@ -1,8 +1,8 @@
 <script setup lang="ts">
 defineProps<{
-  title: string
-  subtitle?: string
-}>()
+  title: string;
+  subtitle?: string;
+}>();
 </script>
 
 <template>
@@ -12,7 +12,7 @@ defineProps<{
         Apontaja
       </p>
       <p class="mt-4 max-w-sm text-sm text-paper/80">
-        La gestion de rendez-vous pensée pour les salons de coiffure et de beauté.
+        A gestão de marcações pensada para salões de cabeleireiro e de beleza.
       </p>
     </aside>
 

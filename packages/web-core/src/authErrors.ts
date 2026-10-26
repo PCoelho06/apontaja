@@ -1,8 +1,9 @@
-import { ApiError } from "@apontaja/web-core/api-client";
+import { ApiError } from "./apiClient";
 
 /**
- * Erreurs d'authentification traduites en portugais du Portugal. Les messages et les `fieldErrors` du back sont
- * en français : on s'appuie sur le statut HTTP et sur le nom du champ, jamais sur le texte.
+ * Erreurs d'authentification traduites en portugais du Portugal, partagées par les deux portails.
+ * Les messages et les `fieldErrors` du back sont en français : on s'appuie sur le statut HTTP et sur
+ * le nom du champ, jamais sur le texte.
  */
 export const TOO_MANY_ATTEMPTS =
   "Demasiadas tentativas. Tente novamente mais tarde.";

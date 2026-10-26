@@ -95,8 +95,8 @@ class RegisterConsentAndPortalIT {
                 call("/api/auth/register", registerBody(email, ",\"acceptTos\":true,\"acceptPrivacy\":true"))
                                 .andExpect(status().isCreated());
 
-                assertThat(captureBody(email, "confirmer-email"))
-                                .contains("http://localhost:5173/confirmer-email?token=");
+                assertThat(captureBody(email, "confirmar-email"))
+                                .contains("http://localhost:5173/confirmar-email?token=");
         }
 
         @Test
