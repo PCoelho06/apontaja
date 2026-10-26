@@ -15,7 +15,11 @@ import {
   parseClosureConflict,
   type ClosureConflict,
 } from "@/lib/closureConflict";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeCatalogLoadError,
+  describeClosureDeleteError,
+  describeClosureSaveError,
+} from "@/lib/catalogErrors";
 import {
   formatInstant,
   instantToZonedLocal,
@@ -78,7 +82,7 @@ async function load() {
       showPast.value ? undefined : new Date().toISOString(),
     );
   } catch (e) {
-    pageError.value = errorMessage(e, "Impossible de charger les fermetures.");
+    pageError.value = describeCatalogLoadError(e, "closures");
   } finally {
     loading.value = false;
   }
@@ -101,7 +105,7 @@ watch(
     try {
       await resourceStore.fetchResources(id);
     } catch (e) {
-      pageError.value = errorMessage(e, "Impossible de charger les ressources.");
+      pageError.value = describeCatalogLoadError(e, "resources");
     }
   },
   { immediate: true },
@@ -123,12 +127,12 @@ function buildPayload(): ClosurePayload | null {
     const startAt = zonedLocalToInstant(form.start, timeZone.value);
     const endAt = zonedLocalToInstant(form.end, timeZone.value);
     if (endAt <= startAt) {
-      formError.value = "La fin doit être postérieure au début.";
+      formError.value = "O fim deve ser depois do início.";
       return null;
     }
     return { startAt, endAt, reason: form.reason.trim() || null };
   } catch (e) {
-    formError.value = e instanceof Error ? e.message : "Dates invalides.";
+    formError.value = e instanceof Error ? e.message : "Datas inválidas.";
     return null;
   }
 }
@@ -156,16 +160,14 @@ async function submit() {
     await load();
   } catch (e) {
     conflict.value = parseClosureConflict(e);
-    formError.value = conflict.value
-      ? null
-      : errorMessage(e, "Enregistrement impossible.");
+    formError.value = conflict.value ? null : describeClosureSaveError(e);
   } finally {
     submitting.value = false;
   }
 }
 
 async function remove(closure: SalonClosure) {
-  if (!globalThis.confirm("Supprimer cette fermeture ?")) {
+  if (!globalThis.confirm("Eliminar este encerramento?")) {
     return;
   }
   pageError.value = null;
@@ -180,7 +182,7 @@ async function remove(closure: SalonClosure) {
     }
     await load();
   } catch (e) {
-    pageError.value = errorMessage(e, "Suppression impossible.");
+    pageError.value = describeClosureDeleteError(e);
   }
 }
 </script>
@@ -191,19 +193,19 @@ async function remove(closure: SalonClosure) {
       v-if="!timeZoneValid"
       variant="error"
     >
-      Le fuseau horaire du salon (« {{ timeZone }} ») n'est pas un identifiant
-      valide (ex. Europe/Paris) : la saisie des fermetures est désactivée.
+      O fuso horário do salão («{{ timeZone }}») não é um identificador válido
+      (por exemplo, Europe/Lisbon): o registo de encerramentos está desativado.
     </UiAlert>
 
     <div class="space-y-3">
       <div class="w-72">
         <UiSelect
           v-model="scope"
-          label="Fermetures de"
+          label="Encerramentos de"
           :disabled="editingId !== null"
         >
           <option value="salon">
-            Tout le salon
+            Todo o salão
           </option>
           <option
             v-for="resource in resourceStore.resources"
@@ -216,11 +218,11 @@ async function remove(closure: SalonClosure) {
       </div>
       <UiCheckbox
         v-model="showPast"
-        label="Afficher aussi les fermetures passées"
+        label="Mostrar também os encerramentos passados"
       />
       <p class="text-sm text-ink/60">
-        Heures du salon ({{ timeZone }}). Une fermeture du salon bloque toutes
-        les ressources ; une fermeture de ressource ne bloque que celle-ci.
+        Horas do salão ({{ timeZone }}). Um encerramento do salão bloqueia todos
+        os recursos; um encerramento de um recurso bloqueia apenas esse recurso.
       </p>
     </div>
 
@@ -234,7 +236,7 @@ async function remove(closure: SalonClosure) {
       v-if="loading"
       class="text-sm text-ink/70"
     >
-      Chargement…
+      A carregar...
     </p>
 
     <ul
@@ -266,14 +268,14 @@ async function remove(closure: SalonClosure) {
             size="sm"
             @click="startEdit(closure)"
           >
-            Modifier
+            Editar
           </UiButton>
           <UiButton
             variant="danger"
             size="sm"
             @click="remove(closure)"
           >
-            Supprimer
+            Eliminar
           </UiButton>
         </div>
       </li>
@@ -282,7 +284,7 @@ async function remove(closure: SalonClosure) {
       v-else
       class="text-ink/60"
     >
-      Aucune fermeture.
+      Sem encerramentos.
     </p>
 
     <form
@@ -291,27 +293,27 @@ async function remove(closure: SalonClosure) {
       @submit.prevent="submit"
     >
       <h2 class="text-lg font-medium text-ink">
-        {{ editingId ? "Modifier la fermeture" : "Nouvelle fermeture" }}
+        {{ editingId ? "Editar o encerramento" : "Novo encerramento" }}
       </h2>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
           v-model="form.start"
           type="datetime-local"
-          label="Début"
+          label="Início"
           required
         />
         <UiInput
           v-model="form.end"
           type="datetime-local"
-          label="Fin"
+          label="Fim"
           required
         />
       </div>
 
       <UiInput
         v-model="form.reason"
-        label="Motif (optionnel)"
+        label="Motivo (opcional)"
         maxlength="255"
       />
 
@@ -327,8 +329,9 @@ async function remove(closure: SalonClosure) {
         variant="error"
       >
         <p class="font-medium">
-          Fermeture impossible : {{ conflict.count }} rendez-vous actif(s)
-          recouvrent cette période. Annulez-les ou déplacez-les d'abord.
+          Encerramento impossível: {{ conflict.count }}
+          {{ conflict.count === 1 ? "marcação ativa sobrepõe-se" : "marcações ativas sobrepõem-se" }}
+          a este período. Cancele-as ou mude-as de hora primeiro.
         </p>
         <ul class="mt-1 list-disc pl-5">
           <li
@@ -343,7 +346,7 @@ async function remove(closure: SalonClosure) {
           v-if="conflict.count > conflict.appointments.length"
           class="mt-1"
         >
-          … et {{ conflict.count - conflict.appointments.length }} autre(s).
+          … e mais {{ conflict.count - conflict.appointments.length }}.
         </p>
       </UiAlert>
 
@@ -352,14 +355,14 @@ async function remove(closure: SalonClosure) {
           type="submit"
           :loading="submitting"
         >
-          {{ editingId ? "Enregistrer" : "Ajouter" }}
+          {{ editingId ? "Guardar" : "Adicionar" }}
         </UiButton>
         <UiButton
           v-if="editingId"
           variant="secondary"
           @click="resetForm"
         >
-          Annuler
+          Cancelar
         </UiButton>
       </div>
     </form>
@@ -367,8 +370,8 @@ async function remove(closure: SalonClosure) {
       v-else-if="!canManage"
       class="text-sm text-ink/60"
     >
-      Lecture seule : seuls les gérants et propriétaires modifient les
-      fermetures.
+      Só leitura: apenas gestores e proprietários podem alterar os
+      encerramentos.
     </p>
   </section>
 </template>

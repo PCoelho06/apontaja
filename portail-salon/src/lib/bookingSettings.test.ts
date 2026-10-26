@@ -54,8 +54,8 @@ describe("bookingSettings", () => {
       "horizonDays",
       "minNoticeMinutes",
     ]);
-    expect(result.errors.horizonDays).toContain("entre 1 et 365");
-    expect(result.errors.cancellationDeadlineHours).toContain("entier");
+    expect(result.errors.horizonDays).toContain("entre 1 e 365");
+    expect(result.errors.cancellationDeadlineHours).toContain("inteiro");
   });
 
   it("refuse une granularité hors liste et un champ vide ou négatif", () => {
@@ -92,7 +92,7 @@ describe("bookingSettings", () => {
       hasBookableService: false,
     });
     expect(unlinked).toHaveLength(1);
-    expect(unlinked[0]).toContain("associée à une ressource");
+    expect(unlinked[0]).toContain("associado a um recurso");
   });
 
   it("construit le lien public sans double barre", () => {

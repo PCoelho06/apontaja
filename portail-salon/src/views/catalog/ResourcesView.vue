@@ -5,8 +5,12 @@ import { useRoute } from "vue-router";
 import { UiAlert, UiButton, UiInput, UiSelect } from "@apontaja/ui-kit";
 
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
-import { ApiError } from "@apontaja/web-core/api-client";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeCatalogLoadError,
+  describeDeleteError,
+  describeResourceSaveError,
+} from "@/lib/catalogErrors";
+import { roleLabel } from "@/lib/staffRoles";
 import {
   useResourceStore,
   type ResourceType,
@@ -15,8 +19,8 @@ import {
 import { useStaffStore, type StaffMember } from "@/stores/staff";
 
 const TYPE_LABELS: Record<ResourceType, string> = {
-  EMPLOYEE: "Collaborateur",
-  MACHINE: "Machine",
+  EMPLOYEE: "Profissional",
+  MACHINE: "Equipamento",
 };
 
 const route = useRoute();
@@ -46,7 +50,7 @@ async function load() {
       staffStore.fetchMembers(salonId.value),
     ]);
   } catch (e) {
-    pageError.value = errorMessage(e, "Impossible de charger les ressources.");
+    pageError.value = describeCatalogLoadError(e, "resources");
   } finally {
     loading.value = false;
   }
@@ -62,7 +66,7 @@ function memberLabel(staffMembershipId: string): string {
   const member = staffStore.members.find(
     (m) => m.staffMembershipId === staffMembershipId,
   );
-  return member ? memberName(member) : "membre retiré";
+  return member ? memberName(member) : "membro removido";
 }
 
 /** Membres encore libres (celui de la ressource en cours d'édition reste proposé). */
@@ -77,7 +81,7 @@ const selectableMembers = computed(() => {
   return staffStore.members.filter((m) => !taken.has(m.staffMembershipId));
 });
 
-// Seul un collaborateur peut être lié : on oublie le choix si on passe à Machine.
+// Seul un profissional (EMPLOYEE) peut être lié : on oublie le choix si on passe à Equipamento.
 watch(
   () => form.type,
   (type) => {
@@ -130,15 +134,16 @@ async function submit() {
     }
     resetForm();
   } catch (e) {
-    formError.value = errorMessage(e, "Enregistrement impossible.");
-    fieldErrors.value = e instanceof ApiError ? (e.fieldErrors ?? {}) : {};
+    const failure = describeResourceSaveError(e);
+    formError.value = failure.message;
+    fieldErrors.value = failure.fieldErrors;
   } finally {
     submitting.value = false;
   }
 }
 
 async function remove(resource: SalonResource) {
-  if (!globalThis.confirm(`Supprimer « ${resource.name} » ?`)) {
+  if (!globalThis.confirm(`Eliminar «${resource.name}»?`)) {
     return;
   }
   pageError.value = null;
@@ -148,7 +153,7 @@ async function remove(resource: SalonResource) {
       resetForm();
     }
   } catch (e) {
-    pageError.value = errorMessage(e, "Suppression impossible.");
+    pageError.value = describeDeleteError(e, "resource");
   }
 }
 </script>
@@ -165,7 +170,7 @@ async function remove(resource: SalonResource) {
       v-if="loading"
       class="text-sm text-ink/70"
     >
-      Chargement…
+      A carregar...
     </p>
 
     <ul
@@ -184,7 +189,7 @@ async function remove(resource: SalonResource) {
           <p class="text-sm text-ink/60">
             {{ TYPE_LABELS[resource.type] }}
             <template v-if="resource.staffMembershipId">
-              · lié à {{ memberLabel(resource.staffMembershipId) }}
+              · ligado a {{ memberLabel(resource.staffMembershipId) }}
             </template>
           </p>
         </div>
@@ -197,14 +202,14 @@ async function remove(resource: SalonResource) {
             size="sm"
             @click="startEdit(resource)"
           >
-            Modifier
+            Editar
           </UiButton>
           <UiButton
             variant="danger"
             size="sm"
             @click="remove(resource)"
           >
-            Supprimer
+            Eliminar
           </UiButton>
         </div>
       </li>
@@ -213,11 +218,11 @@ async function remove(resource: SalonResource) {
       v-else
       class="space-y-1 text-ink/60"
     >
-      <p>Aucune ressource pour le moment.</p>
+      <p>Ainda não há recursos.</p>
       <p class="text-sm">
-        Une ressource est ce qui se réserve dans l'agenda : un collaborateur ou
-        une machine. L'équipe du salon (comptes et rôles) se gère séparément ;
-        liez un collaborateur à un membre de l'équipe si vous le souhaitez.
+        Um recurso é aquilo que se reserva na agenda: um profissional ou um
+        equipamento. A equipa do salão (contas e funções) gere-se à parte;
+        pode ligar um profissional a um membro da equipa, se quiser.
       </p>
     </div>
 
@@ -227,12 +232,12 @@ async function remove(resource: SalonResource) {
       @submit.prevent="submit"
     >
       <h2 class="text-lg font-medium text-ink">
-        {{ editingId ? "Modifier la ressource" : "Nouvelle ressource" }}
+        {{ editingId ? "Editar o recurso" : "Novo recurso" }}
       </h2>
 
       <UiInput
         v-model="form.name"
-        label="Nom"
+        label="Nome"
         maxlength="100"
         required
         :error="fieldErrors.name"
@@ -243,32 +248,32 @@ async function remove(resource: SalonResource) {
         label="Type"
       >
         <option value="EMPLOYEE">
-          Collaborateur
+          Profissional
         </option>
         <option value="MACHINE">
-          Machine
+          Equipamento
         </option>
       </UiSelect>
 
       <UiSelect
         v-if="form.type === 'EMPLOYEE'"
         v-model="form.staffMembershipId"
-        label="Membre de l'équipe (optionnel)"
+        label="Membro da equipa (opcional)"
         :hint="
           selectableMembers.length === 0
-            ? 'Tous les membres de l\'équipe sont déjà liés à une ressource.'
+            ? 'Todos os membros da equipa já estão ligados a um recurso.'
             : undefined
         "
       >
         <option value="">
-          Aucun
+          Nenhum
         </option>
         <option
           v-for="member in selectableMembers"
           :key="member.staffMembershipId"
           :value="member.staffMembershipId"
         >
-          {{ memberName(member) }} · {{ member.role }}
+          {{ memberName(member) }} · {{ roleLabel(member.role) }}
         </option>
       </UiSelect>
 
@@ -284,14 +289,14 @@ async function remove(resource: SalonResource) {
           type="submit"
           :loading="submitting"
         >
-          {{ editingId ? "Enregistrer" : "Ajouter" }}
+          {{ editingId ? "Guardar" : "Adicionar" }}
         </UiButton>
         <UiButton
           v-if="editingId"
           variant="secondary"
           @click="resetForm"
         >
-          Annuler
+          Cancelar
         </UiButton>
       </div>
     </form>
@@ -299,7 +304,7 @@ async function remove(resource: SalonResource) {
       v-else
       class="text-sm text-ink/60"
     >
-      Lecture seule : seuls les gérants et propriétaires modifient le catalogue.
+      Só leitura: apenas gestores e proprietários podem alterar o catálogo.
     </p>
   </section>
 </template>

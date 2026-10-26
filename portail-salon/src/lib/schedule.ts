@@ -21,13 +21,13 @@ export interface TimeRange {
 export type WeekDays = Record<DayCode, TimeRange[]>;
 
 export const DAYS: { code: DayCode; label: string }[] = [
-  { code: "MONDAY", label: "Lundi" },
-  { code: "TUESDAY", label: "Mardi" },
-  { code: "WEDNESDAY", label: "Mercredi" },
-  { code: "THURSDAY", label: "Jeudi" },
-  { code: "FRIDAY", label: "Vendredi" },
-  { code: "SATURDAY", label: "Samedi" },
-  { code: "SUNDAY", label: "Dimanche" },
+  { code: "MONDAY", label: "Segunda-feira" },
+  { code: "TUESDAY", label: "Terça-feira" },
+  { code: "WEDNESDAY", label: "Quarta-feira" },
+  { code: "THURSDAY", label: "Quinta-feira" },
+  { code: "FRIDAY", label: "Sexta-feira" },
+  { code: "SATURDAY", label: "Sábado" },
+  { code: "SUNDAY", label: "Domingo" },
 ];
 
 export const MAX_SLOTS = 100;
@@ -80,23 +80,23 @@ export function weekToSlots(week: WeekDays): ScheduleSlot[] {
   );
 }
 
-/** Message d'erreur en français, ou null si la semaine est envoyable. */
+/** Message d'erreur en pt-PT, ou null si la semaine est envoyable. */
 export function validateWeek(week: WeekDays): string | null {
   if (weekToSlots(week).length > MAX_SLOTS) {
-    return `Trop de plages (${MAX_SLOTS} au maximum).`;
+    return `Demasiados intervalos (máximo ${MAX_SLOTS}).`;
   }
   for (const day of DAYS) {
     const ranges = [...week[day.code]].sort(byStart);
     for (const [index, range] of ranges.entries()) {
       if (!TIME_PATTERN.test(range.start) || !TIME_PATTERN.test(range.end)) {
-        return `${day.label} : renseignez les deux heures de chaque plage.`;
+        return `${day.label}: indique as duas horas de cada intervalo.`;
       }
       if (range.end <= range.start) {
-        return `${day.label} : la fin doit être après le début (${range.start}–${range.end}).`;
+        return `${day.label}: o fim deve ser depois do início (${range.start}–${range.end}).`;
       }
       const next: TimeRange | undefined = ranges[index + 1];
       if (next && TIME_PATTERN.test(next.start) && next.start < range.end) {
-        return `${day.label} : les plages ${range.start}–${range.end} et ${next.start}–${next.end} se chevauchent.`;
+        return `${day.label}: os intervalos ${range.start}–${range.end} e ${next.start}–${next.end} sobrepõem-se.`;
       }
     }
   }

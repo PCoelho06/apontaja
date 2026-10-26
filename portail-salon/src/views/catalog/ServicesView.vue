@@ -11,14 +11,17 @@ import {
 
 import ServiceLinksPanel from "@/components/catalog/ServiceLinksPanel.vue";
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
-import { ApiError } from "@apontaja/web-core/api-client";
+import {
+  describeCatalogLoadError,
+  describeDeleteError,
+  describeServiceSaveError,
+} from "@/lib/catalogErrors";
 import {
   centsToInput,
   eurosToCents,
   formatCents,
   formatDuration,
 } from "@/lib/catalogFormat";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import {
   useSalonServiceStore,
   type SalonServiceItem,
@@ -46,7 +49,7 @@ async function load() {
   try {
     await store.fetchServices(salonId.value);
   } catch (e) {
-    pageError.value = errorMessage(e, "Impossible de charger les prestations.");
+    pageError.value = describeCatalogLoadError(e, "services");
   } finally {
     loading.value = false;
   }
@@ -78,15 +81,16 @@ function buildPayload(): ServicePayload | null {
   const errors: Record<string, string> = {};
   const name = form.name.trim();
   if (!name) {
-    errors.name = "Le nom est obligatoire.";
+    errors.name = "O nome é obrigatório.";
   }
   const duration = Number(form.duration);
   if (!Number.isInteger(duration) || duration < 1 || duration > 1440) {
-    errors.defaultDurationMinutes = "Durée entière entre 1 et 1440 minutes.";
+    errors.defaultDurationMinutes =
+      "Duração: número inteiro entre 1 e 1440 minutos.";
   }
   const price = eurosToCents(form.price);
   if (price === null) {
-    errors.defaultPriceCents = "Prix invalide (ex. 25 ou 25,50).";
+    errors.defaultPriceCents = "Preço inválido (por exemplo, 25 ou 25,50).";
   }
   fieldErrors.value = errors;
   if (Object.keys(errors).length > 0 || price === null) {
@@ -115,15 +119,16 @@ async function submit() {
     }
     resetForm();
   } catch (e) {
-    formError.value = errorMessage(e, "Enregistrement impossible.");
-    fieldErrors.value = e instanceof ApiError ? (e.fieldErrors ?? {}) : {};
+    const failure = describeServiceSaveError(e);
+    formError.value = failure.message;
+    fieldErrors.value = failure.fieldErrors;
   } finally {
     submitting.value = false;
   }
 }
 
 async function remove(service: SalonServiceItem) {
-  if (!globalThis.confirm(`Supprimer « ${service.name} » ?`)) {
+  if (!globalThis.confirm(`Eliminar «${service.name}»?`)) {
     return;
   }
   pageError.value = null;
@@ -136,7 +141,7 @@ async function remove(service: SalonServiceItem) {
       expandedId.value = null;
     }
   } catch (e) {
-    pageError.value = errorMessage(e, "Suppression impossible.");
+    pageError.value = describeDeleteError(e, "service");
   }
 }
 
@@ -158,7 +163,7 @@ function toggleLinks(service: SalonServiceItem) {
       v-if="loading"
       class="text-sm text-ink/70"
     >
-      Chargement…
+      A carregar...
     </p>
 
     <ul
@@ -192,7 +197,7 @@ function toggleLinks(service: SalonServiceItem) {
               size="sm"
               @click="toggleLinks(service)"
             >
-              {{ expandedId === service.serviceId ? "Masquer" : "Ressources" }}
+              {{ expandedId === service.serviceId ? "Ocultar" : "Recursos" }}
             </UiButton>
             <template v-if="canManage">
               <UiButton
@@ -200,14 +205,14 @@ function toggleLinks(service: SalonServiceItem) {
                 size="sm"
                 @click="startEdit(service)"
               >
-                Modifier
+                Editar
               </UiButton>
               <UiButton
                 variant="danger"
                 size="sm"
                 @click="remove(service)"
               >
-                Supprimer
+                Eliminar
               </UiButton>
             </template>
           </div>
@@ -225,7 +230,7 @@ function toggleLinks(service: SalonServiceItem) {
       v-else
       class="text-ink/60"
     >
-      Aucune prestation pour le moment.
+      Ainda não há serviços.
     </p>
 
     <form
@@ -234,33 +239,34 @@ function toggleLinks(service: SalonServiceItem) {
       @submit.prevent="submit"
     >
       <h2 class="text-lg font-medium text-ink">
-        {{ editingId ? "Modifier la prestation" : "Nouvelle prestation" }}
+        {{ editingId ? "Editar o serviço" : "Novo serviço" }}
       </h2>
 
       <UiInput
         v-model="form.name"
-        label="Nom"
+        label="Nome"
         maxlength="100"
         :error="fieldErrors.name"
       />
 
       <UiTextarea
         v-model="form.description"
-        label="Description (optionnelle)"
+        label="Descrição (opcional)"
         maxlength="1000"
         rows="2"
+        :error="fieldErrors.description"
       />
 
       <div class="grid grid-cols-2 gap-4">
         <UiInput
           v-model="form.duration"
-          label="Durée (minutes)"
+          label="Duração (minutos)"
           inputmode="numeric"
           :error="fieldErrors.defaultDurationMinutes"
         />
         <UiInput
           v-model="form.price"
-          label="Prix (€)"
+          label="Preço (€)"
           inputmode="decimal"
           placeholder="25,00"
           :error="fieldErrors.defaultPriceCents"
@@ -279,14 +285,14 @@ function toggleLinks(service: SalonServiceItem) {
           type="submit"
           :loading="submitting"
         >
-          {{ editingId ? "Enregistrer" : "Ajouter" }}
+          {{ editingId ? "Guardar" : "Adicionar" }}
         </UiButton>
         <UiButton
           v-if="editingId"
           variant="secondary"
           @click="resetForm"
         >
-          Annuler
+          Cancelar
         </UiButton>
       </div>
     </form>
@@ -294,7 +300,7 @@ function toggleLinks(service: SalonServiceItem) {
       v-else
       class="text-sm text-ink/60"
     >
-      Lecture seule : seuls les gérants et propriétaires modifient le catalogue.
+      Só leitura: apenas gestores e proprietários podem alterar o catálogo.
     </p>
   </section>
 </template>

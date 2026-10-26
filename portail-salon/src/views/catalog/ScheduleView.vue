@@ -2,10 +2,13 @@
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
-import { UiAlert, UiButton, UiSelect } from "@apontaja/ui-kit";
+import { UiAlert, UiButton, UiInput, UiSelect } from "@apontaja/ui-kit";
 
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeCatalogLoadError,
+  describeScheduleSaveError,
+} from "@/lib/catalogErrors";
 import {
   DAYS,
   emptyWeek,
@@ -17,12 +20,6 @@ import {
 } from "@/lib/schedule";
 import { useResourceStore } from "@/stores/resource";
 import { useScheduleStore } from "@/stores/schedule";
-
-// Champs d'heure compacts (le libellé est porté par aria-label) : mêmes tokens que le ui-kit.
-const TIME_INPUT_CLASS =
-  "rounded-md border border-border bg-white px-2 py-1 text-sm text-ink " +
-  "focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine " +
-  "disabled:cursor-not-allowed disabled:opacity-50";
 
 const route = useRoute();
 const store = useScheduleStore();
@@ -61,7 +58,7 @@ async function load() {
     }
   } catch (e) {
     if (current === loadCounter) {
-      error.value = errorMessage(e, "Impossible de charger les horaires.");
+      error.value = describeCatalogLoadError(e, "schedule");
     }
   } finally {
     if (current === loadCounter) {
@@ -77,7 +74,7 @@ watch(
     try {
       await resourceStore.fetchResources(id);
     } catch (e) {
-      error.value = errorMessage(e, "Impossible de charger les ressources.");
+      error.value = describeCatalogLoadError(e, "resources");
     }
   },
   { immediate: true },
@@ -119,7 +116,7 @@ async function save() {
     );
     saved.value = true;
   } catch (e) {
-    error.value = errorMessage(e, "Enregistrement impossible.");
+    error.value = describeScheduleSaveError(e);
   } finally {
     saving.value = false;
   }
@@ -132,11 +129,11 @@ async function save() {
       <div class="w-72">
         <UiSelect
           v-model="scope"
-          label="Horaires de"
+          label="Horário de"
           :disabled="dirty"
         >
           <option value="salon">
-            Tout le salon
+            Todo o salão
           </option>
           <option
             v-for="resource in resourceStore.resources"
@@ -148,23 +145,22 @@ async function save() {
         </UiSelect>
       </div>
       <UiAlert v-if="dirty">
-        Modifications non enregistrées : enregistrez ou annulez avant de changer
-        de périmètre.
+        Alterações por guardar: guarde ou cancele antes de mudar de âmbito.
       </UiAlert>
       <p
         v-if="scope === 'salon'"
         class="text-sm text-ink/60"
       >
-        Heures locales du salon. Sans aucune plage, le salon n'est jamais ouvert
-        (aucune réservation possible).
+        Horas locais do salão. Sem nenhum intervalo, o salão nunca está aberto
+        (nenhuma marcação é possível).
       </p>
       <p
         v-else
         class="text-sm text-ink/60"
       >
-        Sans aucune plage, la ressource suit les horaires du salon. Avec des
-        plages, elle n'est disponible que sur celles-ci (bornées par les horaires
-        du salon) et fermée les jours non listés.
+        Sem nenhum intervalo, o recurso segue o horário do salão. Com
+        intervalos, só está disponível nesses (limitados pelo horário do salão)
+        e fica fechado nos dias não indicados.
       </p>
     </div>
 
@@ -172,7 +168,7 @@ async function save() {
       v-if="loading"
       class="text-sm text-ink/70"
     >
-      Chargement…
+      A carregar...
     </p>
 
     <div
@@ -192,35 +188,39 @@ async function save() {
             v-if="week[day.code].length === 0"
             class="text-sm text-ink/60"
           >
-            Aucune plage
+            Sem intervalos
           </p>
           <div
             v-for="(range, index) in week[day.code]"
             :key="index"
-            class="flex flex-wrap items-center gap-2"
+            class="flex flex-wrap items-end gap-2"
           >
-            <input
-              v-model="range.start"
-              type="time"
-              :disabled="!canManage"
-              :aria-label="`${day.label}, début de la plage ${index + 1}`"
-              :class="TIME_INPUT_CLASS"
-            >
-            <span class="text-ink/60">–</span>
-            <input
-              v-model="range.end"
-              type="time"
-              :disabled="!canManage"
-              :aria-label="`${day.label}, fin de la plage ${index + 1}`"
-              :class="TIME_INPUT_CLASS"
-            >
+            <div class="w-32">
+              <UiInput
+                v-model="range.start"
+                type="time"
+                label="Início"
+                :disabled="!canManage"
+                :aria-label="`${day.label}, início do intervalo ${index + 1}`"
+              />
+            </div>
+            <span class="pb-2 text-ink/60">–</span>
+            <div class="w-32">
+              <UiInput
+                v-model="range.end"
+                type="time"
+                label="Fim"
+                :disabled="!canManage"
+                :aria-label="`${day.label}, fim do intervalo ${index + 1}`"
+              />
+            </div>
             <UiButton
               v-if="canManage"
               variant="danger"
               size="sm"
               @click="removeRange(day.code, index)"
             >
-              Retirer
+              Retirar
             </UiButton>
           </div>
           <UiButton
@@ -229,7 +229,7 @@ async function save() {
             size="sm"
             @click="addRange(day.code)"
           >
-            Ajouter une plage
+            Adicionar um intervalo
           </UiButton>
         </div>
       </div>
@@ -244,7 +244,7 @@ async function save() {
         v-if="saved"
         variant="success"
       >
-        Horaires enregistrés.
+        Horário guardado.
       </UiAlert>
 
       <div
@@ -256,14 +256,14 @@ async function save() {
           :loading="saving"
           @click="save"
         >
-          Enregistrer
+          Guardar
         </UiButton>
         <UiButton
           variant="secondary"
           :disabled="!dirty || saving"
           @click="load"
         >
-          Annuler les modifications
+          Cancelar as alterações
         </UiButton>
         <UiButton
           variant="secondary"
@@ -272,8 +272,8 @@ async function save() {
         >
           {{
             scope === "salon"
-              ? "Fermer toute la semaine"
-              : "Suivre les horaires du salon"
+              ? "Fechar a semana inteira"
+              : "Seguir o horário do salão"
           }}
         </UiButton>
       </div>
@@ -281,7 +281,7 @@ async function save() {
         v-else
         class="text-sm text-ink/60"
       >
-        Lecture seule : seuls les gérants et propriétaires modifient les horaires.
+        Só leitura: apenas gestores e proprietários podem alterar o horário.
       </p>
     </div>
   </section>

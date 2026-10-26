@@ -23,9 +23,9 @@ export const LIMITS: Record<NumericField, { min: number; max: number }> = {
 };
 
 const FIELD_LABELS: Record<NumericField, string> = {
-  minNoticeMinutes: "Le préavis",
-  horizonDays: "L'horizon",
-  cancellationDeadlineHours: "Le délai d'annulation",
+  minNoticeMinutes: "A antecedência mínima",
+  horizonDays: "O limite de reserva",
+  cancellationDeadlineHours: "O prazo de cancelamento",
 };
 
 /** Valeurs de formulaire : les nombres restent des chaînes tant qu'ils ne sont pas validés. */
@@ -56,11 +56,11 @@ function parseField(draft: SettingsDraft, field: NumericField): number | string 
   const { min, max } = LIMITS[field];
   const label = FIELD_LABELS[field];
   if (!/^\d+$/.test(raw)) {
-    return `${label} doit être un nombre entier.`;
+    return `${label} deve ser um número inteiro.`;
   }
   const value = Number(raw);
   if (!Number.isSafeInteger(value) || value < min || value > max) {
-    return `${label} doit être compris entre ${min} et ${max}.`;
+    return `${label} deve estar entre ${min} e ${max}.`;
   }
   return value;
 }
@@ -111,14 +111,14 @@ export function readinessWarnings(readiness: Readiness): string[] {
   const warnings: string[] = [];
   if (!readiness.hasSalonHours) {
     warnings.push(
-      "Aucun horaire d'ouverture n'est défini pour le salon : aucun créneau ne sera proposé.",
+      "O salão não tem horário de abertura definido: não será proposto nenhum horário.",
     );
   }
   if (readiness.serviceCount === 0) {
-    warnings.push("Aucune prestation n'est définie : il n'y a rien à réserver.");
+    warnings.push("Não há nenhum serviço definido: não há nada para reservar.");
   } else if (!readiness.hasBookableService) {
     warnings.push(
-      "Aucune prestation n'est associée à une ressource : aucune ne sera proposée en ligne.",
+      "Nenhum serviço está associado a um recurso: nenhum será proposto online.",
     );
   }
   return warnings;

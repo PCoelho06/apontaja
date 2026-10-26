@@ -10,7 +10,10 @@ import {
   UiSelect,
 } from "@apontaja/ui-kit";
 
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeCatalogLoadError,
+  describeSettingsSaveError,
+} from "@/lib/catalogErrors";
 import {
   GRANULARITY_OPTIONS,
   LIMITS,
@@ -53,10 +56,7 @@ async function load(id: string) {
   try {
     draft.value = toDraft(await store.fetchSettings(id));
   } catch (e) {
-    pageError.value = errorMessage(
-      e,
-      "Impossible de charger les réglages de réservation.",
-    );
+    pageError.value = describeCatalogLoadError(e, "settings");
     loading.value = false;
     return;
   }
@@ -80,15 +80,15 @@ async function submit() {
   const parsed = parseDraft(draft.value);
   errors.value = parsed.errors;
   if (!parsed.settings) {
-    formError.value = "Corrigez les champs signalés.";
+    formError.value = "Corrija os campos assinalados.";
     return;
   }
   saving.value = true;
   try {
     draft.value = toDraft(await store.saveSettings(salonId.value, parsed.settings));
-    notice.value = "Réglages enregistrés.";
+    notice.value = "Definições guardadas.";
   } catch (e) {
-    formError.value = errorMessage(e, "L'enregistrement a échoué.");
+    formError.value = describeSettingsSaveError(e);
   } finally {
     saving.value = false;
   }
@@ -97,9 +97,9 @@ async function submit() {
 async function copyLink() {
   try {
     await globalThis.navigator.clipboard.writeText(publicUrl.value);
-    copyNotice.value = "Lien copié.";
+    copyNotice.value = "Ligação copiada.";
   } catch {
-    copyNotice.value = "Copie impossible : sélectionnez le lien et copiez-le.";
+    copyNotice.value = "Não foi possível copiar: selecione a ligação e copie-a.";
   }
 }
 </script>
@@ -108,11 +108,11 @@ async function copyLink() {
   <section class="space-y-6">
     <div>
       <h2 class="font-display text-xl text-ink">
-        Réservation en ligne
+        Reserva online
       </h2>
       <p class="mt-1 text-sm text-ink/70">
-        Les clients réservent depuis leur compte, avec un email vérifié. Par
-        défaut, vous validez chaque demande vous-même.
+        Os clientes reservam a partir da sua conta, com um email verificado.
+        Por defeito, é você que valida cada pedido.
       </p>
     </div>
 
@@ -126,7 +126,7 @@ async function copyLink() {
       v-else-if="loading"
       class="text-sm text-ink/70"
     >
-      Chargement…
+      A carregar...
     </p>
 
     <template v-else-if="draft">
@@ -141,7 +141,7 @@ async function copyLink() {
         v-if="!canManage"
         variant="info"
       >
-        Seuls les gérants et propriétaires peuvent modifier ces réglages.
+        Apenas gestores e proprietários podem alterar estas definições.
       </UiAlert>
 
       <form
@@ -154,18 +154,18 @@ async function copyLink() {
         >
           <UiCheckbox
             v-model="draft.onlineBookingEnabled"
-            label="Activer la réservation en ligne"
-            hint="Désactivée, la page publique du salon répond « introuvable »."
+            label="Ativar a reserva online"
+            hint="Desativada, a página pública do salão responde «não encontrado»."
           />
           <UiCheckbox
             v-model="draft.autoConfirm"
-            label="Confirmer automatiquement les réservations"
-            hint="Sinon, chaque demande attend votre validation (écran Demandes)."
+            label="Confirmar automaticamente as marcações"
+            hint="Caso contrário, cada pedido aguarda a sua validação (ecrã Pedidos)."
           />
 
           <UiSelect
             v-model="draft.slotGranularityMinutes"
-            label="Pas des créneaux proposés"
+            label="Intervalo entre os horários propostos"
           >
             <option
               v-for="minutes in GRANULARITY_OPTIONS"
@@ -178,23 +178,23 @@ async function copyLink() {
 
           <UiInput
             v-model="draft.minNoticeMinutes"
-            label="Préavis minimal (minutes)"
+            label="Antecedência mínima (minutos)"
             inputmode="numeric"
-            :hint="`Entre ${LIMITS.minNoticeMinutes.min} et ${LIMITS.minNoticeMinutes.max}.`"
+            :hint="`Entre ${LIMITS.minNoticeMinutes.min} e ${LIMITS.minNoticeMinutes.max}.`"
             :error="errors.minNoticeMinutes"
           />
           <UiInput
             v-model="draft.horizonDays"
-            label="Réservable jusqu'à (jours à l'avance)"
+            label="Reservável até (dias de antecedência)"
             inputmode="numeric"
-            :hint="`Entre ${LIMITS.horizonDays.min} et ${LIMITS.horizonDays.max}.`"
+            :hint="`Entre ${LIMITS.horizonDays.min} e ${LIMITS.horizonDays.max}.`"
             :error="errors.horizonDays"
           />
           <UiInput
             v-model="draft.cancellationDeadlineHours"
-            label="Annulation par le client jusqu'à (heures avant)"
+            label="Cancelamento pelo cliente até (horas antes)"
             inputmode="numeric"
-            :hint="`Entre ${LIMITS.cancellationDeadlineHours.min} et ${LIMITS.cancellationDeadlineHours.max} ; 0 = jusqu'au début. Concerne les rendez-vous confirmés.`"
+            :hint="`Entre ${LIMITS.cancellationDeadlineHours.min} e ${LIMITS.cancellationDeadlineHours.max}; 0 = até ao início. Aplica-se às marcações confirmadas.`"
             :error="errors.cancellationDeadlineHours"
           />
         </fieldset>
@@ -217,20 +217,20 @@ async function copyLink() {
           type="submit"
           :loading="saving"
         >
-          Enregistrer
+          Guardar
         </UiButton>
       </form>
 
       <section class="space-y-2 rounded-md border border-border bg-white p-4">
         <h3 class="text-sm font-medium text-ink">
-          Lien public du salon
+          Ligação pública do salão
         </h3>
         <p class="break-all text-sm text-ink/80">
           {{ publicUrl }}
         </p>
         <p class="text-xs text-ink/60">
-          Ce lien sera actif avec la réservation côté client (prochaine
-          étape).
+          Partilhe esta ligação com os seus clientes. Só funciona quando a
+          reserva online está ativada.
         </p>
         <div class="flex items-center gap-3">
           <UiButton
@@ -238,7 +238,7 @@ async function copyLink() {
             size="sm"
             @click="copyLink"
           >
-            Copier
+            Copiar
           </UiButton>
           <span
             v-if="copyNotice"

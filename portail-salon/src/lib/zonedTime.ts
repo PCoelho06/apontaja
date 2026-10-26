@@ -59,11 +59,11 @@ function pad(value: number, length = 2): string {
  */
 export function zonedLocalToInstant(local: string, timeZone: string): string {
   if (!isValidTimeZone(timeZone)) {
-    throw new Error(`Fuseau horaire du salon invalide : « ${timeZone} ».`);
+    throw new Error(`Fuso horário do salão inválido: «${timeZone}».`);
   }
   const match = LOCAL_PATTERN.exec(local);
   if (!match) {
-    throw new Error("Date et heure invalides.");
+    throw new Error("Data e hora inválidas.");
   }
   const wanted = Date.UTC(
     Number(match[1]),
@@ -78,7 +78,7 @@ export function zonedLocalToInstant(local: string, timeZone: string): string {
   }
   if (asUtcMillis(wallTime(new Date(guess), timeZone)) !== wanted) {
     throw new Error(
-      "Cette heure n'existe pas dans le fuseau du salon (changement d'heure).",
+      "Esta hora não existe no fuso horário do salão (mudança de hora).",
     );
   }
   return new Date(guess).toISOString();
@@ -91,7 +91,7 @@ export function instantToZonedLocal(iso: string, timeZone: string): string {
 }
 
 export function formatInstant(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat("pt-PT", {
     timeZone,
     dateStyle: "medium",
     timeStyle: "short",

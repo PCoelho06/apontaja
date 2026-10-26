@@ -11,7 +11,7 @@ declare module "vue-router" {
 }
 
 // Chemins en pt-PT, renommés zone par zone (4h-1 : authentification et socle, préfixe /saloes).
-// Les suffixes du catalogue, de l'agenda, des clients et des demandes suivent en 4h-2 à 4h-4.
+// 4h-2 : suffixes du catalogue. Ceux de l'agenda, des clients et des demandes suivent en 4h-3 et 4h-4.
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -57,7 +57,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: "/saloes/:salonId/catalogue",
+      path: "/saloes/:salonId/catalogo",
       component: () => import("@/views/catalog/CatalogLayoutView.vue"),
       meta: { requiresAuth: true },
       children: [
@@ -69,27 +69,27 @@ const router = createRouter({
           }),
         },
         {
-          path: "ressources",
+          path: "recursos",
           name: "catalog-resources",
           component: () => import("@/views/catalog/ResourcesView.vue"),
         },
         {
-          path: "prestations",
+          path: "servicos",
           name: "catalog-services",
           component: () => import("@/views/catalog/ServicesView.vue"),
         },
         {
-          path: "horaires",
+          path: "horarios",
           name: "catalog-schedule",
           component: () => import("@/views/catalog/ScheduleView.vue"),
         },
         {
-          path: "fermetures",
+          path: "encerramentos",
           name: "catalog-closures",
           component: () => import("@/views/catalog/ClosuresView.vue"),
         },
         {
-          path: "reservation",
+          path: "reserva-online",
           name: "booking-settings",
           component: () => import("@/views/catalog/BookingSettingsView.vue"),
         },

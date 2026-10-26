@@ -1,7 +1,7 @@
 const AMOUNT_PATTERN = /^(\d+)(?:[.,](\d{1,2}))?$/;
 const MAX_CENTS = 2_147_483_647; // Integer Java
 
-const euroFormat = new Intl.NumberFormat("fr-FR", {
+const euroFormat = new Intl.NumberFormat("pt-PT", {
   style: "currency",
   currency: "EUR",
 });
