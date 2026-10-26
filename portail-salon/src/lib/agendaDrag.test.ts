@@ -19,7 +19,12 @@ describe("snapMinutes", () => {
 });
 
 describe("dragPreviewStart", () => {
-  const base = { originStart: 600, duration: 60, pxPerMinute: PX_PER_MINUTE, axis: AXIS };
+  const base = {
+    originStart: 600,
+    duration: 60,
+    pxPerMinute: PX_PER_MINUTE,
+    axis: AXIS,
+  };
 
   it("convertit le décalage en minutes puis arrondit", () => {
     // 28 px ≈ 30 min
@@ -32,7 +37,9 @@ describe("dragPreviewStart", () => {
     expect(dragPreviewStart({ ...base, deltaPx: -5000 })).toBe(540);
     expect(dragPreviewStart({ ...base, deltaPx: 5000 })).toBe(1020);
     // durée de 50 min : dernier quart d'heure qui laisse la place
-    expect(dragPreviewStart({ ...base, duration: 50, deltaPx: 5000 })).toBe(1020);
+    expect(dragPreviewStart({ ...base, duration: 50, deltaPx: 5000 })).toBe(
+      1020,
+    );
   });
 });
 
@@ -60,7 +67,7 @@ describe("minutesToInstant", () => {
 
   it("refuse l'heure qui n'existe pas (saut de printemps)", () => {
     expect(() => minutesToInstant("2026-03-29", 150, "Europe/Paris")).toThrow(
-      "n'existe pas",
+      "não existe",
     );
   });
 });

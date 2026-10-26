@@ -4,7 +4,7 @@ import router from "@/router";
 
 const SALON = { salonId: "abc" };
 
-describe("chemins pt-PT du portail salon (4h-1)", () => {
+describe("chemins pt-PT du portail salon (4h-1, 4h-2)", () => {
   it("garde les noms de routes et renomme les chemins de la zone authentification et socle", () => {
     const expected: Array<[string, Record<string, string>, string]> = [
       ["login", {}, "/entrar"],
@@ -25,13 +25,26 @@ describe("chemins pt-PT du portail salon (4h-1)", () => {
     }
   });
 
+  it("renomme les chemins du catalogue (4h-2) et garde les noms de routes", () => {
+    const expected: Array<[string, string]> = [
+      ["catalog-resources", "/saloes/abc/catalogo/recursos"],
+      ["catalog-services", "/saloes/abc/catalogo/servicos"],
+      ["catalog-schedule", "/saloes/abc/catalogo/horarios"],
+      ["catalog-closures", "/saloes/abc/catalogo/encerramentos"],
+      ["booking-settings", "/saloes/abc/catalogo/reserva-online"],
+    ];
+
+    for (const [name, path] of expected) {
+      expect(router.resolve({ name, params: SALON }).path).toBe(path);
+    }
+  });
+
+  it("redirige /catalogo vers les recursos", () => {
+    expect(router.resolve("/saloes/abc/catalogo").matched.length).toBeGreaterThan(0);
+  });
+
   it("utilise le préfixe /saloes pour les routes des zones suivantes, suffixes inchangés", () => {
     const expected: Array<[string, string]> = [
-      ["catalog-resources", "/saloes/abc/catalogue/ressources"],
-      ["catalog-services", "/saloes/abc/catalogue/prestations"],
-      ["catalog-schedule", "/saloes/abc/catalogue/horaires"],
-      ["catalog-closures", "/saloes/abc/catalogue/fermetures"],
-      ["booking-settings", "/saloes/abc/catalogue/reservation"],
       ["agenda", "/saloes/abc/agenda"],
       ["booking-requests", "/saloes/abc/demandes"],
       ["customers", "/saloes/abc/clients"],
@@ -55,6 +68,7 @@ describe("chemins pt-PT du portail salon (4h-1)", () => {
       "/confidentialite",
       "/invitations/accepter",
       "/salons/nouveau",
+      "/saloes/:salonId/catalogue",
     ]) {
       expect(paths).not.toContain(old);
     }

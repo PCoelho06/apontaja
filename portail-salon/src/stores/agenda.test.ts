@@ -82,7 +82,7 @@ describe("agenda store", () => {
   it("refuse un fuseau invalide avant tout appel", async () => {
     await expect(
       useAgendaStore().loadDay("s1", "2026-10-01", "Europe/Nulle", []),
-    ).rejects.toThrow("Fuseau horaire");
+    ).rejects.toThrow("Fuso horário");
     expect(apiGet).not.toHaveBeenCalled();
   });
 });

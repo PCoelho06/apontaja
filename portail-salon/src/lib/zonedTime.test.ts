@@ -26,7 +26,7 @@ describe("zonedLocalToInstant", () => {
   it("refuse une heure inexistante (saut de printemps)", () => {
     expect(() =>
       zonedLocalToInstant("2026-03-29T02:30", "Europe/Paris"),
-    ).toThrow("n'existe pas");
+    ).toThrow("não existe");
   });
 
   it("retient une occurrence cohérente d'une heure ambiguë", () => {
@@ -36,10 +36,10 @@ describe("zonedLocalToInstant", () => {
 
   it("refuse un fuseau ou un format invalide", () => {
     expect(() => zonedLocalToInstant("2026-08-15T10:00", "Europe/Nulle")).toThrow(
-      "Fuseau horaire",
+      "Fuso horário",
     );
     expect(() => zonedLocalToInstant("demain", "Europe/Paris")).toThrow(
-      "invalides",
+      "inválidas",
     );
   });
 });

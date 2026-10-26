@@ -4,7 +4,7 @@ import { RouterLink, RouterView, useRoute } from "vue-router";
 
 import { UiAlert } from "@apontaja/ui-kit";
 
-import { errorMessage } from "@apontaja/web-core/error-message";
+import { describeCatalogSalonLoadError } from "@/lib/catalogErrors";
 import { useSalonStore } from "@/stores/salon";
 
 const route = useRoute();
@@ -28,7 +28,7 @@ watch(
       ]);
       ready.value = true;
     } catch (e) {
-      error.value = errorMessage(e, "Impossible de charger le salon.");
+      error.value = describeCatalogSalonLoadError(e);
     }
   },
   { immediate: true },
@@ -47,10 +47,10 @@ const activeTabClass = "bg-wine! text-paper! hover:bg-wine!";
           :to="{ name: 'salon-detail', params: { salonId } }"
           class="text-sm text-wine hover:underline"
         >
-          ← {{ salonStore.currentSalon?.name ?? "Salon" }}
+          ← {{ salonStore.currentSalon?.name ?? "Salão" }}
         </RouterLink>
         <h1 class="font-display text-2xl text-ink">
-          Catalogue
+          Catálogo
         </h1>
         <nav class="flex flex-wrap gap-2">
           <RouterLink
@@ -58,35 +58,35 @@ const activeTabClass = "bg-wine! text-paper! hover:bg-wine!";
             :class="tabClass"
             :active-class="activeTabClass"
           >
-            Ressources
+            Recursos
           </RouterLink>
           <RouterLink
             :to="{ name: 'catalog-services', params: { salonId } }"
             :class="tabClass"
             :active-class="activeTabClass"
           >
-            Prestations
+            Serviços
           </RouterLink>
           <RouterLink
             :to="{ name: 'catalog-schedule', params: { salonId } }"
             :class="tabClass"
             :active-class="activeTabClass"
           >
-            Horaires
+            Horário
           </RouterLink>
           <RouterLink
             :to="{ name: 'catalog-closures', params: { salonId } }"
             :class="tabClass"
             :active-class="activeTabClass"
           >
-            Fermetures
+            Encerramentos
           </RouterLink>
           <RouterLink
             :to="{ name: 'booking-settings', params: { salonId } }"
             :class="tabClass"
             :active-class="activeTabClass"
           >
-            Réservation en ligne
+            Reserva online
           </RouterLink>
         </nav>
       </header>
@@ -102,7 +102,7 @@ const activeTabClass = "bg-wine! text-paper! hover:bg-wine!";
         v-else
         class="text-sm text-ink/70"
       >
-        Chargement…
+        A carregar...
       </p>
     </div>
   </main>

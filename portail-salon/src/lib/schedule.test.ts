@@ -47,20 +47,20 @@ describe("validateWeek", () => {
       { start: "09:00", end: "13:00" },
       { start: "12:00", end: "18:00" },
     ];
-    expect(validateWeek(week)).toContain("Mercredi");
-    expect(validateWeek(week)).toContain("chevauchent");
+    expect(validateWeek(week)).toContain("Quarta-feira");
+    expect(validateWeek(week)).toContain("sobrepõem-se");
   });
 
   it("refuse une fin avant le début, une plage vide et un format invalide", () => {
     const week = emptyWeek();
     week.FRIDAY = [{ start: "18:00", end: "09:00" }];
-    expect(validateWeek(week)).toContain("Vendredi");
+    expect(validateWeek(week)).toContain("Sexta-feira");
 
     week.FRIDAY = [{ start: "09:00", end: "" }];
-    expect(validateWeek(week)).toContain("deux heures");
+    expect(validateWeek(week)).toContain("duas horas");
 
     week.FRIDAY = [{ start: "9:00", end: "12:00" }];
-    expect(validateWeek(week)).toContain("deux heures");
+    expect(validateWeek(week)).toContain("duas horas");
   });
 
   it("refuse plus de 100 plages", () => {

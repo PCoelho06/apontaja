@@ -28,7 +28,7 @@ describe("eurosToCents", () => {
 });
 
 describe("formatCents", () => {
-  it("formate en euros à la française", () => {
+  it("formate en euros au format pt-PT", () => {
     expect(formatCents(1250).replace(/\s/g, " ")).toBe("12,50 €");
   });
 });

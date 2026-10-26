@@ -15,7 +15,10 @@ import {
   formatCents,
   formatDuration,
 } from "@/lib/catalogFormat";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeCatalogLoadError,
+  describeLinkError,
+} from "@/lib/catalogErrors";
 import { useResourceStore } from "@/stores/resource";
 import {
   useSalonServiceStore,
@@ -67,11 +70,11 @@ async function loadLinks() {
       resourceStore.fetchResources(props.salonId),
     ]);
   } catch (e) {
-    error.value = errorMessage(e, "Impossible de charger les associations.");
+    error.value = describeCatalogLoadError(e, "links");
   }
 }
 
-// Recharge aussi quand les valeurs par défaut changent (effectifs recalculés).
+// Recharge aussi quand les valeurs par défaut changent (valeurs effectives recalculées).
 watch(
   () => [
     props.service.serviceId,
@@ -108,7 +111,7 @@ function parseOverrides(): LinkOverrides | null {
   if (priceInput.value.trim() !== "") {
     price = eurosToCents(priceInput.value);
     if (price === null) {
-      error.value = "Prix de surcharge invalide (ex. 25 ou 25,50).";
+      error.value = "Preço específico inválido (por exemplo, 25 ou 25,50).";
       return null;
     }
   }
@@ -116,7 +119,7 @@ function parseOverrides(): LinkOverrides | null {
   if (durationInput.value.trim() !== "") {
     duration = Number(durationInput.value);
     if (!Number.isInteger(duration) || duration < 1 || duration > 1440) {
-      error.value = "Durée de surcharge : entier entre 1 et 1440 minutes.";
+      error.value = "Duração específica: número inteiro entre 1 e 1440 minutos.";
       return null;
     }
   }
@@ -126,7 +129,7 @@ function parseOverrides(): LinkOverrides | null {
 async function save() {
   error.value = null;
   if (!selectedResourceId.value) {
-    error.value = "Choisissez une ressource.";
+    error.value = "Escolha um recurso.";
     return;
   }
   const overrides = parseOverrides();
@@ -143,7 +146,7 @@ async function save() {
     );
     resetForm();
   } catch (e) {
-    error.value = errorMessage(e, "Association impossible.");
+    error.value = describeLinkError(e, "save");
   } finally {
     submitting.value = false;
   }
@@ -161,7 +164,7 @@ async function remove(link: ServiceResourceLink) {
       resetForm();
     }
   } catch (e) {
-    error.value = errorMessage(e, "Retrait impossible.");
+    error.value = describeLinkError(e, "remove");
   }
 }
 </script>
@@ -169,7 +172,7 @@ async function remove(link: ServiceResourceLink) {
 <template>
   <div class="space-y-3 rounded-md bg-ink/5 p-3">
     <p class="text-sm font-medium text-ink">
-      Ressources pouvant réaliser cette prestation
+      Recursos que podem realizar este serviço
     </p>
 
     <ul
@@ -195,7 +198,7 @@ async function remove(link: ServiceResourceLink) {
             tone="brass"
             class="ml-1"
           >
-            surcharge
+            específico
           </UiBadge>
         </div>
         <div
@@ -207,14 +210,14 @@ async function remove(link: ServiceResourceLink) {
             size="sm"
             @click="startEdit(link)"
           >
-            Modifier
+            Editar
           </UiButton>
           <UiButton
             variant="danger"
             size="sm"
             @click="remove(link)"
           >
-            Retirer
+            Retirar
           </UiButton>
         </div>
       </li>
@@ -223,7 +226,7 @@ async function remove(link: ServiceResourceLink) {
       v-else
       class="text-sm text-ink/60"
     >
-      Aucune ressource associée : cette prestation n'est pas réservable.
+      Nenhum recurso associado: este serviço não pode ser reservado.
     </p>
 
     <form
@@ -233,14 +236,14 @@ async function remove(link: ServiceResourceLink) {
     >
       <UiSelect
         v-model="selectedResourceId"
-        label="Ressource"
+        label="Recurso"
         :disabled="editing"
       >
         <option
           value=""
           disabled
         >
-          Choisir…
+          Escolher...
         </option>
         <option
           v-for="resource in selectableResources"
@@ -252,29 +255,29 @@ async function remove(link: ServiceResourceLink) {
       </UiSelect>
       <UiInput
         v-model="priceInput"
-        label="Prix (surcharge)"
+        label="Preço (específico)"
         inputmode="decimal"
-        :placeholder="`Défaut ${centsToInput(service.defaultPriceCents)}`"
+        :placeholder="`Padrão ${centsToInput(service.defaultPriceCents)}`"
       />
       <UiInput
         v-model="durationInput"
-        label="Durée (surcharge, min)"
+        label="Duração (específica, min)"
         inputmode="numeric"
-        :placeholder="`Défaut ${service.defaultDurationMinutes}`"
+        :placeholder="`Padrão ${service.defaultDurationMinutes}`"
       />
       <div class="flex gap-2">
         <UiButton
           type="submit"
           :loading="submitting"
         >
-          {{ editing ? "Enregistrer" : "Associer" }}
+          {{ editing ? "Guardar" : "Associar" }}
         </UiButton>
         <UiButton
           v-if="editing"
           variant="secondary"
           @click="resetForm"
         >
-          Annuler
+          Cancelar
         </UiButton>
       </div>
     </form>
@@ -282,8 +285,8 @@ async function remove(link: ServiceResourceLink) {
       v-if="canManage && !editing && selectableResources.length === 0"
       class="text-sm text-ink/60"
     >
-      Aucune ressource à associer : créez-en une dans l'onglet Ressources, ou
-      toutes sont déjà associées à cette prestation.
+      Não há recursos para associar: crie um no separador Recursos, ou todos
+      já estão associados a este serviço.
     </p>
     <UiAlert
       v-if="error"
