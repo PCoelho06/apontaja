@@ -3,10 +3,9 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import AuthTextField from "@/components/AuthTextField.vue";
-import { ApiError } from "@apontaja/web-core/api-client";
+import { describeCreateSalonError } from "@/lib/salonErrors";
 import { useSalonStore } from "@/stores/salon";
-import { UiSelect } from "@apontaja/ui-kit";
+import { UiAlert, UiButton, UiInput, UiSelect } from "@apontaja/ui-kit";
 
 const router = useRouter();
 const salonStore = useSalonStore();
@@ -15,8 +14,8 @@ const name = ref("");
 const address = ref("");
 const postalCode = ref("");
 const city = ref("");
-const country = ref("France");
-const timezone = ref("Europe/Paris");
+const country = ref("Portugal");
+const timezone = ref("Europe/Lisbon");
 const phone = ref("");
 
 const fieldErrors = ref<Record<string, string>>({});
@@ -48,18 +47,11 @@ async function handleSubmit() {
       phone: phone.value || undefined,
     });
 
-    // Pas encore d'écran de détail salon (Tranche 8) — retour à l'accueil pour l'instant.
     await router.push({ name: "home" });
   } catch (error) {
-    if (error instanceof ApiError) {
-      if (error.fieldErrors) {
-        fieldErrors.value = error.fieldErrors;
-      } else {
-        generalError.value = error.message;
-      }
-    } else {
-      generalError.value = "Une erreur est survenue.";
-    }
+    const failure = describeCreateSalonError(error);
+    fieldErrors.value = failure.fieldErrors;
+    generalError.value = failure.message;
   } finally {
     isSubmitting.value = false;
   }
@@ -68,48 +60,50 @@ async function handleSubmit() {
 
 <template>
   <AuthLayout
-    title="Créer un salon"
-    subtitle="Renseignez les informations de votre salon pour commencer."
+    title="Criar um salão"
+    subtitle="Preencha as informações do seu salão para começar."
   >
     <form
       class="space-y-4"
       @submit.prevent="handleSubmit"
     >
-      <AuthTextField
-        id="name"
+      <UiInput
         v-model="name"
-        label="Nom du salon"
+        label="Nome do salão"
+        required
         :error="fieldErrors.name"
       />
-      <AuthTextField
-        id="address"
+      <UiInput
         v-model="address"
-        label="Adresse"
+        label="Morada"
+        autocomplete="street-address"
+        required
         :error="fieldErrors.address"
       />
       <div class="grid grid-cols-2 gap-4">
-        <AuthTextField
-          id="postalCode"
+        <UiInput
           v-model="postalCode"
-          label="Code postal"
+          label="Código postal"
+          autocomplete="postal-code"
+          required
           :error="fieldErrors.postalCode"
         />
-        <AuthTextField
-          id="city"
+        <UiInput
           v-model="city"
-          label="Ville"
+          label="Cidade"
+          required
           :error="fieldErrors.city"
         />
       </div>
-      <AuthTextField
-        id="country"
+      <UiInput
         v-model="country"
-        label="Pays"
+        label="País"
+        required
         :error="fieldErrors.country"
       />
       <UiSelect
         v-model="timezone"
-        label="Fuseau horaire"
+        label="Fuso horário"
         :error="fieldErrors.timezone"
       >
         <option
@@ -120,28 +114,28 @@ async function handleSubmit() {
           {{ zone }}
         </option>
       </UiSelect>
-      <AuthTextField
-        id="phone"
+      <UiInput
         v-model="phone"
-        label="Téléphone (optionnel)"
         type="tel"
+        label="Telefone (opcional)"
+        autocomplete="tel"
         :error="fieldErrors.phone"
       />
 
-      <p
+      <UiAlert
         v-if="generalError"
-        class="text-sm text-danger"
+        variant="error"
       >
         {{ generalError }}
-      </p>
+      </UiAlert>
 
-      <button
+      <UiButton
         type="submit"
-        :disabled="isSubmitting"
-        class="w-full rounded-md bg-wine px-4 py-2 text-sm font-medium text-paper hover:bg-wine/90 focus:outline-none focus:ring-2 focus:ring-wine disabled:opacity-50"
+        class="w-full"
+        :loading="isSubmitting"
       >
-        {{ isSubmitting ? "Création..." : "Créer le salon" }}
-      </button>
+        {{ isSubmitting ? "A criar..." : "Criar o salão" }}
+      </UiButton>
     </form>
   </AuthLayout>
 </template>

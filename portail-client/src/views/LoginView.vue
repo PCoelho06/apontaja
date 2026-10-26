@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import { describeLoginError } from "@/lib/authErrors";
+import { describeLoginError } from "@apontaja/web-core/auth-errors";
 import { safeRedirect } from "@/lib/safeRedirect";
 import { useAuthStore } from "@/stores/auth";
 

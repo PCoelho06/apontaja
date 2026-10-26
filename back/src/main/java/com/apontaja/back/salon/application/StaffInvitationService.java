@@ -82,10 +82,10 @@ public class StaffInvitationService {
                                 command.invitedBy(), tokenHasher.hash(rawToken), now.plus(invitationTtl), now);
                 staffInvitationRepository.save(invitation);
 
-                String link = frontendBaseUrl + "/invitations/accepter?token=" + rawToken;
-                emailSender.send(email, "Invitation à rejoindre un salon sur Apontaja",
-                                "Vous avez été invité à rejoindre un salon (rôle : " + role + "). " + "Lien valable "
-                                                + invitationTtl.toDays() + " jours : " + link);
+                String link = frontendBaseUrl + "/convites/aceitar?token=" + rawToken;
+                StaffInvitationEmailComposer.InvitationEmail message = StaffInvitationEmailComposer.compose(role, link,
+                                invitationTtl);
+                emailSender.send(email, message.subject(), message.body());
 
                 return new CreateStaffInvitationResult(invitation.getId());
         }

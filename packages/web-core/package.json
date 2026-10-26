@@ -8,7 +8,8 @@
     "./api-client": "./src/apiClient.ts",
     "./require-token": "./src/requireToken.ts",
     "./error-message": "./src/errorMessage.ts",
-    "./auth": "./src/auth.ts"
+    "./auth": "./src/auth.ts",
+    "./auth-errors": "./src/authErrors.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

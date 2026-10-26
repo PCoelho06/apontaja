@@ -10,52 +10,54 @@ declare module "vue-router" {
   }
 }
 
+// Chemins en pt-PT, renommés zone par zone (4h-1 : authentification et socle, préfixe /saloes).
+// Les suffixes du catalogue, de l'agenda, des clients et des demandes suivent en 4h-2 à 4h-4.
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: "/connexion",
+      path: "/entrar",
       name: "login",
       component: () => import("@/views/LoginView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/inscription",
+      path: "/registar",
       name: "register",
       component: () => import("@/views/RegisterView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/mot-de-passe-oublie",
+      path: "/recuperar-palavra-passe",
       name: "forgot-password",
       component: () => import("@/views/ForgotPasswordView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/reinitialiser-mot-de-passe",
+      path: "/repor-palavra-passe",
       name: "reset-password",
       component: () => import("@/views/ResetPasswordView.vue"),
       meta: { guestOnly: true },
     },
     {
-      path: "/confirmer-email",
+      path: "/confirmar-email",
       name: "confirm-email",
       component: () => import("@/views/ConfirmEmailView.vue"),
     },
     {
-      path: "/salons/nouveau",
+      path: "/saloes/novo",
       name: "create-salon",
       component: () => import("@/views/CreateSalonView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/salons/:salonId",
+      path: "/saloes/:salonId",
       name: "salon-detail",
       component: () => import("@/views/SalonDetailView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/salons/:salonId/catalogue",
+      path: "/saloes/:salonId/catalogue",
       component: () => import("@/views/catalog/CatalogLayoutView.vue"),
       meta: { requiresAuth: true },
       children: [
@@ -94,43 +96,43 @@ const router = createRouter({
       ],
     },
     {
-      path: "/salons/:salonId/agenda",
+      path: "/saloes/:salonId/agenda",
       name: "agenda",
       component: () => import("@/views/AgendaView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/salons/:salonId/demandes",
+      path: "/saloes/:salonId/demandes",
       name: "booking-requests",
       component: () => import("@/views/BookingRequestsView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/salons/:salonId/clients",
+      path: "/saloes/:salonId/clients",
       name: "customers",
       component: () => import("@/views/CustomersView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/salons/:salonId/clients/doublons",
+      path: "/saloes/:salonId/clients/doublons",
       name: "customer-duplicates",
       component: () => import("@/views/CustomerDuplicatesView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/cgu",
+      path: "/termos",
       name: "terms",
       component: () => import("@/views/LegalPlaceholderView.vue"),
-      meta: { title: "Conditions générales d'utilisation" },
+      meta: { title: "Termos e Condições de Utilização" },
     },
     {
-      path: "/confidentialite",
+      path: "/privacidade",
       name: "privacy",
       component: () => import("@/views/LegalPlaceholderView.vue"),
-      meta: { title: "Politique de confidentialité" },
+      meta: { title: "Política de Privacidade" },
     },
     {
-      path: "/invitations/accepter",
+      path: "/convites/aceitar",
       name: "accept-invitation",
       component: () => import("@/views/AcceptInvitationView.vue"),
     },

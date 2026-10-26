@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import { describeResetError } from "@/lib/authErrors";
+import { describeResetError } from "@apontaja/web-core/auth-errors";
 import { useAuthStore } from "@/stores/auth";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";

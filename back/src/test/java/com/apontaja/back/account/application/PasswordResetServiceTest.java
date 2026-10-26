@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -145,7 +146,7 @@ class PasswordResetServiceTest {
         }
 
         @Test
-        void requestReset_portail_client_envoie_un_email_en_portugais_et_salon_en_francais() {
+        void requestReset_les_portails_client_et_salon_envoient_un_email_en_portugais() {
                 Account account = new Account(accountId, "bob@example.com", "Test", "User", "hash", fixedNow);
 
                 when(accountRepository.findAliveByEmail("bob@example.com")).thenReturn(Optional.of(account));
@@ -157,10 +158,8 @@ class PasswordResetServiceTest {
                 service.requestReset("bob@example.com", FrontendPortal.CLIENT);
                 service.requestReset("bob@example.com", FrontendPortal.SALON);
 
-                verify(emailSender).send(org.mockito.ArgumentMatchers.eq("bob@example.com"),
-                                org.mockito.ArgumentMatchers.eq("Reposição da sua palavra-passe"), anyString());
-                verify(emailSender).send(org.mockito.ArgumentMatchers.eq("bob@example.com"),
-                                org.mockito.ArgumentMatchers.eq("Réinitialisation de votre mot de passe"), anyString());
+                verify(emailSender, org.mockito.Mockito.times(2)).send(eq("bob@example.com"),
+                                eq("Reposição da sua palavra-passe"), anyString());
         }
 
         @Test

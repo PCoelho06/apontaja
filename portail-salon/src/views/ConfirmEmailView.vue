@@ -1,62 +1,64 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { onMounted, ref } from "vue";
+import { RouterLink, useRoute } from "vue-router";
 
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import { ApiError } from '@apontaja/web-core/api-client'
-import { useAuthStore } from '@/stores/auth'
+import AuthLayout from "@/layouts/AuthLayout.vue";
+import { describeConfirmError } from "@apontaja/web-core/auth-errors";
+import { useAuthStore } from "@/stores/auth";
 
-const route = useRoute()
-const auth = useAuthStore()
+import { UiAlert } from "@apontaja/ui-kit";
 
-const status = ref<'pending' | 'success' | 'error'>('pending')
-const errorMessage = ref('')
+const route = useRoute();
+const auth = useAuthStore();
+
+const status = ref<"pending" | "success" | "error">("pending");
+const errorMessage = ref("");
 
 onMounted(async () => {
-  const token = typeof route.query.token === 'string' ? route.query.token : ''
+  const token = typeof route.query.token === "string" ? route.query.token : "";
   if (!token) {
-    status.value = 'error'
-    errorMessage.value = 'Lien invalide.'
-    return
+    status.value = "error";
+    errorMessage.value =
+      "Ligação inválida — volte a abrir a ligação que recebeu por email.";
+    return;
   }
 
   try {
-    await auth.confirmEmail(token)
-    status.value = 'success'
+    await auth.confirmEmail(token);
+    status.value = "success";
   } catch (error) {
-    status.value = 'error'
-    errorMessage.value = error instanceof ApiError ? error.message : "Impossible de confirmer l'email."
+    status.value = "error";
+    errorMessage.value = describeConfirmError(error);
   }
-})
+});
 </script>
 
 <template>
-  <AuthLayout title="Confirmation de l'email">
+  <AuthLayout title="Confirmação do email">
     <p
       v-if="status === 'pending'"
       class="text-sm text-ink"
     >
-      Vérification en cours...
+      A verificar...
     </p>
-    <p
+    <UiAlert
       v-else-if="status === 'success'"
-      class="text-sm text-ink"
+      variant="success"
     >
-      Votre email est confirmé.
-    </p>
-    <p
+      O seu email está confirmado.
+    </UiAlert>
+    <UiAlert
       v-else
-      class="text-sm text-danger"
-      role="alert"
+      variant="error"
     >
       {{ errorMessage }}
-    </p>
+    </UiAlert>
 
     <RouterLink
       :to="{ name: 'login' }"
       class="mt-6 inline-block text-sm text-wine hover:underline"
     >
-      Retour à la connexion
+      Voltar ao início de sessão
     </RouterLink>
   </AuthLayout>
 </template>

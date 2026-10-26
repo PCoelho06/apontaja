@@ -10,10 +10,10 @@ class FrontendLinksTest {
 
     @Test
     void pointe_vers_le_portail_demande() {
-        assertThat(links.link(FrontendPortal.SALON, "/confirmer-email?token=abc"))
-                .isEqualTo("http://salon.test/confirmer-email?token=abc");
-        assertThat(links.link(FrontendPortal.CLIENT, "/confirmer-email?token=abc"))
-                .isEqualTo("http://client.test/confirmer-email?token=abc");
+        assertThat(links.link(FrontendPortal.SALON, "/confirmar-email?token=abc"))
+                .isEqualTo("http://salon.test/confirmar-email?token=abc");
+        assertThat(links.link(FrontendPortal.CLIENT, "/confirmar-email?token=abc"))
+                .isEqualTo("http://client.test/confirmar-email?token=abc");
     }
 
     @Test

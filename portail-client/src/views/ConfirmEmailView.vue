@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import AuthLayout from "@/layouts/AuthLayout.vue";
-import { describeConfirmError } from "@/lib/authErrors";
+import { describeConfirmError } from "@apontaja/web-core/auth-errors";
 import { useAuthStore } from "@/stores/auth";
 import { useVerificationStore } from "@/stores/verification";
 
