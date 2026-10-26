@@ -11,6 +11,7 @@ import { STATUS_BLOCK_CLASSES, STATUS_LABELS } from "@/lib/appointmentStatus";
 import { useAppointmentDrag } from "@/composables/useAppointmentDrag";
 import { fitsInAvailable } from "@/lib/agendaDrag";
 import { canReschedule } from "@/lib/appointmentActions";
+import { SLOT_NOT_OPEN } from "@/lib/appointmentErrors";
 
 const HOUR_HEIGHT = 56; // px
 const PX_PER_MINUTE = HOUR_HEIGHT / 60;
@@ -56,10 +57,7 @@ const {
     if (column && fitsInAvailable(startMinutes, duration, column.available)) {
       emit("reschedule", appointmentId, startMinutes);
     } else {
-      emit(
-        "reschedule-blocked",
-        "Ce créneau n'est pas ouvert à la réservation (horaires ou fermeture).",
-      );
+      emit("reschedule-blocked", SLOT_NOT_OPEN);
     }
   },
 });
@@ -97,6 +95,15 @@ function blockTimes(appointment: PositionedAppointment): string {
   const start = visibleStart(appointment);
   const end = start + (appointment.end - appointment.start);
   return `${formatMinutes(start)}–${formatMinutes(end)}`;
+}
+
+function blockTitle(appointment: PositionedAppointment): string {
+  return [
+    `${formatMinutes(appointment.start)}–${formatMinutes(appointment.end)}`,
+    appointment.customerName,
+    appointment.serviceName,
+    STATUS_LABELS[appointment.status],
+  ].join(" · ");
 }
 
 function blockStyle(appointment: PositionedAppointment) {
@@ -216,9 +223,9 @@ function onSlotClick(column: AgendaColumn, clientY: number, bodyTop: number) {
             :key="`closure-${index}`"
             class="absolute inset-x-0 bg-danger/10 px-1 text-xs text-danger"
             :style="{ top: top(closure.start), height: height(closure) }"
-            :title="closure.reason ?? 'Fermeture'"
+            :title="closure.reason ?? 'Encerramento'"
           >
-            Fermé{{ closure.reason ? ` · ${closure.reason}` : "" }}
+            Encerrado{{ closure.reason ? ` · ${closure.reason}` : "" }}
           </div>
 
           <!-- Rendez-vous -->
@@ -230,7 +237,7 @@ function onSlotClick(column: AgendaColumn, clientY: number, bodyTop: number) {
             class="absolute overflow-hidden rounded border-l-4 px-1.5 py-0.5 text-xs"
             :class="blockClasses(appointment)"
             :style="blockStyle(appointment)"
-            :title="`${formatMinutes(appointment.start)}–${formatMinutes(appointment.end)} · ${appointment.customerName} · ${appointment.serviceName} · ${STATUS_LABELS[appointment.status]}`"
+            :title="blockTitle(appointment)"
             @pointerdown="
               onBlockPointerDown(appointment, $event.button, $event.clientY)
             "
@@ -258,3 +265,6 @@ function onSlotClick(column: AgendaColumn, clientY: number, bodyTop: number) {
     </div>
   </div>
 </template>
+
+
+

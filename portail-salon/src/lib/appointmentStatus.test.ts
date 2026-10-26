@@ -16,4 +16,14 @@ describe("appointmentStatus", () => {
       expect(STATUS_BLOCK_CLASSES[status]).toBeTruthy();
     }
   });
+
+  it("affiche les libellés en portugais du Portugal", () => {
+    expect(STATUS_LABELS).toEqual({
+      SCHEDULED: "Por confirmar",
+      CONFIRMED: "Confirmada",
+      COMPLETED: "Concluída",
+      NO_SHOW: "Não compareceu",
+      CANCELLED: "Cancelada",
+    });
+  });
 });

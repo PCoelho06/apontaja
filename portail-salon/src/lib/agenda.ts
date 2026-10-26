@@ -54,13 +54,18 @@ export function todayIn(timeZone: string, now: Date = new Date()): string {
 }
 
 export function formatDay(date: string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat("pt-PT", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   }).format(parseDate(date));
+}
+
+/** "1 marcação", "3 marcações" (0 : "0 marcações"). */
+export function appointmentCountLabel(count: number): string {
+  return count === 1 ? "1 marcação" : `${count} marcações`;
 }
 
 /** Bornes du jour (heure du salon) en instants ISO : [from, to). */
@@ -351,3 +356,6 @@ export function buildColumns(params: BuildColumnsParams): {
     ),
   };
 }
+
+
+

@@ -9,10 +9,15 @@ import {
   UiSelect,
 } from "@apontaja/ui-kit";
 
-import { describeIssues } from "@/lib/availabilityIssues";
+import {
+  describeCreateError,
+  describeCustomerSearchError,
+  describeLocalTimeError,
+  describeNewCustomerError,
+} from "@/lib/appointmentErrors";
 import { formatCents, formatDuration } from "@/lib/catalogFormat";
+import { describeCatalogLoadError } from "@/lib/catalogErrors";
 import { debounce } from "@/lib/debounce";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { instantToZonedLocal, zonedLocalToInstant } from "@/lib/zonedTime";
 import { useAppointmentStore } from "@/stores/appointment";
 import {
@@ -79,7 +84,7 @@ async function loadLinks() {
       ),
     );
   } catch (e) {
-    formError.value = errorMessage(e, "Impossible de charger les prestations.");
+    formError.value = describeCatalogLoadError(e, "services");
   }
 }
 
@@ -105,7 +110,11 @@ const serviceChoices = computed(() =>
       ? [
           {
             serviceId: service.serviceId,
-            label: `${service.name} · ${formatDuration(link.effectiveDurationMinutes)} · ${formatCents(link.effectivePriceCents)}`,
+            label: [
+              service.name,
+              formatDuration(link.effectiveDurationMinutes),
+              formatCents(link.effectivePriceCents),
+            ].join(" · "),
             durationMinutes: link.effectiveDurationMinutes,
           },
         ]
@@ -134,7 +143,7 @@ const endHint = computed(() => {
     const end = new Date(
       new Date(startAt).getTime() + choice.durationMinutes * 60_000,
     );
-    return `Fin prévue à ${instantToZonedLocal(end.toISOString(), props.timeZone).slice(11, 16)}`;
+    return `Fim previsto às ${instantToZonedLocal(end.toISOString(), props.timeZone).slice(11, 16)}`;
   } catch {
     return undefined;
   }
@@ -142,7 +151,7 @@ const endHint = computed(() => {
 
 const serviceHint = computed(() => {
   if (serviceChoices.value.length === 0) {
-    return "Aucune prestation n'est associée à cette ressource (voir le catalogue).";
+    return "Nenhum serviço está associado a este recurso. Associe-o no catálogo.";
   }
   return endHint.value;
 });
@@ -154,7 +163,7 @@ async function runSearch() {
       size: 20,
     });
   } catch (e) {
-    formError.value = errorMessage(e, "Recherche de clients impossible.");
+    formError.value = describeCustomerSearchError(e);
   }
 }
 
@@ -194,12 +203,12 @@ function buildCustomer(): NewCustomer | null {
   const email = customerForm.email.trim();
   const phone = customerForm.phone.trim();
   if (!firstName || !lastName) {
-    formError.value = "Le prénom et le nom du client sont obligatoires.";
+    formError.value = "O nome próprio e o apelido do cliente são obrigatórios.";
     return null;
   }
   if (!email && !phone) {
     formError.value =
-      "Renseignez au moins un email ou un téléphone pour le client.";
+      "Indique pelo menos um email ou um telefone para o cliente.";
     return null;
   }
   return {
@@ -215,7 +224,7 @@ async function submit() {
   formError.value = null;
   issues.value = [];
   if (!resourceId.value || !serviceId.value || !start.value) {
-    formError.value = "Choisissez une ressource, une prestation et un début.";
+    formError.value = "Escolha um recurso, um serviço e uma hora de início.";
     return;
   }
   const customerPayload = newCustomer.value ? buildCustomer() : null;
@@ -223,19 +232,32 @@ async function submit() {
     return;
   }
   if (!newCustomer.value && !customerId.value) {
-    formError.value = "Choisissez un client ou créez-en un.";
+    formError.value = "Escolha um cliente ou crie um novo.";
+    return;
+  }
+
+  let startAt: string;
+  try {
+    startAt = zonedLocalToInstant(start.value, props.timeZone);
+  } catch (e) {
+    formError.value = describeLocalTimeError(e);
     return;
   }
 
   submitting.value = true;
   try {
-    const startAt = zonedLocalToInstant(start.value, props.timeZone);
     let profileId = customerId.value;
     if (customerPayload) {
-      const created = await customerStore.createCustomer(
-        props.salonId,
-        customerPayload,
-      );
+      let created: Customer;
+      try {
+        created = await customerStore.createCustomer(
+          props.salonId,
+          customerPayload,
+        );
+      } catch (e) {
+        formError.value = describeNewCustomerError(e);
+        return;
+      }
       // Le client existe désormais : un nouvel essai ne doit pas le recréer (pas de dédoublonnage côté back).
       profileId = created.customerProfileId;
       customerId.value = profileId;
@@ -251,13 +273,9 @@ async function submit() {
     emit("created");
     open.value = false;
   } catch (e) {
-    issues.value = describeIssues(e);
-    formError.value =
-      issues.value.length > 0
-        ? null
-        : e instanceof Error
-          ? e.message
-          : "Réservation impossible.";
+    const failure = describeCreateError(e);
+    issues.value = failure.issues;
+    formError.value = failure.issues.length > 0 ? null : failure.message;
   } finally {
     submitting.value = false;
   }
@@ -267,7 +285,8 @@ async function submit() {
 <template>
   <UiDialog
     v-model:open="open"
-    title="Nouveau rendez-vous"
+    title="Nova marcação"
+    close-label="Fechar"
   >
     <form
       class="space-y-4"
@@ -275,7 +294,7 @@ async function submit() {
     >
       <UiSelect
         v-model="resourceId"
-        label="Ressource"
+        label="Recurso"
       >
         <option
           v-for="resource in resources"
@@ -289,19 +308,19 @@ async function submit() {
       <UiInput
         v-model="start"
         type="datetime-local"
-        label="Début"
+        label="Início"
       />
 
       <UiSelect
         v-model="serviceId"
-        label="Prestation"
+        label="Serviço"
         :hint="serviceHint"
       >
         <option
           value=""
           disabled
         >
-          Choisir une prestation…
+          Escolher um serviço…
         </option>
         <option
           v-for="choice in serviceChoices"
@@ -314,24 +333,24 @@ async function submit() {
 
       <fieldset class="space-y-3 rounded-md border border-border p-3">
         <legend class="px-1 text-sm font-medium text-ink">
-          Client
+          Cliente
         </legend>
 
         <template v-if="!newCustomer">
           <UiInput
             v-model="search"
-            label="Rechercher"
+            label="Pesquisar"
             autofocus
           />
           <UiSelect
             v-model="customerId"
-            label="Client"
+            label="Cliente"
           >
             <option
               value=""
               disabled
             >
-              Choisir un client…
+              Escolher um cliente…
             </option>
             <option
               v-for="customer in customerChoices"
@@ -347,12 +366,12 @@ async function submit() {
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <UiInput
               v-model="customerForm.firstName"
-              label="Prénom"
+              label="Nome próprio"
               autofocus
             />
             <UiInput
               v-model="customerForm.lastName"
-              label="Nom"
+              label="Apelido"
             />
             <UiInput
               v-model="customerForm.email"
@@ -362,11 +381,11 @@ async function submit() {
             <UiInput
               v-model="customerForm.phone"
               type="tel"
-              label="Téléphone"
+              label="Telefone"
             />
           </div>
           <p class="text-xs text-ink/60">
-            Au moins un email ou un téléphone est requis.
+            É obrigatório indicar pelo menos um email ou um telefone.
           </p>
         </template>
 
@@ -374,7 +393,7 @@ async function submit() {
           variant="secondary"
           @click="newCustomer = !newCustomer"
         >
-          {{ newCustomer ? "Choisir un client existant" : "Nouveau client" }}
+          {{ newCustomer ? "Escolher cliente existente" : "Novo cliente" }}
         </UiButton>
       </fieldset>
 
@@ -383,7 +402,7 @@ async function submit() {
         variant="error"
       >
         <p class="font-medium">
-          Ce créneau n'est pas disponible :
+          Este horário não está disponível:
         </p>
         <ul class="list-disc pl-5">
           <li
@@ -406,15 +425,18 @@ async function submit() {
           variant="secondary"
           @click="open = false"
         >
-          Annuler
+          Cancelar
         </UiButton>
         <UiButton
           type="submit"
           :loading="submitting"
         >
-          Réserver
+          Marcar
         </UiButton>
       </div>
     </form>
   </UiDialog>
 </template>
+
+
+

@@ -3,7 +3,11 @@ import { computed, ref } from "vue";
 
 import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
 
-import { describeIssues } from "@/lib/availabilityIssues";
+import {
+  describeLocalTimeError,
+  describeRescheduleError,
+  shouldReloadAfter,
+} from "@/lib/appointmentErrors";
 import { formatDuration } from "@/lib/catalogFormat";
 import {
   formatInstant,
@@ -19,7 +23,12 @@ const props = defineProps<{
   appointment: AppointmentItem;
 }>();
 
-const emit = defineEmits<{ back: []; done: [startAt: string] }>();
+const emit = defineEmits<{
+  back: [];
+  done: [startAt: string];
+  /** Le back a répondu 404/409 : la journée affichée est probablement périmée. */
+  stale: [];
+}>();
 
 const store = useAppointmentStore();
 
@@ -29,14 +38,14 @@ const formError = ref<string | null>(null);
 const issues = ref<string[]>([]);
 
 const hint = computed(() => {
-  const kept = `Durée (${formatDuration(props.appointment.durationAtBookingMinutes)}) et prix conservés.`;
+  const kept = `Duração (${formatDuration(props.appointment.durationAtBookingMinutes)}) e preço mantidos.`;
   try {
     const startAt = zonedLocalToInstant(start.value, props.timeZone);
     const end = new Date(
       new Date(startAt).getTime() +
         props.appointment.durationAtBookingMinutes * 60_000,
     );
-    return `Fin prévue : ${formatInstant(end.toISOString(), props.timeZone)}. ${kept}`;
+    return `Fim previsto: ${formatInstant(end.toISOString(), props.timeZone)}. ${kept}`;
   } catch {
     return kept;
   }
@@ -45,13 +54,21 @@ const hint = computed(() => {
 async function submit() {
   formError.value = null;
   issues.value = [];
+  let startAt: string;
   try {
-    const startAt = zonedLocalToInstant(start.value, props.timeZone);
-    if (new Date(startAt).getTime() === new Date(props.appointment.startAt).getTime()) {
-      formError.value = "Choisissez un début différent de l'actuel.";
-      return;
-    }
-    submitting.value = true;
+    startAt = zonedLocalToInstant(start.value, props.timeZone);
+  } catch (e) {
+    formError.value = describeLocalTimeError(e);
+    return;
+  }
+  const unchanged =
+    new Date(startAt).getTime() === new Date(props.appointment.startAt).getTime();
+  if (unchanged) {
+    formError.value = "Escolha uma hora de início diferente da atual.";
+    return;
+  }
+  submitting.value = true;
+  try {
     await store.rescheduleAppointment(
       props.salonId,
       props.appointment.appointmentId,
@@ -59,13 +76,12 @@ async function submit() {
     );
     emit("done", startAt);
   } catch (e) {
-    issues.value = describeIssues(e);
-    formError.value =
-      issues.value.length > 0
-        ? null
-        : e instanceof Error
-          ? e.message
-          : "Déplacement impossible.";
+    const failure = describeRescheduleError(e);
+    issues.value = failure.issues;
+    formError.value = failure.issues.length > 0 ? null : failure.message;
+    if (shouldReloadAfter(e)) {
+      emit("stale");
+    }
   } finally {
     submitting.value = false;
   }
@@ -80,7 +96,7 @@ async function submit() {
     <UiInput
       v-model="start"
       type="datetime-local"
-      label="Nouveau début"
+      label="Nova hora de início"
       :hint="hint"
       autofocus
     />
@@ -90,7 +106,7 @@ async function submit() {
       variant="error"
     >
       <p class="font-medium">
-        Ce créneau n'est pas disponible :
+        Este horário não está disponível:
       </p>
       <ul class="list-disc pl-5">
         <li
@@ -114,14 +130,17 @@ async function submit() {
         :disabled="submitting"
         @click="emit('back')"
       >
-        Retour
+        Voltar
       </UiButton>
       <UiButton
         type="submit"
         :loading="submitting"
       >
-        Déplacer
+        Mudar de hora
       </UiButton>
     </div>
   </form>
 </template>
+
+
+

@@ -12,7 +12,11 @@ import {
 import { availableActions, canReschedule } from "@/lib/appointmentActions";
 import { STATUS_LABELS, STATUS_TONES } from "@/lib/appointmentStatus";
 import { formatCents, formatDuration } from "@/lib/catalogFormat";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeStatusActionError,
+  shouldReloadAfter,
+  type StatusAction,
+} from "@/lib/appointmentErrors";
 import { formatInstant, instantToZonedLocal } from "@/lib/zonedTime";
 import type { AppointmentItem } from "@/stores/agenda";
 import { useAppointmentStore } from "@/stores/appointment";
@@ -59,13 +63,13 @@ const resourceName = computed(
   () =>
     resourceStore.resources.find(
       (r) => r.resourceId === props.appointment?.resourceId,
-    )?.name ?? "Ressource inconnue",
+    )?.name ?? "Recurso desconhecido",
 );
 const serviceName = computed(
   () =>
     serviceStore.services.find(
       (s) => s.serviceId === props.appointment?.serviceId,
-    )?.name ?? "Prestation supprimée",
+    )?.name ?? "Serviço eliminado",
 );
 
 const when = computed(() => {
@@ -106,7 +110,7 @@ function onRescheduled(startAt: string) {
   open.value = false;
 }
 
-async function run(action: () => Promise<unknown>) {
+async function run(kind: StatusAction, action: () => Promise<unknown>) {
   busy.value = true;
   error.value = null;
   try {
@@ -115,7 +119,10 @@ async function run(action: () => Promise<unknown>) {
     reason.value = "";
     emit("changed");
   } catch (e) {
-    error.value = errorMessage(e, "Action impossible.");
+    error.value = describeStatusActionError(e, kind);
+    if (shouldReloadAfter(e)) {
+      emit("changed");
+    }
   } finally {
     busy.value = false;
   }
@@ -124,21 +131,23 @@ async function run(action: () => Promise<unknown>) {
 function confirm() {
   if (props.appointment) {
     const id = props.appointment.appointmentId;
-    run(() => appointmentStore.confirmAppointment(props.salonId, id));
+    run("confirm", () => appointmentStore.confirmAppointment(props.salonId, id));
   }
 }
 
 function complete() {
   if (props.appointment) {
     const id = props.appointment.appointmentId;
-    run(() => appointmentStore.completeAppointment(props.salonId, id));
+    run("complete", () =>
+      appointmentStore.completeAppointment(props.salonId, id),
+    );
   }
 }
 
 function markNoShow() {
   if (props.appointment) {
     const id = props.appointment.appointmentId;
-    run(() => appointmentStore.markNoShow(props.salonId, id));
+    run("no-show", () => appointmentStore.markNoShow(props.salonId, id));
   }
 }
 
@@ -146,7 +155,7 @@ function cancel() {
   if (props.appointment) {
     const id = props.appointment.appointmentId;
     const text = reason.value.trim();
-    run(() =>
+    run("cancel", () =>
       appointmentStore.cancelAppointment(props.salonId, id, text || null),
     );
   }
@@ -156,7 +165,8 @@ function cancel() {
 <template>
   <UiDialog
     v-model:open="open"
-    title="Rendez-vous"
+    title="Marcação"
+    close-label="Fechar"
   >
     <div
       v-if="appointment"
@@ -173,17 +183,17 @@ function cancel() {
 
       <dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1.5">
         <dt class="text-ink/60">
-          Ressource
+          Recurso
         </dt>
         <dd>{{ resourceName }}</dd>
         <dt class="text-ink/60">
-          Client
+          Cliente
         </dt>
         <dd>
           {{
             customer
               ? `${customer.firstName} ${customer.lastName}`
-              : "Client inconnu"
+              : "Cliente desconhecido"
           }}
           <span
             v-if="customer?.phone"
@@ -199,15 +209,15 @@ function cancel() {
           }}</span>
         </dd>
         <dt class="text-ink/60">
-          Prestation
+          Serviço
         </dt>
         <dd>{{ serviceName }}</dd>
         <dt class="text-ink/60">
-          Durée
+          Duração
         </dt>
         <dd>{{ formatDuration(appointment.durationAtBookingMinutes) }}</dd>
         <dt class="text-ink/60">
-          Prix
+          Preço
         </dt>
         <dd>{{ formatCents(appointment.priceAtBookingCents) }}</dd>
       </dl>
@@ -225,7 +235,7 @@ function cancel() {
       >
         <UiTextarea
           v-model="reason"
-          label="Motif de l'annulation (optionnel)"
+          label="Motivo do cancelamento (opcional)"
           maxlength="500"
           autofocus
         />
@@ -235,14 +245,14 @@ function cancel() {
             :disabled="busy"
             @click="cancelling = false"
           >
-            Retour
+            Voltar
           </UiButton>
           <UiButton
             variant="danger"
             :loading="busy"
             @click="cancel"
           >
-            Confirmer l'annulation
+            Confirmar cancelamento
           </UiButton>
         </div>
       </div>
@@ -254,6 +264,7 @@ function cancel() {
         :appointment="appointment"
         @back="rescheduling = false"
         @done="onRescheduled"
+        @stale="emit('changed')"
       />
 
       <div
@@ -265,14 +276,14 @@ function cancel() {
           :loading="busy"
           @click="confirm"
         >
-          Confirmer
+          Confirmar
         </UiButton>
         <UiButton
           v-if="actions.includes('complete')"
           :loading="busy"
           @click="complete"
         >
-          Terminer
+          Concluir
         </UiButton>
         <UiButton
           v-if="canMove"
@@ -280,7 +291,7 @@ function cancel() {
           :disabled="busy"
           @click="startReschedule"
         >
-          Déplacer
+          Mudar de hora
         </UiButton>
         <UiButton
           v-if="actions.includes('no-show')"
@@ -288,7 +299,7 @@ function cancel() {
           :disabled="busy"
           @click="markNoShow"
         >
-          Client absent
+          Cliente faltou
         </UiButton>
         <UiButton
           v-if="actions.includes('cancel')"
@@ -296,9 +307,12 @@ function cancel() {
           :disabled="busy"
           @click="cancelling = true"
         >
-          Annuler le rendez-vous
+          Cancelar marcação
         </UiButton>
       </div>
     </div>
   </UiDialog>
 </template>
+
+
+
