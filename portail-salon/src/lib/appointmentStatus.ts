@@ -14,11 +14,11 @@ export const STATUS_ORDER: AppointmentStatus[] = [
 ];
 
 export const STATUS_LABELS: Record<AppointmentStatus, string> = {
-  SCHEDULED: "À confirmer",
-  CONFIRMED: "Confirmé",
-  COMPLETED: "Terminé",
-  NO_SHOW: "Absent",
-  CANCELLED: "Annulé",
+  SCHEDULED: "Por confirmar",
+  CONFIRMED: "Confirmada",
+  COMPLETED: "Concluída",
+  NO_SHOW: "Não compareceu",
+  CANCELLED: "Cancelada",
 };
 
 /** Teinte de l'UiBadge (légende). */

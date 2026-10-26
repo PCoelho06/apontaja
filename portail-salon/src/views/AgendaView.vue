@@ -6,6 +6,7 @@ import {
   UiAlert,
   UiBadge,
   UiButton,
+  UiCheckbox,
   UiInput,
   UiSelect,
 } from "@apontaja/ui-kit";
@@ -14,6 +15,7 @@ import DayGrid from "@/components/agenda/DayGrid.vue";
 import AppointmentCreateDialog from "@/components/agenda/AppointmentCreateDialog.vue";
 import AppointmentDetailDialog from "@/components/agenda/AppointmentDetailDialog.vue";
 import {
+  appointmentCountLabel,
   buildColumns,
   formatDay,
   formatMinutes,
@@ -25,10 +27,15 @@ import {
   STATUS_ORDER,
   STATUS_TONES,
 } from "@/lib/appointmentStatus";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeAgendaLoadError,
+  describeLocalTimeError,
+  describeRescheduleError,
+  failureLines,
+  shouldReloadAfter,
+} from "@/lib/appointmentErrors";
 import { formatInstant, isValidTimeZone } from "@/lib/zonedTime";
 import { minutesToInstant } from "@/lib/agendaDrag";
-import { describeIssues } from "@/lib/availabilityIssues";
 import { useAppointmentStore } from "@/stores/appointment";
 import { useAgendaStore } from "@/stores/agenda";
 import { useAuthStore } from "@/stores/auth";
@@ -112,9 +119,9 @@ const model = computed(() => {
       endAt: a.endAt,
       status: a.status,
       customerName:
-        customerNames.value.get(a.customerProfileId) ?? "Client inconnu",
+        customerNames.value.get(a.customerProfileId) ?? "Cliente desconhecido",
       serviceName:
-        serviceNames.value.get(a.serviceId) ?? "Prestation supprimée",
+        serviceNames.value.get(a.serviceId) ?? "Serviço eliminado",
     }));
   return buildColumns({
     date: date.value,
@@ -154,8 +161,7 @@ async function loadDay() {
       agendaStore.appointments.map((a) => a.customerProfileId),
     );
   } catch (e) {
-    error.value =
-      e instanceof Error ? e.message : "Impossible de charger l'agenda.";
+    error.value = describeAgendaLoadError(e);
   } finally {
     loading.value = false;
   }
@@ -207,14 +213,20 @@ function openDetail(appointmentId: string) {
 }
 
 function onRescheduled(startAt: string) {
-  notice.value = `Rendez-vous déplacé : ${formatInstant(startAt, timeZone.value)}.`;
+  notice.value = `Hora da marcação alterada para ${formatInstant(startAt, timeZone.value)}.`;
 }
 
 async function onReschedule(appointmentId: string, startMinutes: number) {
   notice.value = null;
   moveErrors.value = [];
+  let startAt: string;
   try {
-    const startAt = minutesToInstant(date.value, startMinutes, timeZone.value);
+    startAt = minutesToInstant(date.value, startMinutes, timeZone.value);
+  } catch (e) {
+    moveErrors.value = [describeLocalTimeError(e)];
+    return;
+  }
+  try {
     await appointmentStore.rescheduleAppointment(
       salonId.value,
       appointmentId,
@@ -223,11 +235,10 @@ async function onReschedule(appointmentId: string, startMinutes: number) {
     onRescheduled(startAt);
     await loadDay();
   } catch (e) {
-    const issues = describeIssues(e);
-    moveErrors.value =
-      issues.length > 0
-        ? issues
-        : [e instanceof Error ? e.message : "Déplacement impossible."];
+    moveErrors.value = failureLines(describeRescheduleError(e));
+    if (shouldReloadAfter(e)) {
+      await loadDay();
+    }
   }
 }
 
@@ -256,7 +267,7 @@ watch(
       ready.value = true;
       await loadDay();
     } catch (e) {
-      error.value = errorMessage(e, "Impossible de charger l'agenda.");
+      error.value = describeAgendaLoadError(e);
     }
   },
   { immediate: true },
@@ -271,7 +282,7 @@ watch(
           :to="{ name: 'salon-detail', params: { salonId } }"
           class="text-sm text-wine hover:underline"
         >
-          ← {{ salonStore.currentSalon?.name ?? "Salon" }}
+          ← {{ salonStore.currentSalon?.name ?? "Salão" }}
         </RouterLink>
         <h1 class="mt-2 font-display text-2xl text-ink">
           Agenda
@@ -288,7 +299,7 @@ watch(
         v-if="!ready && !error"
         class="text-sm text-ink/70"
       >
-        Chargement…
+        A carregar...
       </p>
 
       <template v-else-if="ready">
@@ -296,9 +307,9 @@ watch(
           v-if="!timeZoneValid"
           variant="error"
         >
-          Le fuseau horaire du salon (« {{ timeZone }} ») n'est pas un
-          identifiant valide (ex. Europe/Paris) : l'agenda ne peut pas être
-          affiché.
+          O fuso horário do salão («{{ timeZone }}») não é um identificador
+          válido (por exemplo, Europe/Lisbon): não é possível apresentar a
+          agenda.
         </UiAlert>
 
         <template v-else>
@@ -306,7 +317,7 @@ watch(
             <div class="flex gap-2">
               <UiButton
                 variant="secondary"
-                aria-label="Jour précédent"
+                aria-label="Dia anterior"
                 @click="shift(-1)"
               >
                 ‹
@@ -315,11 +326,11 @@ watch(
                 variant="secondary"
                 @click="setDate(todayIn(timeZone))"
               >
-                Aujourd'hui
+                Hoje
               </UiButton>
               <UiButton
                 variant="secondary"
-                aria-label="Jour suivant"
+                aria-label="Dia seguinte"
                 @click="shift(1)"
               >
                 ›
@@ -329,23 +340,23 @@ watch(
               <UiInput
                 :model-value="date"
                 type="date"
-                label="Jour"
+                label="Dia"
                 @update:model-value="setDate"
               />
             </div>
             <div class="w-64">
               <UiSelect
                 v-model="filter"
-                label="Ressources"
+                label="Recursos"
               >
                 <option value="all">
-                  Toutes les ressources
+                  Todos os recursos
                 </option>
                 <option
                   v-if="myResource"
                   value="mine"
                 >
-                  Mon agenda ({{ myResource.name }})
+                  A minha agenda ({{ myResource.name }})
                 </option>
                 <option
                   v-for="resource in resourceStore.resources"
@@ -356,19 +367,18 @@ watch(
                 </option>
               </UiSelect>
             </div>
-            <label class="flex items-center gap-2 pb-2 text-sm text-ink">
-              <input
+            <div class="pb-2">
+              <UiCheckbox
                 v-model="showCancelled"
-                type="checkbox"
-              >
-              Afficher les rendez-vous annulés
-            </label>
+                label="Mostrar marcações canceladas"
+              />
+            </div>
             <UiButton
               class="ml-auto"
               :disabled="!date || visibleResources.length === 0"
               @click="openCreate(null, null)"
             >
-              Nouveau rendez-vous
+              Nova marcação
             </UiButton>
           </div>
 
@@ -379,7 +389,7 @@ watch(
             >
               {{ formatDay(date) }}
               <span class="text-sm normal-case text-ink/60">
-                · {{ appointmentCount }} rendez-vous
+                · {{ appointmentCountLabel(appointmentCount) }}
               </span>
             </p>
             <div class="flex flex-wrap gap-2">
@@ -398,7 +408,7 @@ watch(
             variant="error"
           >
             <p class="font-medium">
-              Déplacement impossible :
+              Não foi possível mudar a hora:
             </p>
             <ul class="list-disc pl-5">
               <li
@@ -418,12 +428,12 @@ watch(
           </UiAlert>
 
           <UiAlert v-if="visibleResources.length === 0">
-            Aucune ressource à afficher.
+            Nenhum recurso para apresentar.
             <RouterLink
               :to="{ name: 'catalog-resources', params: { salonId } }"
               class="underline"
             >
-              Gérer les ressources
+              Gerir recursos
             </RouterLink>
           </UiAlert>
           <div
@@ -461,3 +471,6 @@ watch(
     </div>
   </main>
 </template>
+
+
+
