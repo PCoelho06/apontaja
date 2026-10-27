@@ -83,16 +83,4 @@ class SalonCustomerLinkJpaRepositoryIT {
 
         assertThat(saved).extracting(SalonCustomerLink::getId).doesNotHaveDuplicates();
     }
-
-    @Test
-    void liste_les_liens_vivants_du_salon_dans_l_ordre_de_creation() {
-        UUID salonId = createSalon();
-        UUID first = linkJpaRepository.saveAndFlush(newLink(salonId, createProfile("Dave"))).getId();
-        UUID second = linkJpaRepository.saveAndFlush(newLink(salonId, createProfile("Eve"))).getId();
-        linkJpaRepository.saveAndFlush(newLink(createSalon(), createProfile("Frank")));
-
-        List<SalonCustomerLink> result = linkJpaRepository.findBySalonIdAndDeletedAtIsNullOrderByCreatedAtAsc(salonId);
-
-        assertThat(result).extracting(SalonCustomerLink::getId).containsExactly(first, second);
-    }
 }

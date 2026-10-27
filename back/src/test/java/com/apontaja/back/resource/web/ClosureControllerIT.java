@@ -189,7 +189,8 @@ class ClosureControllerIT {
                 mockMvc.perform(post(SALON_CLOSURES, salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body("2026-09-02T00:00:00Z", "2026-09-01T00:00:00Z")))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.code").value("INVALID_TIME_RANGE"));
                 mockMvc.perform(post(SALON_CLOSURES, salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(body("2026-09-01", "2026-09-02")))
                                 .andExpect(status().isBadRequest());
@@ -211,7 +212,8 @@ class ClosureControllerIT {
                 mockMvc.perform(delete(SALON_CLOSURE, salonId, closureId).header("Authorization", auth))
                                 .andExpect(status().isNoContent());
                 mockMvc.perform(delete(SALON_CLOSURE, salonId, closureId).header("Authorization", auth))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("CLOSURE_NOT_FOUND"));
         }
 
         @Test
@@ -246,3 +248,6 @@ class ClosureControllerIT {
                                 .andExpect(jsonPath("$.length()").value(1));
         }
 }
+
+
+

@@ -135,10 +135,12 @@ class CustomerBookControllerIT {
 
         mockMvc.perform(put(CUSTOMER, salonId, customerId).header("Authorization", auth)
                 .contentType(MediaType.APPLICATION_JSON).content(body("Alice", "Martin", null, null)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_CONTACT_REQUIRED"));
         mockMvc.perform(put(CUSTOMER, salonId, UUID.randomUUID()).header("Authorization", auth)
                 .contentType(MediaType.APPLICATION_JSON).content(body("Alice", "Martin", "a@example.com", null)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
     }
 
     @Test
@@ -184,7 +186,8 @@ class CustomerBookControllerIT {
 
         mockMvc.perform(put(CUSTOMER, salonId, customerId).header("Authorization", employee)
                 .contentType(MediaType.APPLICATION_JSON).content(body("Alice", "Martin", "a@example.com", null)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_ANONYMIZED"));
         mockMvc.perform(get(CUSTOMERS, salonId).header("Authorization", employee)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
     }
@@ -232,7 +235,8 @@ class CustomerBookControllerIT {
         String customerOfB = createCustomer(salonB, authOf(salonB, StaffRole.OWNER), "Carol", "B", "c@example.com");
 
         mockMvc.perform(get(HISTORY, salonA, customerOfB).header("Authorization", authA))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
     }
 
     @Test
@@ -256,3 +260,6 @@ class CustomerBookControllerIT {
         mockMvc.perform(delete(CUSTOMER, salonA, customerId)).andExpect(status().isForbidden());
     }
 }
+
+
+

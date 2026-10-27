@@ -5,6 +5,8 @@ import com.apontaja.back.resource.application.ResourceNotFoundException;
 import com.apontaja.back.resource.application.ScheduleManagementService;
 import com.apontaja.back.resource.application.ScheduleSlotCommand;
 import com.apontaja.back.resource.application.ScheduleSlotSummary;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -72,14 +74,12 @@ class ScheduleController {
 
     @ExceptionHandler(InvalidTimeRangeException.class)
     ResponseEntity<ProblemDetail> handleInvalid(InvalidTimeRangeException ex) {
-        return ResponseEntity.badRequest()
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.INVALID_TIME_RANGE);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ProblemDetail> handleNotFound(ResourceNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.RESOURCE_NOT_FOUND);
     }
 
     private static List<ScheduleSlotCommand> toCommands(ScheduleRequest request) {
@@ -92,3 +92,6 @@ class ScheduleController {
                 s.startTime().toString(), s.endTime().toString())).toList());
     }
 }
+
+
+

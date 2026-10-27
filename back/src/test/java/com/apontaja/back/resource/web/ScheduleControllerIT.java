@@ -172,7 +172,8 @@ class ScheduleControllerIT {
                 mockMvc.perform(put(SALON_SCHEDULE, salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(schedule(slot("MONDAY", "09:00", "12:00"), slot("MONDAY", "11:00", "13:00"))))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.code").value("INVALID_TIME_RANGE"));
                 mockMvc.perform(get(SALON_SCHEDULE, salonId).header("Authorization", auth))
                                 .andExpect(jsonPath("$.slots.length()").value(1));
 
@@ -233,7 +234,8 @@ class ScheduleControllerIT {
                 UUID resourceOfB = createResource(salonB);
 
                 mockMvc.perform(get(RESOURCE_SCHEDULE, salonA, resourceOfB).header("Authorization", auth))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
                 mockMvc.perform(put(RESOURCE_SCHEDULE, salonA, resourceOfB).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(schedule()))
                                 .andExpect(status().isNotFound());
@@ -277,3 +279,5 @@ class ScheduleControllerIT {
                 assertThat(slotCount).isIn(1, 2);
         }
 }
+
+

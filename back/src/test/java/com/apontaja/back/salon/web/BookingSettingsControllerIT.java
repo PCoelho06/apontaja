@@ -133,15 +133,22 @@ class BookingSettingsControllerIT {
     void refuse_les_valeurs_hors_bornes_et_les_champs_manquants() throws Exception {
         UUID salonId = createSalon(createOrganization());
         String auth = authOf(salonId, StaffRole.OWNER);
-        String[] bodies = {json(true, false, 7, 60, 90, 12), json(true, false, 30, -1, 90, 12),
+        String[] outOfRange = {json(true, false, 7, 60, 90, 12), json(true, false, 30, -1, 90, 12),
                 json(true, false, 30, 10_081, 90, 12), json(true, false, 30, 60, 0, 12),
                 json(true, false, 30, 60, 366, 12), json(true, false, 30, 60, 90, -1),
-                json(true, false, 30, 60, 90, 721), "{}",
-                "{\"onlineBookingEnabled\":true,\"autoConfirm\":false}"};
+                json(true, false, 30, 60, 90, 721)};
+        String[] incomplete = {"{}", "{\"onlineBookingEnabled\":true,\"autoConfirm\":false}"};
 
-        for (String body : bodies) {
+        for (String body : outOfRange) {
             mockMvc.perform(put(URL, salonId).header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
-                    .content(body)).andExpect(status().isBadRequest());
+                    .content(body)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_BOOKING_SETTINGS"));
+        }
+        // Champs manquants : refus par Bean Validation (fieldErrors), sans code métier.
+        for (String body : incomplete) {
+            mockMvc.perform(put(URL, salonId).header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors").exists());
         }
         mockMvc.perform(get(URL, salonId).header("Authorization", auth))
                 .andExpect(jsonPath("$.onlineBookingEnabled").value(false));

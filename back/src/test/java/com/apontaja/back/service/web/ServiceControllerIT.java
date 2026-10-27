@@ -169,7 +169,8 @@ class ServiceControllerIT {
 
                 mockMvc.perform(post(SERVICES, salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(body("Coupe", 30, 2500)))
-                                .andExpect(status().isConflict());
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("SERVICE_NAME_ALREADY_USED"));
                 mockMvc.perform(post(SERVICES, salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(body("Autre", 0, 2500)))
                                 .andExpect(status().isBadRequest())
@@ -196,7 +197,8 @@ class ServiceControllerIT {
                                 .andExpect(jsonPath("$.defaultDurationMinutes").value(60));
                 mockMvc.perform(put(SERVICE, salonId, serviceId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(body("Brushing", 60, 4000)))
-                                .andExpect(status().isConflict());
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("SERVICE_NAME_ALREADY_USED"));
         }
 
         @Test
@@ -279,10 +281,12 @@ class ServiceControllerIT {
                                 .andExpect(status().isBadRequest());
                 mockMvc.perform(put(LINK, salonA, serviceId, foreignResource).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
                 mockMvc.perform(put(LINK, salonA, serviceId, UUID.randomUUID()).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
         }
 
         @Test
@@ -318,3 +322,5 @@ class ServiceControllerIT {
                                 .andExpect(jsonPath("$.length()").value(0));
         }
 }
+
+

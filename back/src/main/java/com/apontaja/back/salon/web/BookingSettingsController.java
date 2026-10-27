@@ -3,6 +3,8 @@ package com.apontaja.back.salon.web;
 import com.apontaja.back.salon.application.BookingSettingsService;
 import com.apontaja.back.salon.application.InvalidBookingSettingsException;
 import com.apontaja.back.salon.application.UpdateBookingSettingsCommand;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -57,7 +59,9 @@ class BookingSettingsController {
 
     @ExceptionHandler(InvalidBookingSettingsException.class)
     ResponseEntity<ProblemDetail> handleInvalid(InvalidBookingSettingsException ex) {
-        return ResponseEntity.badRequest()
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.INVALID_BOOKING_SETTINGS);
     }
 }
+
+
+

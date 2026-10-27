@@ -5,7 +5,6 @@ import com.apontaja.back.customer.domain.SalonCustomerLinkRepository;
 
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,10 +25,5 @@ class SalonCustomerLinkRepositoryAdapter implements SalonCustomerLinkRepository 
     @Override
     public Optional<SalonCustomerLink> findAliveBySalonIdAndCustomerProfileId(UUID salonId, UUID customerProfileId) {
         return jpaRepository.findBySalonIdAndCustomerProfileIdAndDeletedAtIsNull(salonId, customerProfileId);
-    }
-
-    @Override
-    public List<SalonCustomerLink> findAliveBySalonId(UUID salonId) {
-        return jpaRepository.findBySalonIdAndDeletedAtIsNullOrderByCreatedAtAsc(salonId);
     }
 }

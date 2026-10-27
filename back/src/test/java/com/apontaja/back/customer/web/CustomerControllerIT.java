@@ -123,7 +123,8 @@ class CustomerControllerIT {
 
                 mockMvc.perform(post(CUSTOMERS, salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(body("Bob", "Dupont", null, null)))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.code").value("CUSTOMER_CONTACT_REQUIRED"));
         }
 
         @Test
@@ -186,3 +187,6 @@ class CustomerControllerIT {
                                 .andExpect(jsonPath("$.content.length()").value(2));
         }
 }
+
+
+
