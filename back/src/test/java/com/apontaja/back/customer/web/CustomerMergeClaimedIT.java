@@ -149,9 +149,12 @@ class CustomerMergeClaimedIT {
 
         mockMvc.perform(post(CUSTOMERS + "/merge", salon).header("Authorization", owner)
                 .contentType(MediaType.APPLICATION_JSON).content(mergeBody(manual, claimed)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_CLAIMED"));
 
         assertThat(profileRepository.findAliveById(claimed)).isPresent();
         assertThat(profileRepository.findAliveById(manual)).isPresent();
     }
 }
+
+

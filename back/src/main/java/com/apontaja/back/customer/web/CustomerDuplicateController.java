@@ -8,6 +8,8 @@ import com.apontaja.back.customer.application.CustomerNotFoundException;
 import com.apontaja.back.customer.application.CustomerSharedException;
 import com.apontaja.back.customer.application.InvalidMergeRequestException;
 import com.apontaja.back.customer.application.MergeCustomersCommand;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -63,21 +65,29 @@ class CustomerDuplicateController {
 
     @ExceptionHandler(InvalidMergeRequestException.class)
     ResponseEntity<ProblemDetail> handleInvalid(InvalidMergeRequestException ex) {
-        return problem(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.INVALID_MERGE_REQUEST);
     }
 
     @ExceptionHandler(CustomerNotFoundException.class)
     ResponseEntity<ProblemDetail> handleNotFound(CustomerNotFoundException ex) {
-        return problem(HttpStatus.NOT_FOUND, ex.getMessage());
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.CUSTOMER_NOT_FOUND);
     }
 
-    @ExceptionHandler({ CustomerAnonymizedException.class, CustomerClaimedException.class,
-            CustomerSharedException.class })
-    ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
-        return problem(HttpStatus.CONFLICT, ex.getMessage());
+    @ExceptionHandler(CustomerAnonymizedException.class)
+    ResponseEntity<ProblemDetail> handleAnonymized(CustomerAnonymizedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.CUSTOMER_ANONYMIZED);
     }
 
-    private static ResponseEntity<ProblemDetail> problem(HttpStatus status, String detail) {
-        return ResponseEntity.status(status).body(ProblemDetail.forStatusAndDetail(status, detail));
+    @ExceptionHandler(CustomerClaimedException.class)
+    ResponseEntity<ProblemDetail> handleClaimed(CustomerClaimedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.CUSTOMER_CLAIMED);
+    }
+
+    @ExceptionHandler(CustomerSharedException.class)
+    ResponseEntity<ProblemDetail> handleShared(CustomerSharedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.CUSTOMER_SHARED);
     }
 }
+
+
+

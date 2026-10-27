@@ -196,7 +196,8 @@ class AppointmentAgendaAndStatusIT {
                                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("COMPLETED"));
 
                 mockMvc.perform(patch(APPOINTMENT + "/complete", s.salonId(), id).header("Authorization", s.employee()))
-                                .andExpect(status().isConflict());
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("APPOINTMENT_TRANSITION_FORBIDDEN"));
                 mockMvc.perform(patch(APPOINTMENT + "/cancel", s.salonId(), id).header("Authorization", s.employee())
                                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
                                 .andExpect(status().isConflict());
@@ -210,7 +211,8 @@ class AppointmentAgendaAndStatusIT {
                 String id = book(s, s.resourceId(), FUTURE_10H);
 
                 mockMvc.perform(patch(APPOINTMENT + "/confirm", s.salonId(), id).header("Authorization", s.employee()))
-                                .andExpect(status().isConflict());
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("APPOINTMENT_TRANSITION_FORBIDDEN"));
         }
 
         @Test
@@ -241,7 +243,8 @@ class AppointmentAgendaAndStatusIT {
                 String past = book(s, s.resourceId(), PAST_10H);
 
                 mockMvc.perform(patch(APPOINTMENT + "/no-show", s.salonId(), future).header("Authorization",
-                                s.employee())).andExpect(status().isConflict());
+                                s.employee())).andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("APPOINTMENT_TRANSITION_FORBIDDEN"));
                 mockMvc.perform(patch(APPOINTMENT + "/no-show", s.salonId(), past).header("Authorization",
                                 s.employee())).andExpect(status().isOk())
                                 .andExpect(jsonPath("$.status").value("NO_SHOW"));
@@ -290,7 +293,8 @@ class AppointmentAgendaAndStatusIT {
 
                 for (String action : List.of("confirm", "complete", "no-show")) {
                         mockMvc.perform(patch(APPOINTMENT + "/" + action, a.salonId(), appointmentOfB)
-                                        .header("Authorization", a.owner())).andExpect(status().isNotFound());
+                                        .header("Authorization", a.owner())).andExpect(status().isNotFound())
+                                                .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_FOUND"));
                 }
                 mockMvc.perform(patch(APPOINTMENT + "/cancel", a.salonId(), appointmentOfB)
                                 .header("Authorization", a.owner()).contentType(MediaType.APPLICATION_JSON)
@@ -380,3 +384,6 @@ class AppointmentAgendaAndStatusIT {
                                 .andExpect(status().isBadRequest());
         }
 }
+
+
+

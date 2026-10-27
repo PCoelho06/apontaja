@@ -168,7 +168,8 @@ class ResourceStaffLinkIT {
         Member employee = member(salonId, StaffRole.EMPLOYEE);
 
         postResource(salonId, ownerAuth(salonId), payload("Four", "MACHINE", employee.membershipId()))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.code").value("RESOURCE_STAFF_LINK_INVALID"));
     }
 
     @Test
@@ -181,9 +182,12 @@ class ResourceStaffLinkIT {
         membership.softDelete(Instant.now());
         staffMembershipRepository.save(membership);
 
-        postResource(salonId, auth, payload("A", "EMPLOYEE", UUID.randomUUID())).andExpect(status().isNotFound());
-        postResource(salonId, auth, payload("B", "EMPLOYEE", foreign.membershipId())).andExpect(status().isNotFound());
-        postResource(salonId, auth, payload("C", "EMPLOYEE", removed.membershipId())).andExpect(status().isNotFound());
+        postResource(salonId, auth, payload("A", "EMPLOYEE", UUID.randomUUID())).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("STAFF_MEMBER_NOT_FOUND"));
+        postResource(salonId, auth, payload("B", "EMPLOYEE", foreign.membershipId())).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("STAFF_MEMBER_NOT_FOUND"));
+        postResource(salonId, auth, payload("C", "EMPLOYEE", removed.membershipId())).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("STAFF_MEMBER_NOT_FOUND"));
     }
 
     @Test
@@ -194,8 +198,10 @@ class ResourceStaffLinkIT {
         UUID first = createResourceVia(salonId, auth, payload("Lea", "EMPLOYEE", memberId));
         UUID second = createResourceVia(salonId, auth, payload("Chaise", "EMPLOYEE", null));
 
-        postResource(salonId, auth, payload("Lea bis", "EMPLOYEE", memberId)).andExpect(status().isConflict());
-        putResource(salonId, second, auth, payload("Chaise", "EMPLOYEE", memberId)).andExpect(status().isConflict());
+        postResource(salonId, auth, payload("Lea bis", "EMPLOYEE", memberId)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("STAFF_MEMBER_ALREADY_LINKED"));
+        putResource(salonId, second, auth, payload("Chaise", "EMPLOYEE", memberId)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("STAFF_MEMBER_ALREADY_LINKED"));
         // renommer la ressource déjà liée ne la met pas en conflit avec elle-même
         putResource(salonId, first, auth, payload("Lea renommee", "EMPLOYEE", memberId)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.staffMembershipId").value(memberId.toString()));
@@ -242,3 +248,6 @@ class ResourceStaffLinkIT {
         resourceRepository.save(linkedResource(salonId, "R3", memberId));
     }
 }
+
+
+

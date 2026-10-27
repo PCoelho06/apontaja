@@ -248,7 +248,8 @@ class AppointmentRescheduleIT {
 
         // 11:30Z -> 12:30Z chevauche l'autre RDV ; l'agenda ne voit que la contrainte
         // PG
-        reschedule(s.salonId(), moving, s.employee(), "2099-01-05T12:30:00+01:00").andExpect(status().isConflict());
+        reschedule(s.salonId(), moving, s.employee(), "2099-01-05T12:30:00+01:00").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("APPOINTMENT_CONFLICT"));
 
         assertStillAt(s, moving, "2099-01-05T09:00:00Z");
     }
@@ -274,6 +275,7 @@ class AppointmentRescheduleIT {
 
         // 23:30 + 60 min dépasse 23:59 (une minute de "trou" avant 00:00 le lendemain)
         reschedule(s.salonId(), id, s.employee(), H23_30).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_AVAILABLE"))
                 .andExpect(jsonPath("$.issues[0]").value("OUTSIDE_SALON_HOURS"));
 
         assertStillAt(s, id, "2099-01-05T09:00:00Z");
@@ -290,8 +292,10 @@ class AppointmentRescheduleIT {
         mockMvc.perform(patch(APPOINTMENT + "/complete", s.salonId(), completed).header("Authorization", s.employee()))
                 .andExpect(status().isOk());
 
-        reschedule(s.salonId(), cancelled, s.employee(), H14).andExpect(status().isConflict());
-        reschedule(s.salonId(), completed, s.employee(), H14).andExpect(status().isConflict());
+        reschedule(s.salonId(), cancelled, s.employee(), H14).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_RESCHEDULABLE"));
+        reschedule(s.salonId(), completed, s.employee(), H14).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_RESCHEDULABLE"));
     }
 
     @Test
@@ -321,7 +325,8 @@ class AppointmentRescheduleIT {
         Setup s = setup();
         String id = book(s, s.resourceId(), H10);
 
-        reschedule(s.salonId(), id, s.employee(), "pas-une-date").andExpect(status().isBadRequest());
+        reschedule(s.salonId(), id, s.employee(), "pas-une-date").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_TIME_RANGE"));
         assertStillAt(s, id, "2099-01-05T09:00:00Z");
     }
 
@@ -331,8 +336,10 @@ class AppointmentRescheduleIT {
         Setup b = setup();
         String appointmentOfB = book(b, b.resourceId(), H10);
 
-        reschedule(a.salonId(), appointmentOfB, a.owner(), H14).andExpect(status().isNotFound());
-        reschedule(a.salonId(), UUID.randomUUID().toString(), a.owner(), H14).andExpect(status().isNotFound());
+        reschedule(a.salonId(), appointmentOfB, a.owner(), H14).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_FOUND"));
+        reschedule(a.salonId(), UUID.randomUUID().toString(), a.owner(), H14).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_FOUND"));
         assertStillAt(b, appointmentOfB, "2099-01-05T09:00:00Z");
     }
 
@@ -376,3 +383,6 @@ class AppointmentRescheduleIT {
         }
     }
 }
+
+
+

@@ -233,15 +233,18 @@ class AppointmentControllerIT {
                 mockMvc.perform(post(APPOINTMENTS, setup.salonId()).header("Authorization", setup.auth())
                                 .contentType(MediaType.APPLICATION_JSON).content(bookingBody(setup.customerProfileId(),
                                                 setup.serviceId(), foreignResource, "2026-09-24T10:00:00+02:00")))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
                 mockMvc.perform(post(APPOINTMENTS, setup.salonId()).header("Authorization", setup.auth())
                                 .contentType(MediaType.APPLICATION_JSON).content(bookingBody(setup.customerProfileId(),
                                                 foreignService, setup.resourceId(), "2026-09-24T10:00:00+02:00")))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("SERVICE_NOT_FOUND"));
                 mockMvc.perform(post(APPOINTMENTS, setup.salonId()).header("Authorization", setup.auth())
                                 .contentType(MediaType.APPLICATION_JSON).content(bookingBody(foreignCustomer,
                                                 setup.serviceId(), setup.resourceId(), "2026-09-24T10:00:00+02:00")))
-                                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
         }
 
         @Test
@@ -252,7 +255,8 @@ class AppointmentControllerIT {
                 mockMvc.perform(post(APPOINTMENTS, setup.salonId()).header("Authorization", setup.auth())
                                 .contentType(MediaType.APPLICATION_JSON).content(bookingBody(setup.customerProfileId(),
                                                 setup.serviceId(), unlinkedResource, "2026-09-24T10:00:00+02:00")))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.code").value("SERVICE_RESOURCE_NOT_ASSOCIATED"));
         }
 
         @Test
@@ -262,7 +266,8 @@ class AppointmentControllerIT {
                 mockMvc.perform(post(APPOINTMENTS, setup.salonId()).header("Authorization", setup.auth())
                                 .contentType(MediaType.APPLICATION_JSON).content(bookingBody(setup.customerProfileId(),
                                                 setup.serviceId(), setup.resourceId(), "pas-une-date")))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.code").value("INVALID_TIME_RANGE"));
         }
 
         @Test
@@ -280,6 +285,7 @@ class AppointmentControllerIT {
                                 .content(bookingBody(customerProfileId, serviceId, resourceId,
                                                 "2026-09-24T10:00:00+02:00")))
                                 .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("APPOINTMENT_NOT_AVAILABLE"))
                                 .andExpect(jsonPath("$.issues[0]").value("OUTSIDE_SALON_HOURS"));
         }
 
@@ -336,9 +342,11 @@ class AppointmentControllerIT {
                                 .andExpect(status().isCreated());
 
                 mockMvc.perform(delete("/api/salons/{salonId}/resources/{id}", setup.salonId(), setup.resourceId())
-                                .header("Authorization", ownerAuth)).andExpect(status().isConflict());
+                                .header("Authorization", ownerAuth)).andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_IN_USE"));
                 mockMvc.perform(delete("/api/salons/{salonId}/services/{id}", setup.salonId(), setup.serviceId())
-                                .header("Authorization", ownerAuth)).andExpect(status().isConflict());
+                                .header("Authorization", ownerAuth)).andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("SERVICE_IN_USE"));
         }
 
         @Test
@@ -358,3 +366,6 @@ class AppointmentControllerIT {
                                 .andExpect(status().isForbidden());
         }
 }
+
+
+

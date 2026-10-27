@@ -192,6 +192,7 @@ class ClosureAppointmentGuardIT {
                 String id = book(s, s.resourceId(), H10);
 
                 postSalonClosure(s, "2099-01-05T08:30:00Z", "2099-01-05T09:30:00Z").andExpect(status().isConflict())
+                        .andExpect(jsonPath("$.code").value("CLOSURE_BLOCKED_BY_APPOINTMENTS"))
                                 .andExpect(jsonPath("$.count").value(1))
                                 .andExpect(jsonPath("$.appointments.length()").value(1))
                                 .andExpect(jsonPath("$.appointments[0].appointmentId").value(id))
@@ -221,7 +222,9 @@ class ClosureAppointmentGuardIT {
                 postResourceClosure(s, otherResource, "2099-01-05T08:30:00Z", "2099-01-05T09:30:00Z")
                                 .andExpect(status().isCreated());
                 postResourceClosure(s, s.resourceId(), "2099-01-05T08:30:00Z", "2099-01-05T09:30:00Z")
-                                .andExpect(status().isConflict()).andExpect(jsonPath("$.count").value(1));
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("CLOSURE_BLOCKED_BY_APPOINTMENTS"))
+                                        .andExpect(jsonPath("$.count").value(1));
         }
 
         @Test
@@ -232,6 +235,7 @@ class ClosureAppointmentGuardIT {
                 book(s, s.resourceId(), H10); // 09:00Z -> 10:00Z
 
                 postSalonClosure(s, "2099-01-05T08:00:00Z", "2099-01-05T12:00:00Z").andExpect(status().isConflict())
+                        .andExpect(jsonPath("$.code").value("CLOSURE_BLOCKED_BY_APPOINTMENTS"))
                                 .andExpect(jsonPath("$.count").value(2))
                                 .andExpect(jsonPath("$.appointments[0].startAt").value("2099-01-05T09:00:00Z"))
                                 .andExpect(jsonPath("$.appointments[0].resourceId").value(s.resourceId().toString()))
@@ -273,7 +277,9 @@ class ClosureAppointmentGuardIT {
                 String overlapping = closureBody("2099-01-05T08:30:00Z", "2099-01-05T09:30:00Z");
                 mockMvc.perform(put(SALON_CLOSURE, s.salonId(), closureId).header("Authorization", s.owner())
                                 .contentType(MediaType.APPLICATION_JSON).content(overlapping))
-                                .andExpect(status().isConflict()).andExpect(jsonPath("$.count").value(1));
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("CLOSURE_BLOCKED_BY_APPOINTMENTS"))
+                                        .andExpect(jsonPath("$.count").value(1));
 
                 // la fermeture n'a pas bougé
                 mockMvc.perform(get(SALON_CLOSURES, s.salonId()).header("Authorization", s.owner()))
@@ -285,3 +291,6 @@ class ClosureAppointmentGuardIT {
                                 .contentType(MediaType.APPLICATION_JSON).content(harmless)).andExpect(status().isOk());
         }
 }
+
+
+

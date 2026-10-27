@@ -11,6 +11,8 @@ import com.apontaja.back.service.application.ServiceResourceLinkConflictExceptio
 import com.apontaja.back.service.application.ServiceResourceLinkService;
 import com.apontaja.back.service.application.ServiceResourceLinkSummary;
 import com.apontaja.back.service.application.ServiceSummary;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -120,17 +122,29 @@ class ServiceController {
         return ResponseEntity.noContent().build();
     }
 
-    @ExceptionHandler({ServiceNameAlreadyUsedException.class, ServiceInUseException.class,
-            ServiceResourceLinkConflictException.class})
-    ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
+    @ExceptionHandler(ServiceNameAlreadyUsedException.class)
+    ResponseEntity<ProblemDetail> handleNameAlreadyUsed(ServiceNameAlreadyUsedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.SERVICE_NAME_ALREADY_USED);
     }
 
-    @ExceptionHandler({ServiceNotFoundException.class, LinkedResourceNotFoundException.class})
-    ResponseEntity<ProblemDetail> handleNotFound(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+    @ExceptionHandler(ServiceInUseException.class)
+    ResponseEntity<ProblemDetail> handleInUse(ServiceInUseException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.SERVICE_IN_USE);
+    }
+
+    @ExceptionHandler(ServiceResourceLinkConflictException.class)
+    ResponseEntity<ProblemDetail> handleLinkConflict(ServiceResourceLinkConflictException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.SERVICE_RESOURCE_LINK_CONFLICT);
+    }
+
+    @ExceptionHandler(ServiceNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleNotFound(ServiceNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.SERVICE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(LinkedResourceNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleLinkedResourceNotFound(LinkedResourceNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.RESOURCE_NOT_FOUND);
     }
 
     private static ServiceDetails toDetails(ServiceRequest request) {
@@ -148,3 +162,6 @@ class ServiceController {
                 l.effectivePriceCents(), l.effectiveDurationMinutes());
     }
 }
+
+
+

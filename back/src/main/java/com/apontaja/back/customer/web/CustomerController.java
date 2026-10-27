@@ -15,6 +15,8 @@ import com.apontaja.back.customer.application.CustomerNotFoundException;
 import com.apontaja.back.customer.application.CustomerSharedException;
 import com.apontaja.back.customer.application.UpdateCustomerCommand;
 import com.apontaja.back.web.PageResponse;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -136,22 +138,27 @@ class CustomerController {
 
     @ExceptionHandler(ContactRequiredException.class)
     ResponseEntity<ProblemDetail> handleContactRequired(ContactRequiredException ex) {
-        return problem(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.CUSTOMER_CONTACT_REQUIRED);
     }
 
     @ExceptionHandler(CustomerNotFoundException.class)
     ResponseEntity<ProblemDetail> handleNotFound(CustomerNotFoundException ex) {
-        return problem(HttpStatus.NOT_FOUND, ex.getMessage());
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.CUSTOMER_NOT_FOUND);
     }
 
-    @ExceptionHandler({ CustomerAnonymizedException.class, CustomerSharedException.class,
-            CustomerHasUpcomingAppointmentsException.class })
-    ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
-        return problem(HttpStatus.CONFLICT, ex.getMessage());
+    @ExceptionHandler(CustomerAnonymizedException.class)
+    ResponseEntity<ProblemDetail> handleAnonymized(CustomerAnonymizedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.CUSTOMER_ANONYMIZED);
     }
 
-    private static ResponseEntity<ProblemDetail> problem(HttpStatus status, String detail) {
-        return ResponseEntity.status(status).body(ProblemDetail.forStatusAndDetail(status, detail));
+    @ExceptionHandler(CustomerSharedException.class)
+    ResponseEntity<ProblemDetail> handleShared(CustomerSharedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.CUSTOMER_SHARED);
+    }
+
+    @ExceptionHandler(CustomerHasUpcomingAppointmentsException.class)
+    ResponseEntity<ProblemDetail> handleHasUpcoming(CustomerHasUpcomingAppointmentsException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.CUSTOMER_HAS_UPCOMING_APPOINTMENTS);
     }
 
     private static int totalPages(long totalElements, int size) {
@@ -170,3 +177,6 @@ class CustomerController {
                 i.serviceId(), i.priceAtBookingCents(), i.durationAtBookingMinutes());
     }
 }
+
+
+

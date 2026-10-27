@@ -7,6 +7,8 @@ import com.apontaja.back.resource.application.ClosureNotFoundException;
 import com.apontaja.back.resource.application.ClosureSummary;
 import com.apontaja.back.resource.application.InvalidTimeRangeException;
 import com.apontaja.back.resource.application.ResourceNotFoundException;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -114,19 +116,23 @@ class ClosureController {
 
     @ExceptionHandler(InvalidTimeRangeException.class)
     ResponseEntity<ProblemDetail> handleInvalid(InvalidTimeRangeException ex) {
-        return ResponseEntity.badRequest()
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.INVALID_TIME_RANGE);
     }
 
-    @ExceptionHandler({ResourceNotFoundException.class, ClosureNotFoundException.class})
-    ResponseEntity<ProblemDetail> handleNotFound(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(ClosureNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleClosureNotFound(ClosureNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.CLOSURE_NOT_FOUND);
     }
 
     @ExceptionHandler(ClosureBlockedByAppointmentsException.class)
     ResponseEntity<ProblemDetail> handleBlockedByAppointments(ClosureBlockedByAppointmentsException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        ProblemDetail problem = ApiProblems.problem(HttpStatus.CONFLICT, ex.getMessage(),
+                ApiErrorCode.CLOSURE_BLOCKED_BY_APPOINTMENTS);
         problem.setProperty("count", ex.count());
         problem.setProperty("appointments",
                 ex.appointments().stream().map(BlockingAppointmentResponse::from).toList());
@@ -150,3 +156,6 @@ class ClosureController {
                 s.createdAt());
     }
 }
+
+
+

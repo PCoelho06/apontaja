@@ -166,13 +166,15 @@ class CustomerDuplicateControllerIT {
 
         mockMvc.perform(post(MERGE, salonId).header("Authorization", manager)
                 .contentType(MediaType.APPLICATION_JSON).content(mergeBody(survivor, survivor)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.code").value("INVALID_MERGE_REQUEST"));
         mockMvc.perform(post(MERGE, salonId).header("Authorization", manager)
                 .contentType(MediaType.APPLICATION_JSON).content(mergeBody(survivor)))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post(MERGE, salonId).header("Authorization", manager)
                 .contentType(MediaType.APPLICATION_JSON).content(mergeBody(survivor, UUID.randomUUID())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
     }
 
     @Test
@@ -187,12 +189,17 @@ class CustomerDuplicateControllerIT {
 
         mockMvc.perform(post(MERGE, salonA).header("Authorization", managerA)
                 .contentType(MediaType.APPLICATION_JSON).content(mergeBody(survivor, ofOtherSalon)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
 
         mockMvc.perform(delete(CUSTOMERS + "/{id}", salonA, toAnonymize).header("Authorization", managerA))
                 .andExpect(status().isNoContent());
         mockMvc.perform(post(MERGE, salonA).header("Authorization", managerA)
                 .contentType(MediaType.APPLICATION_JSON).content(mergeBody(survivor, toAnonymize)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                        .andExpect(jsonPath("$.code").value("CUSTOMER_ANONYMIZED"));
     }
 }
+
+
+

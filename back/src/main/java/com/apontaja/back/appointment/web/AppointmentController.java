@@ -16,6 +16,8 @@ import com.apontaja.back.appointment.application.ServiceResourceNotAssociatedExc
 import com.apontaja.back.resource.application.InvalidTimeRangeException;
 import com.apontaja.back.resource.application.ResourceNotFoundException;
 import com.apontaja.back.service.application.ServiceNotFoundException;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 
 import jakarta.validation.Valid;
 
@@ -126,31 +128,57 @@ class AppointmentController {
         return ResponseEntity.ok(toResponse(statusService.markNoShow(salonId, appointmentId)));
     }
 
-    @ExceptionHandler({ ResourceNotFoundException.class, ServiceNotFoundException.class,
-            CustomerNotFoundException.class, AppointmentNotFoundException.class })
-    ResponseEntity<ProblemDetail> handleNotFound(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.RESOURCE_NOT_FOUND);
     }
 
-    @ExceptionHandler({ ServiceResourceNotAssociatedException.class, InvalidTimeRangeException.class })
-    ResponseEntity<ProblemDetail> handleBadRequest(RuntimeException ex) {
-        return ResponseEntity.badRequest()
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    @ExceptionHandler(ServiceNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleServiceNotFound(ServiceNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.SERVICE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(CustomerNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleCustomerNotFound(CustomerNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.CUSTOMER_NOT_FOUND);
+    }
+
+    @ExceptionHandler(AppointmentNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleAppointmentNotFound(AppointmentNotFoundException ex) {
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.APPOINTMENT_NOT_FOUND);
+    }
+
+    @ExceptionHandler(ServiceResourceNotAssociatedException.class)
+    ResponseEntity<ProblemDetail> handleNotAssociated(ServiceResourceNotAssociatedException ex) {
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.SERVICE_RESOURCE_NOT_ASSOCIATED);
+    }
+
+    @ExceptionHandler(InvalidTimeRangeException.class)
+    ResponseEntity<ProblemDetail> handleInvalidTimeRange(InvalidTimeRangeException ex) {
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.INVALID_TIME_RANGE);
     }
 
     @ExceptionHandler(AppointmentNotAvailableException.class)
     ResponseEntity<ProblemDetail> handleNotAvailable(AppointmentNotAvailableException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        ProblemDetail problem = ApiProblems.problem(HttpStatus.CONFLICT, ex.getMessage(),
+                ApiErrorCode.APPOINTMENT_NOT_AVAILABLE);
         problem.setProperty("issues", ex.issues().stream().map(Enum::name).toList());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
-    @ExceptionHandler({ AppointmentConflictException.class, InvalidAppointmentTransitionException.class,
-            AppointmentNotReschedulableException.class })
-    ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
+    @ExceptionHandler(AppointmentConflictException.class)
+    ResponseEntity<ProblemDetail> handleConflict(AppointmentConflictException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.APPOINTMENT_CONFLICT);
+    }
+
+    @ExceptionHandler(InvalidAppointmentTransitionException.class)
+    ResponseEntity<ProblemDetail> handleTransition(InvalidAppointmentTransitionException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.APPOINTMENT_TRANSITION_FORBIDDEN);
+    }
+
+    @ExceptionHandler(AppointmentNotReschedulableException.class)
+    ResponseEntity<ProblemDetail> handleNotReschedulable(AppointmentNotReschedulableException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.APPOINTMENT_NOT_RESCHEDULABLE);
     }
 
     private static AppointmentResponse toResponse(AppointmentSummary s) {
@@ -159,3 +187,6 @@ class AppointmentController {
                 s.durationAtBookingMinutes(), s.createdAt());
     }
 }
+
+
+

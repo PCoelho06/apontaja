@@ -162,7 +162,8 @@ class ResourceControllerIT {
                 mockMvc.perform(post("/api/salons/{salonId}/resources", salonId)
                                 .header("Authorization", bearerTokenFor(ownerId))
                                 .contentType(MediaType.APPLICATION_JSON).content(payload("Chaise 1", "EMPLOYEE")))
-                                .andExpect(status().isConflict());
+                                .andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NAME_ALREADY_USED"));
         }
 
         @Test
@@ -172,7 +173,8 @@ class ResourceControllerIT {
 
                 mockMvc.perform(post("/api/salons/{salonId}/resources", salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(payload("Chaise", "ROBOT")))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.code").value("INVALID_RESOURCE_TYPE"));
                 mockMvc.perform(post("/api/salons/{salonId}/resources", salonId).header("Authorization", auth)
                                 .contentType(MediaType.APPLICATION_JSON).content(payload("", "EMPLOYEE")))
                                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.name").exists());
@@ -193,7 +195,8 @@ class ResourceControllerIT {
 
                 mockMvc.perform(put("/api/salons/{salonId}/resources/{id}", salonId, resourceId)
                                 .header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
-                                .content(payload("Chaise 2", "MACHINE"))).andExpect(status().isConflict());
+                                .content(payload("Chaise 2", "MACHINE"))).andExpect(status().isConflict())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NAME_ALREADY_USED"));
         }
 
         @Test
@@ -221,9 +224,14 @@ class ResourceControllerIT {
                 mockMvc.perform(get("/api/salons/{salonId}/resources/{id}", salonA, resourceOfB).header("Authorization",
                                 auth)).andExpect(status().isNotFound());
                 mockMvc.perform(delete("/api/salons/{salonId}/resources/{id}", salonA, resourceOfB)
-                                .header("Authorization", auth)).andExpect(status().isNotFound());
+                                .header("Authorization", auth)).andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
                 mockMvc.perform(put("/api/salons/{salonId}/resources/{id}", salonA, resourceOfB)
                                 .header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
-                                .content(payload("Vol", "EMPLOYEE"))).andExpect(status().isNotFound());
+                                .content(payload("Vol", "EMPLOYEE"))).andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
         }
 }
+
+
+

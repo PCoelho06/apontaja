@@ -11,6 +11,8 @@ import com.apontaja.back.resource.application.ResourceNotFoundException;
 import com.apontaja.back.resource.application.ResourceQueryService;
 import com.apontaja.back.resource.application.ResourceSummary;
 import com.apontaja.back.resource.application.StaffMemberAlreadyLinkedException;
+import com.apontaja.back.web.ApiErrorCode;
+import com.apontaja.back.web.ApiProblems;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -89,40 +91,39 @@ class ResourceController {
         return ResponseEntity.noContent().build();
     }
 
-    @ExceptionHandler({ ResourceNameAlreadyUsedException.class, ResourceInUseException.class })
-    ResponseEntity<ProblemDetail> handleConflict(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
+    @ExceptionHandler(ResourceNameAlreadyUsedException.class)
+    ResponseEntity<ProblemDetail> handleNameAlreadyUsed(ResourceNameAlreadyUsedException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.RESOURCE_NAME_ALREADY_USED);
+    }
+
+    @ExceptionHandler(ResourceInUseException.class)
+    ResponseEntity<ProblemDetail> handleInUse(ResourceInUseException ex) {
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.RESOURCE_IN_USE);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ProblemDetail> handleNotFound(ResourceNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.RESOURCE_NOT_FOUND);
     }
 
     @ExceptionHandler(InvalidResourceTypeException.class)
     ResponseEntity<ProblemDetail> handleInvalidType(InvalidResourceTypeException ex) {
-        return ResponseEntity.badRequest()
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.INVALID_RESOURCE_TYPE);
     }
 
-        @ExceptionHandler(InvalidResourceStaffLinkException.class)
+    @ExceptionHandler(InvalidResourceStaffLinkException.class)
     ResponseEntity<ProblemDetail> handleInvalidStaffLink(InvalidResourceStaffLinkException ex) {
-        return ResponseEntity.badRequest()
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.BAD_REQUEST, ex.getMessage(), ApiErrorCode.RESOURCE_STAFF_LINK_INVALID);
     }
 
     @ExceptionHandler(LinkedStaffMemberNotFoundException.class)
     ResponseEntity<ProblemDetail> handleStaffMemberNotFound(LinkedStaffMemberNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.NOT_FOUND, ex.getMessage(), ApiErrorCode.STAFF_MEMBER_NOT_FOUND);
     }
 
     @ExceptionHandler(StaffMemberAlreadyLinkedException.class)
     ResponseEntity<ProblemDetail> handleStaffMemberAlreadyLinked(StaffMemberAlreadyLinkedException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
+        return ApiProblems.of(HttpStatus.CONFLICT, ex.getMessage(), ApiErrorCode.STAFF_MEMBER_ALREADY_LINKED);
     }
 
     private static ResourceResponse toResponse(ResourceSummary s) {
@@ -130,3 +131,6 @@ class ResourceController {
                 s.createdAt());
     }
 }
+
+
+
