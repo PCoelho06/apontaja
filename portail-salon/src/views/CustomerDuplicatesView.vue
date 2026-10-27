@@ -4,8 +4,12 @@ import { useRoute } from "vue-router";
 
 import { UiAlert, UiButton, UiDialog } from "@apontaja/ui-kit";
 
-import { ApiError } from "@apontaja/web-core/api-client";
-import { visitLabel } from "@/lib/customerFormat";
+import {
+  describeCustomerLoadError,
+  describeMergeError,
+  shouldReloadAfterMerge,
+} from "@/lib/customerErrors";
+import { NO_CONTACT_LABEL, visitLabel } from "@/lib/customerFormat";
 import {
   CLAIMED_SURVIVOR_WARNING,
   absorbedIds,
@@ -18,7 +22,6 @@ import {
   type DuplicateGroup,
   type DuplicateMember,
 } from "@/lib/customerDuplicates";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { useCustomerStore } from "@/stores/customer";
 import { useSalonStore } from "@/stores/salon";
 
@@ -41,6 +44,8 @@ const pendingGroup = ref<DuplicateGroup | null>(null);
 const pendingSurvivor = ref<DuplicateMember | null>(null);
 const excluded = ref<string[]>([]);
 const merging = ref(false);
+/** La liste est périmée (404/409) : la fusion ne peut plus être relancée avec ces profils. */
+const stale = ref(false);
 const dialogError = ref<string | null>(null);
 
 const candidates = computed(() =>
@@ -58,13 +63,6 @@ const selectedIds = computed(() =>
     : [],
 );
 
-function failure(e: unknown, fallback: string): string {
-  if (e instanceof ApiError && e.status === 403) {
-    return "Seuls les gérants et propriétaires peuvent gérer les doublons.";
-  }
-  return errorMessage(e, fallback);
-}
-
 async function load() {
   loading.value = true;
   error.value = null;
@@ -73,7 +71,7 @@ async function load() {
     groups.value = report.groups;
     truncated.value = report.truncated;
   } catch (e) {
-    error.value = failure(e, "Impossible de charger les doublons.");
+    error.value = describeCustomerLoadError(e, "duplicates");
   } finally {
     loading.value = false;
   }
@@ -86,7 +84,7 @@ watch(
     try {
       await salonStore.fetchSalon(id);
     } catch (e) {
-      error.value = failure(e, "Impossible de charger le salon.");
+      error.value = describeCustomerLoadError(e, "salon");
       loading.value = false;
       return;
     }
@@ -100,6 +98,7 @@ function startMerge(group: DuplicateGroup, survivor: DuplicateMember) {
   pendingSurvivor.value = survivor;
   excluded.value = [];
   dialogError.value = null;
+  stale.value = false;
   dialogOpen.value = true;
 }
 
@@ -122,11 +121,15 @@ async function confirmMerge() {
       survivor.customerProfileId,
       selectedIds.value,
     );
-    notice.value = `${selectedIds.value.length} profil(s) fusionné(s) dans ${memberName(survivor)}.`;
+    notice.value = `${selectedIds.value.length} perfil(is) fundido(s) em ${memberName(survivor)}.`;
     dialogOpen.value = false;
     await load();
   } catch (e) {
-    dialogError.value = failure(e, "La fusion a échoué.");
+    dialogError.value = describeMergeError(e);
+    if (shouldReloadAfterMerge(e)) {
+      stale.value = true;
+      await load();
+    }
   } finally {
     merging.value = false;
   }
@@ -141,14 +144,14 @@ async function confirmMerge() {
           :to="{ name: 'customers', params: { salonId } }"
           class="text-sm text-wine hover:underline"
         >
-          ← Clients
+          ← Clientes
         </RouterLink>
         <h1 class="mt-2 font-display text-2xl text-ink">
-          Doublons
+          Duplicados
         </h1>
         <p class="mt-1 text-sm text-ink/70">
-          Profils qui partagent un email ou un téléphone. Rien n'est fusionné
-          automatiquement : vous choisissez le profil à conserver.
+          Perfis que partilham um email ou um telefone. Nada é fundido
+          automaticamente: escolha o perfil a manter.
         </p>
       </div>
 
@@ -168,7 +171,7 @@ async function confirmMerge() {
         v-if="loading"
         class="text-sm text-ink/70"
       >
-        Chargement…
+        A carregar...
       </p>
 
       <template v-else-if="!error">
@@ -176,14 +179,14 @@ async function confirmMerge() {
           v-if="groups.length === 0"
           class="text-ink/60"
         >
-          Aucun doublon détecté.
+          Nenhum duplicado detetado.
         </p>
         <UiAlert
           v-if="truncated"
           variant="error"
         >
-          Seuls les premiers groupes sont affichés. Fusionnez-les puis
-          rechargez la page pour voir la suite.
+          Só são apresentados os primeiros grupos. Funda-os e recarregue a
+          página para ver os seguintes.
         </UiAlert>
 
         <section
@@ -205,11 +208,11 @@ async function confirmMerge() {
                   {{ memberName(member) }}
                 </p>
                 <p class="text-ink/60">
-                  {{ memberContact(member) || "Aucun moyen de contact" }}
+                  {{ memberContact(member) || NO_CONTACT_LABEL }}
                 </p>
                 <p class="text-xs text-ink/60">
-                  Dernière visite : {{ visitLabel(member.lastVisitAt, timeZone) }}
-                  · Prochain rendez-vous :
+                  Última visita: {{ visitLabel(member.lastVisitAt, timeZone) }}
+                  · Próxima marcação:
                   {{ visitLabel(member.nextVisitAt, timeZone) }}
                 </p>
                 <p
@@ -225,7 +228,7 @@ async function confirmMerge() {
                 size="sm"
                 @click="startMerge(group, member)"
               >
-                Conserver ce profil
+                Manter este perfil
               </UiButton>
             </li>
           </ul>
@@ -234,16 +237,17 @@ async function confirmMerge() {
 
       <UiDialog
         v-model:open="dialogOpen"
-        title="Fusionner des clients"
+        title="Fundir clientes"
+        close-label="Fechar"
       >
         <div
           v-if="pendingSurvivor"
           class="space-y-4 text-sm text-ink"
         >
           <p>
-            Conserver <strong>{{ memberName(pendingSurvivor) }}</strong> et lui
-            rattacher les profils ci-dessous : leurs rendez-vous, leurs notes
-            et leur consentement le plus récent.
+            Manter <strong>{{ memberName(pendingSurvivor) }}</strong> e
+            associar-lhe os perfis abaixo: as respetivas marcações, notas e o
+            consentimento mais recente.
           </p>
           <ul class="divide-y divide-border rounded-md border border-border">
             <li
@@ -255,7 +259,7 @@ async function confirmMerge() {
               <span>
                 <span class="block">{{ memberName(member) }}</span>
                 <span class="block text-xs text-ink/60">{{
-                  memberContact(member) || "Aucun moyen de contact"
+                  memberContact(member) || NO_CONTACT_LABEL
                 }}</span>
               </span>
               <UiButton
@@ -264,7 +268,7 @@ async function confirmMerge() {
                 :disabled="merging"
                 @click="toggle(member.customerProfileId)"
               >
-                {{ excluded.includes(member.customerProfileId) ? "Inclure" : "Exclure" }}
+                {{ excluded.includes(member.customerProfileId) ? "Incluir" : "Excluir" }}
               </UiButton>
             </li>
           </ul>
@@ -275,8 +279,8 @@ async function confirmMerge() {
             {{ CLAIMED_SURVIVOR_WARNING }}
           </UiAlert>
           <UiAlert variant="error">
-            Cette opération est irréversible : les profils fusionnés sont
-            retirés du carnet et leurs données personnelles effacées.
+            Esta operação é irreversível: os perfis fundidos são retirados do
+            ficheiro de clientes e os seus dados pessoais apagados.
           </UiAlert>
           <UiAlert
             v-if="dialogError"
@@ -290,15 +294,15 @@ async function confirmMerge() {
               :disabled="merging"
               @click="dialogOpen = false"
             >
-              Annuler
+              Cancelar
             </UiButton>
             <UiButton
               variant="danger"
               :loading="merging"
-              :disabled="selectedIds.length === 0"
+              :disabled="selectedIds.length === 0 || stale"
               @click="confirmMerge"
             >
-              Fusionner {{ selectedIds.length }} profil(s)
+              Fundir {{ selectedIds.length }} perfil(is)
             </UiButton>
           </div>
         </div>
@@ -306,3 +310,6 @@ async function confirmMerge() {
     </div>
   </main>
 </template>
+
+
+

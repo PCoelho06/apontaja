@@ -20,11 +20,11 @@ export function buildCustomerPayload(
   const phone = values.phone.trim();
   const internalNotes = values.internalNotes.trim();
   if (!firstName || !lastName) {
-    return { error: "Le prénom et le nom du client sont obligatoires." };
+    return { error: "O nome próprio e o apelido do cliente são obrigatórios." };
   }
   if (!email && !phone) {
     return {
-      error: "Renseignez au moins un email ou un téléphone pour le client.",
+      error: "Indique pelo menos um email ou um telefone do cliente.",
     };
   }
   return {
@@ -37,3 +37,6 @@ export function buildCustomerPayload(
     },
   };
 }
+
+
+

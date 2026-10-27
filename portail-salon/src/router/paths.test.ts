@@ -4,7 +4,7 @@ import router from "@/router";
 
 const SALON = { salonId: "abc" };
 
-describe("chemins pt-PT du portail salon (4h-1, 4h-2)", () => {
+describe("chemins pt-PT du portail salon (4h-1 à 4h-4)", () => {
   it("garde les noms de routes et renomme les chemins de la zone authentification et socle", () => {
     const expected: Array<[string, Record<string, string>, string]> = [
       ["login", {}, "/entrar"],
@@ -43,12 +43,12 @@ describe("chemins pt-PT du portail salon (4h-1, 4h-2)", () => {
     expect(router.resolve("/saloes/abc/catalogo").matched.length).toBeGreaterThan(0);
   });
 
-  it("utilise le préfixe /saloes pour les routes des zones suivantes, suffixes inchangés", () => {
+  it("renomme les chemins de l'agenda, des pedidos et des clientes (4h-3, 4h-4)", () => {
     const expected: Array<[string, string]> = [
       ["agenda", "/saloes/abc/agenda"],
-      ["booking-requests", "/saloes/abc/demandes"],
-      ["customers", "/saloes/abc/clients"],
-      ["customer-duplicates", "/saloes/abc/clients/doublons"],
+      ["booking-requests", "/saloes/abc/pedidos"],
+      ["customers", "/saloes/abc/clientes"],
+      ["customer-duplicates", "/saloes/abc/clientes/duplicados"],
     ];
 
     for (const [name, path] of expected) {
@@ -69,6 +69,9 @@ describe("chemins pt-PT du portail salon (4h-1, 4h-2)", () => {
       "/invitations/accepter",
       "/salons/nouveau",
       "/saloes/:salonId/catalogue",
+      "/saloes/:salonId/clients",
+      "/saloes/:salonId/clients/doublons",
+      "/saloes/:salonId/demandes",
     ]) {
       expect(paths).not.toContain(old);
     }
@@ -80,3 +83,6 @@ describe("chemins pt-PT du portail salon (4h-1, 4h-2)", () => {
     expect(router.getRoutes().find((r) => r.name === "privacy")?.meta.title).toContain("Privacidade");
   });
 });
+
+
+

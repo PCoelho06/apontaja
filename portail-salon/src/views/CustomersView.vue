@@ -6,9 +6,14 @@ import { UiAlert, UiButton, UiInput } from "@apontaja/ui-kit";
 
 import CustomerDetailDialog from "@/components/customers/CustomerDetailDialog.vue";
 import CustomerFormDialog from "@/components/customers/CustomerFormDialog.vue";
-import { contactLine, fullName, visitLabel } from "@/lib/customerFormat";
+import { describeCustomerLoadError } from "@/lib/customerErrors";
+import {
+  NO_CONTACT_LABEL,
+  contactLine,
+  fullName,
+  visitLabel,
+} from "@/lib/customerFormat";
 import { debounce } from "@/lib/debounce";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { useCatalogAccess } from "@/composables/useCatalogAccess";
 import { useCustomerStore, type Customer } from "@/stores/customer";
 import { useSalonStore } from "@/stores/salon";
@@ -45,7 +50,7 @@ async function search() {
       page: pageIndex.value,
     });
   } catch (e) {
-    error.value = errorMessage(e, "Impossible de charger les clients.");
+    error.value = describeCustomerLoadError(e, "list");
   } finally {
     loading.value = false;
   }
@@ -85,7 +90,7 @@ watch(
       ready.value = true;
       await search();
     } catch (e) {
-      error.value = errorMessage(e, "Impossible de charger les clients.");
+      error.value = describeCustomerLoadError(e, "list");
     }
   },
   { immediate: true },
@@ -126,18 +131,18 @@ function onSaved(customer: Customer) {
           :to="{ name: 'salon-detail', params: { salonId } }"
           class="text-sm text-wine hover:underline"
         >
-          ← {{ salonStore.currentSalon?.name ?? "Salon" }}
+          ← {{ salonStore.currentSalon?.name ?? "Salão" }}
         </RouterLink>
         <div class="mt-2 flex items-center justify-between gap-3">
           <h1 class="font-display text-2xl text-ink">
-            Clients
+            Clientes
           </h1>
           <RouterLink
             v-if="canManage"
             :to="{ name: 'customer-duplicates', params: { salonId } }"
             class="text-sm text-wine hover:underline"
           >
-            Doublons
+            Duplicados
           </RouterLink>
         </div>
       </div>
@@ -152,7 +157,7 @@ function onSaved(customer: Customer) {
         v-if="!ready && !error"
         class="text-sm text-ink/70"
       >
-        Chargement…
+        A carregar...
       </p>
 
       <template v-else-if="ready">
@@ -160,12 +165,12 @@ function onSaved(customer: Customer) {
           <div class="min-w-64 flex-1">
             <UiInput
               v-model="query"
-              label="Rechercher un client"
-              hint="Nom, email ou téléphone"
+              label="Pesquisar cliente"
+              hint="Nome, email ou telefone"
             />
           </div>
           <UiButton @click="openCreate">
-            Nouveau client
+            Novo cliente
           </UiButton>
         </div>
 
@@ -188,13 +193,13 @@ function onSaved(customer: Customer) {
                   fullName(customer)
                 }}</span>
                 <span class="block text-sm text-ink/60">{{
-                  contactLine(customer) || "Aucun moyen de contact"
+                  contactLine(customer) || NO_CONTACT_LABEL
                 }}</span>
               </span>
               <span class="text-xs text-ink/60 sm:text-right">
-                <span class="block">Dernière visite :
+                <span class="block">Última visita:
                   {{ visitLabel(customer.lastVisitAt, timeZone) }}</span>
-                <span class="block">Prochain rendez-vous :
+                <span class="block">Próxima marcação:
                   {{ visitLabel(customer.nextVisitAt, timeZone) }}</span>
               </span>
             </button>
@@ -206,8 +211,8 @@ function onSaved(customer: Customer) {
         >
           {{
             query.trim()
-              ? "Aucun client ne correspond à cette recherche."
-              : "Aucun client pour le moment."
+              ? "Nenhum cliente corresponde a esta pesquisa."
+              : "Ainda não há clientes."
           }}
         </p>
 
@@ -221,10 +226,10 @@ function onSaved(customer: Customer) {
             :disabled="pageIndex === 0 || loading"
             @click="goToPage(-1)"
           >
-            ← Précédent
+            ← Anterior
           </UiButton>
           <span class="text-sm text-ink/60">
-            Page {{ pageIndex + 1 }} / {{ customerStore.totalPages }} ·
+            Página {{ pageIndex + 1 }} / {{ customerStore.totalPages }} ·
             {{ customerStore.totalElements }} clients
           </span>
           <UiButton
@@ -233,7 +238,7 @@ function onSaved(customer: Customer) {
             :disabled="pageIndex + 1 >= customerStore.totalPages || loading"
             @click="goToPage(1)"
           >
-            Suivant →
+            Seguinte →
           </UiButton>
         </div>
 
@@ -255,3 +260,6 @@ function onSaved(customer: Customer) {
     </div>
   </main>
 </template>
+
+
+

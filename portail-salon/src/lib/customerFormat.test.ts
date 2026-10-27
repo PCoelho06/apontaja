@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { contactLine, fullName, visitLabel } from "@/lib/customerFormat";
+import {
+  NO_CONTACT_LABEL,
+  contactLine,
+  fullName,
+  visitLabel,
+} from "@/lib/customerFormat";
 
 describe("customerFormat", () => {
   it("assemble le nom complet", () => {
@@ -19,6 +24,10 @@ describe("customerFormat", () => {
     expect(contactLine({ email: undefined, phone: null })).toBe("");
   });
 
+  it("expose le libellé pt-PT sans contact", () => {
+    expect(NO_CONTACT_LABEL).toBe("Sem contacto");
+  });
+
   it("affiche un tiret quand il n'y a pas de visite", () => {
     expect(visitLabel(null, "Europe/Paris")).toBe("—");
     expect(visitLabel(undefined, "Europe/Paris")).toBe("—");
@@ -30,3 +39,6 @@ describe("customerFormat", () => {
     );
   });
 });
+
+
+

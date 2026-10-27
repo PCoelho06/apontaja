@@ -4,9 +4,12 @@ import { useRoute } from "vue-router";
 
 import { UiAlert, UiBadge, UiButton, UiDialog } from "@apontaja/ui-kit";
 
-import { ApiError } from "@apontaja/web-core/api-client";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { ageLabel } from "@/lib/bookingRequests";
+import {
+  describeRequestActionError,
+  describeRequestsLoadError,
+  shouldReloadRequests,
+} from "@/lib/bookingRequestErrors";
 import { formatCents, formatDuration } from "@/lib/catalogFormat";
 import { fullName, visitLabel } from "@/lib/customerFormat";
 import type { AppointmentItem } from "@/stores/agenda";
@@ -40,15 +43,15 @@ const declineError = ref<string | null>(null);
 
 function customerName(id: string): string {
   const customer = customerStore.byId[id];
-  return customer ? fullName(customer) : "Client inconnu";
+  return customer ? fullName(customer) : "Cliente desconhecido";
 }
 
 function serviceName(id: string): string {
-  return serviceStore.services.find((s) => s.serviceId === id)?.name ?? "Prestation";
+  return serviceStore.services.find((s) => s.serviceId === id)?.name ?? "Serviço eliminado";
 }
 
 function resourceName(id: string): string {
-  return resourceStore.resources.find((r) => r.resourceId === id)?.name ?? "Ressource";
+  return resourceStore.resources.find((r) => r.resourceId === id)?.name ?? "Recurso desconhecido";
 }
 
 async function refresh() {
@@ -72,7 +75,7 @@ async function load(id: string) {
     ]);
     await refresh();
   } catch (e) {
-    error.value = errorMessage(e, "Impossible de charger les demandes.");
+    error.value = describeRequestsLoadError(e, "load");
   } finally {
     loading.value = false;
   }
@@ -86,23 +89,25 @@ async function reload() {
   try {
     await refresh();
   } catch (e) {
-    error.value = errorMessage(e, "Impossible d'actualiser les demandes.");
+    error.value = describeRequestsLoadError(e, "refresh");
   } finally {
     refreshing.value = false;
   }
 }
 
-/** 409 : la demande a changé (le client l'a annulée, un collègue l'a traitée) → message clair + rechargement. */
-async function failure(e: unknown, fallback: string): Promise<string> {
-  if (e instanceof ApiError && e.status === 409) {
+/** 404/409 : la demande a changé (le client l'a annulée, un collègue l'a traitée) → message clair + rechargement. */
+async function failure(
+  e: unknown,
+  action: "confirm" | "decline",
+): Promise<string> {
+  if (shouldReloadRequests(e)) {
     try {
       await refresh();
     } catch {
       // La liste reste celle d'avant ; le message suffit.
     }
-    return "Cette demande a changé entre-temps (annulée par le client ou déjà traitée). La liste a été actualisée.";
   }
-  return errorMessage(e, fallback);
+  return describeRequestActionError(e, action);
 }
 
 async function confirm(request: AppointmentItem) {
@@ -111,9 +116,11 @@ async function confirm(request: AppointmentItem) {
   notice.value = null;
   try {
     await requestsStore.confirmRequest(salonId.value, request.appointmentId);
-    notice.value = `Rendez-vous confirmé pour ${customerName(request.customerProfileId)}. Un email lui a été envoyé s'il a une adresse.`;
+    notice.value =
+      `Marcação confirmada para ${customerName(request.customerProfileId)}. ` +
+      "Foi enviado um email ao cliente, se tiver endereço.";
   } catch (e) {
-    error.value = await failure(e, "La confirmation a échoué.");
+    error.value = await failure(e, "confirm");
   } finally {
     busyId.value = null;
   }
@@ -134,10 +141,12 @@ async function confirmDecline() {
   declineError.value = null;
   try {
     await requestsStore.declineRequest(salonId.value, request.appointmentId);
-    notice.value = `Demande refusée pour ${customerName(request.customerProfileId)}. Un email lui a été envoyé s'il a une adresse.`;
+    notice.value =
+      `Pedido recusado para ${customerName(request.customerProfileId)}. ` +
+      "Foi enviado um email ao cliente, se tiver endereço.";
     declineOpen.value = false;
   } catch (e) {
-    declineError.value = await failure(e, "Le refus a échoué.");
+    declineError.value = await failure(e, "decline");
   } finally {
     busyId.value = null;
   }
@@ -152,11 +161,11 @@ async function confirmDecline() {
           :to="{ name: 'salon-detail', params: { salonId } }"
           class="text-sm text-wine hover:underline"
         >
-          ← {{ salonStore.currentSalon?.name ?? "Salon" }}
+          ← {{ salonStore.currentSalon?.name ?? "Salão" }}
         </RouterLink>
         <div class="mt-2 flex items-center justify-between gap-3">
           <h1 class="font-display text-2xl text-ink">
-            Demandes à valider
+            Pedidos por validar
             <UiBadge
               v-if="!loading && requestsStore.count > 0"
               tone="brass"
@@ -170,13 +179,13 @@ async function confirmDecline() {
             :loading="refreshing"
             @click="reload"
           >
-            Actualiser
+            Atualizar
           </UiButton>
         </div>
         <p class="mt-1 text-sm text-ink/70">
-          Réservations faites en ligne, en attente de votre décision. Le client
-          est prévenu par email lorsque vous confirmez ou refusez. Heures du
-          salon<span v-if="timeZone"> ({{ timeZone }})</span>.
+          Reservas feitas online, a aguardar a sua decisão. O cliente é
+          avisado por email quando confirma ou recusa. Horas do
+          salão<span v-if="timeZone"> ({{ timeZone }})</span>.
         </p>
       </div>
 
@@ -196,7 +205,7 @@ async function confirmDecline() {
         v-if="loading"
         class="text-sm text-ink/70"
       >
-        Chargement…
+        A carregar...
       </p>
 
       <template v-else>
@@ -204,7 +213,7 @@ async function confirmDecline() {
           v-if="requestsStore.count === 0"
           class="text-ink/60"
         >
-          Aucune demande en attente.
+          Nenhum pedido em espera.
         </p>
         <ul
           v-else
@@ -221,13 +230,13 @@ async function confirmDecline() {
                 {{ customerName(request.customerProfileId) }}
               </p>
               <p class="text-ink/70">
-                {{ serviceName(request.serviceId) }} avec
+                {{ serviceName(request.serviceId) }} com
                 {{ resourceName(request.resourceId) }} ·
                 {{ formatDuration(request.durationAtBookingMinutes) }} ·
                 {{ formatCents(request.priceAtBookingCents) }}
               </p>
               <p class="text-xs text-ink/60">
-                Demandé {{ ageLabel(request.createdAt, now) }}
+                Pedido feito {{ ageLabel(request.createdAt, now) }}
               </p>
             </div>
             <div class="flex gap-2">
@@ -237,7 +246,7 @@ async function confirmDecline() {
                 :disabled="busyId !== null"
                 @click="confirm(request)"
               >
-                Confirmer
+                Confirmar
               </UiButton>
               <UiButton
                 variant="secondary"
@@ -245,7 +254,7 @@ async function confirmDecline() {
                 :disabled="busyId !== null"
                 @click="askDecline(request)"
               >
-                Refuser
+                Recusar
               </UiButton>
             </div>
           </li>
@@ -254,23 +263,24 @@ async function confirmDecline() {
           :to="{ name: 'agenda', params: { salonId } }"
           class="inline-block text-sm text-wine hover:underline"
         >
-          Voir l'agenda
+          Ver a agenda
         </RouterLink>
       </template>
 
       <UiDialog
         v-model:open="declineOpen"
-        title="Refuser la demande"
+        title="Recusar pedido"
+        close-label="Fechar"
       >
         <div
           v-if="declining"
           class="space-y-4 text-sm text-ink"
         >
           <p>
-            Refuser la demande de
+            Recusar o pedido de
             <strong>{{ customerName(declining.customerProfileId) }}</strong>
-            le {{ visitLabel(declining.startAt, timeZone) }} ? Le créneau sera
-            libéré et le client en sera informé par email.
+            para {{ visitLabel(declining.startAt, timeZone) }}? O horário será
+            libertado e o cliente será informado por email.
           </p>
           <UiAlert
             v-if="declineError"
@@ -284,14 +294,14 @@ async function confirmDecline() {
               :disabled="busyId !== null"
               @click="declineOpen = false"
             >
-              Garder la demande
+              Manter pedido
             </UiButton>
             <UiButton
               variant="danger"
               :loading="busyId === declining.appointmentId"
               @click="confirmDecline"
             >
-              Refuser
+              Recusar
             </UiButton>
           </div>
         </div>
@@ -299,3 +309,6 @@ async function confirmDecline() {
     </div>
   </main>
 </template>
+
+
+

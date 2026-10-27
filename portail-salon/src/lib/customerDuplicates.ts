@@ -35,8 +35,8 @@ export function memberContact(member: DuplicateMember): string {
 }
 
 const REASON_LABELS: Record<DuplicateReason, string> = {
-  EMAIL: "Même email",
-  PHONE: "Même téléphone",
+  EMAIL: "Mesmo email",
+  PHONE: "Mesmo telefone",
 };
 
 export function reasonsLabel(reasons: DuplicateReason[]): string {
@@ -45,10 +45,10 @@ export function reasonsLabel(reasons: DuplicateReason[]): string {
 
 export function notMergeableLabel(reason: NotMergeableReason | null): string {
   if (reason === "CLAIMED") {
-    return "Profil rattaché à un compte client : il peut être conservé, mais pas absorbé.";
+    return "Perfil associado a uma conta de cliente: pode ser mantido, mas não absorvido.";
   }
   if (reason === "SHARED") {
-    return "Profil partagé avec un autre salon : fusion impossible.";
+    return "Perfil partilhado com outro salão: fusão impossível.";
   }
   return "";
 }
@@ -75,7 +75,8 @@ export function canKeep(group: DuplicateGroup, member: DuplicateMember): boolean
 }
 
 export const CLAIMED_SURVIVOR_WARNING =
-  "Ce profil est rattaché à un compte client. Après la fusion, son titulaire verra l'historique de rendez-vous des profils fusionnés.";
+  "Este perfil está associado a uma conta de cliente. Após a fusão, o titular " +
+  "verá o histórico de marcações dos perfis fundidos.";
 
 /** Identifiants à absorber : les candidats moins ceux que l'utilisateur a exclus. */
 export function absorbedIds(
@@ -87,3 +88,6 @@ export function absorbedIds(
     .map((member) => member.customerProfileId)
     .filter((id) => !excluded.includes(id));
 }
+
+
+

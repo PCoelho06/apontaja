@@ -9,9 +9,8 @@ import {
   UiTextarea,
 } from "@apontaja/ui-kit";
 
-import { ApiError } from "@apontaja/web-core/api-client";
+import { describeCustomerSaveError } from "@/lib/customerErrors";
 import { buildCustomerPayload } from "@/lib/customerForm";
-import { errorMessage } from "@apontaja/web-core/error-message";
 import { useCustomerStore, type Customer } from "@/stores/customer";
 
 const props = defineProps<{
@@ -76,8 +75,9 @@ async function submit() {
     emit("saved", saved);
     open.value = false;
   } catch (e) {
-    formError.value = errorMessage(e, "Enregistrement impossible.");
-    fieldErrors.value = e instanceof ApiError ? (e.fieldErrors ?? {}) : {};
+    const failure = describeCustomerSaveError(e);
+    formError.value = failure.message;
+    fieldErrors.value = failure.fieldErrors;
   } finally {
     submitting.value = false;
   }
@@ -87,7 +87,8 @@ async function submit() {
 <template>
   <UiDialog
     v-model:open="open"
-    :title="customer ? 'Modifier le client' : 'Nouveau client'"
+    :title="customer ? 'Editar cliente' : 'Novo cliente'"
+    close-label="Fechar"
   >
     <form
       class="space-y-4"
@@ -96,14 +97,14 @@ async function submit() {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <UiInput
           v-model="form.firstName"
-          label="Prénom"
+          label="Nome próprio"
           maxlength="100"
           autofocus
           :error="fieldErrors.firstName"
         />
         <UiInput
           v-model="form.lastName"
-          label="Nom"
+          label="Apelido"
           maxlength="100"
           :error="fieldErrors.lastName"
         />
@@ -116,16 +117,16 @@ async function submit() {
         <UiInput
           v-model="form.phone"
           type="tel"
-          label="Téléphone"
+          label="Telefone"
           :error="fieldErrors.phone"
         />
       </div>
       <p class="text-xs text-ink/60">
-        Au moins un email ou un téléphone est requis.
+        Indique pelo menos um email ou um telefone.
       </p>
       <UiTextarea
         v-model="form.internalNotes"
-        label="Notes internes (visibles du salon uniquement)"
+        label="Notas internas (visíveis apenas para o salão)"
         maxlength="2000"
         :error="fieldErrors.internalNotes"
       />
@@ -142,15 +143,18 @@ async function submit() {
           variant="secondary"
           @click="open = false"
         >
-          Annuler
+          Cancelar
         </UiButton>
         <UiButton
           type="submit"
           :loading="submitting"
         >
-          Enregistrer
+          Guardar
         </UiButton>
       </div>
     </form>
   </UiDialog>
 </template>
+
+
+
