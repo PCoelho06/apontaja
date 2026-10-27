@@ -11,7 +11,7 @@ declare module "vue-router" {
 }
 
 // Chemins en pt-PT, renommés zone par zone (4h-1 : authentification et socle, préfixe /saloes).
-// 4h-2 : suffixes du catalogue. Ceux de l'agenda, des clients et des demandes suivent en 4h-3 et 4h-4.
+// 4h-2 : suffixes du catalogue ; 4h-3 : agenda ; 4h-4 : clientes, duplicados, pedidos.
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -102,19 +102,19 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: "/saloes/:salonId/demandes",
+      path: "/saloes/:salonId/pedidos",
       name: "booking-requests",
       component: () => import("@/views/BookingRequestsView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/saloes/:salonId/clients",
+      path: "/saloes/:salonId/clientes",
       name: "customers",
       component: () => import("@/views/CustomersView.vue"),
       meta: { requiresAuth: true },
     },
     {
-      path: "/saloes/:salonId/clients/doublons",
+      path: "/saloes/:salonId/clientes/duplicados",
       name: "customer-duplicates",
       component: () => import("@/views/CustomerDuplicatesView.vue"),
       meta: { requiresAuth: true },
@@ -164,3 +164,6 @@ router.beforeEach((to) => {
 });
 
 export default router;
+
+
+

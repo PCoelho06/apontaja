@@ -83,7 +83,7 @@ describe("bookingRequests store", () => {
 
     expect(apiPatch).toHaveBeenCalledWith(
       "/api/salons/s1/appointments/a/cancel",
-      { reason: "Demande refusée par le salon" },
+      { reason: "Pedido recusado pelo salão" },
       "tok",
     );
     expect(store.count).toBe(0);
@@ -102,3 +102,6 @@ describe("bookingRequests store", () => {
     expect(store.count).toBe(1);
   });
 });
+
+
+

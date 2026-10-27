@@ -43,8 +43,8 @@ describe("customerDuplicates", () => {
   });
 
   it("libelle les motifs et les refus", () => {
-    expect(reasonsLabel(["EMAIL", "PHONE"])).toBe("Même email · Même téléphone");
-    expect(notMergeableLabel("CLAIMED")).toContain("compte client");
+    expect(reasonsLabel(["EMAIL", "PHONE"])).toBe("Mesmo email · Mesmo telefone");
+    expect(notMergeableLabel("CLAIMED")).toContain("conta de cliente");
     expect(notMergeableLabel(null)).toBe("");
   });
 
@@ -78,3 +78,6 @@ describe("customerDuplicates", () => {
     expect(canKeep(alone, claimed)).toBe(false);
   });
 });
+
+
+

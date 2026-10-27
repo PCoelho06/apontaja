@@ -3,12 +3,20 @@ import { computed, ref, watch } from "vue";
 
 import { UiAlert, UiButton, UiDialog } from "@apontaja/ui-kit";
 
-import { ApiError } from "@apontaja/web-core/api-client";
 import type { AppointmentStatus } from "@/lib/appointmentStatus";
 import { STATUS_LABELS } from "@/lib/appointmentStatus";
 import { formatCents } from "@/lib/catalogFormat";
-import { contactLine, fullName, visitLabel } from "@/lib/customerFormat";
-import { errorMessage } from "@apontaja/web-core/error-message";
+import {
+  describeAnonymizeError,
+  describeConsentError,
+  describeCustomerLoadError,
+} from "@/lib/customerErrors";
+import {
+  NO_CONTACT_LABEL,
+  contactLine,
+  fullName,
+  visitLabel,
+} from "@/lib/customerFormat";
 import {
   useCustomerStore,
   type Customer,
@@ -45,7 +53,7 @@ const contact = computed(() => (customer.value ? contactLine(customer.value) : "
 function serviceName(serviceId: string): string {
   return (
     serviceStore.services.find((s) => s.serviceId === serviceId)?.name ??
-    "Prestation supprimée"
+    "Serviço eliminado"
   );
 }
 
@@ -69,7 +77,7 @@ async function loadHistory(page: number) {
     historyPage.value = result.page;
     historyTotalPages.value = result.totalPages;
   } catch (e) {
-    historyError.value = errorMessage(e, "Impossible de charger l'historique.");
+    historyError.value = describeCustomerLoadError(e, "history");
   }
 }
 
@@ -88,21 +96,17 @@ watch(
   { immediate: true },
 );
 
-function failure(e: unknown): string {
-  if (e instanceof ApiError && e.status === 403) {
-    return "Seuls les gérants et propriétaires peuvent anonymiser un client.";
-  }
-  return errorMessage(e, "Action impossible.");
-}
-
-async function run(action: () => Promise<unknown>) {
+async function run(
+  action: () => Promise<unknown>,
+  describe: (e: unknown) => string,
+) {
   busy.value = true;
   error.value = null;
   try {
     await action();
     emit("changed");
   } catch (e) {
-    error.value = failure(e);
+    error.value = describe(e);
   } finally {
     busy.value = false;
   }
@@ -111,7 +115,10 @@ async function run(action: () => Promise<unknown>) {
 function setConsent(consented: boolean) {
   const id = props.customerId;
   if (id) {
-    run(() => customerStore.setMarketingConsent(props.salonId, id, consented));
+    run(
+      () => customerStore.setMarketingConsent(props.salonId, id, consented),
+      describeConsentError,
+    );
   }
 }
 
@@ -122,15 +129,15 @@ function anonymize() {
     return;
   }
   const confirmed = globalThis.confirm(
-    `Anonymiser ${fullName(current)} ? Son nom, son email, son téléphone, ` +
-      "ses notes et son consentement seront effacés définitivement. " +
-      "Ses rendez-vous sont conservés.",
+    `Anonimizar ${fullName(current)}? O nome, o email, o telefone, ` +
+      "as notas e o consentimento serão apagados definitivamente. " +
+      "As marcações são conservadas.",
   );
   if (confirmed) {
     run(async () => {
       await customerStore.anonymizeCustomer(props.salonId, id);
       open.value = false;
-    });
+    }, describeAnonymizeError);
   }
 }
 </script>
@@ -138,7 +145,8 @@ function anonymize() {
 <template>
   <UiDialog
     v-model:open="open"
-    title="Fiche client"
+    title="Ficha do cliente"
+    close-label="Fechar"
   >
     <div
       v-if="customer"
@@ -152,28 +160,28 @@ function anonymize() {
           v-if="customer.anonymized"
           class="text-ink/60"
         >
-          Client anonymisé : ses données personnelles ont été effacées.
+          Cliente anonimizado: os dados pessoais foram apagados.
         </p>
         <p
           v-else
           class="text-ink/60"
         >
-          {{ contact || "Aucun moyen de contact" }}
+          {{ contact || NO_CONTACT_LABEL }}
         </p>
       </div>
 
       <dl class="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1.5">
         <dt class="text-ink/60">
-          Dernière visite
+          Última visita
         </dt>
         <dd>{{ visitLabel(customer.lastVisitAt, timeZone) }}</dd>
         <dt class="text-ink/60">
-          Prochain rendez-vous
+          Próxima marcação
         </dt>
         <dd>{{ visitLabel(customer.nextVisitAt, timeZone) }}</dd>
         <template v-if="!customer.anonymized">
           <dt class="text-ink/60">
-            Notes internes
+            Notas internas
           </dt>
           <dd class="whitespace-pre-line">
             {{ customer.internalNotes || "—" }}
@@ -193,16 +201,16 @@ function anonymize() {
         class="space-y-2 rounded-md border border-border p-3"
       >
         <p class="font-medium">
-          Communications marketing
+          Comunicações de marketing
         </p>
         <p class="text-ink/70">
           <template v-if="customer.marketingConsent">
-            Le client a accepté de recevoir les communications de ce salon
-            (le {{ visitLabel(customer.marketingConsentAt, timeZone) }}).
+            O cliente aceitou receber as comunicações deste salão
+            (em {{ visitLabel(customer.marketingConsentAt, timeZone) }}).
           </template>
           <template v-else>
-            Aucun consentement enregistré. N'en enregistrez un que si le
-            client l'a donné expressément.
+            Nenhum consentimento registado. Só registe um se o cliente o
+            tiver dado expressamente.
           </template>
         </p>
         <UiButton
@@ -212,7 +220,7 @@ function anonymize() {
           :loading="busy"
           @click="setConsent(false)"
         >
-          Retirer le consentement
+          Retirar consentimento
         </UiButton>
         <UiButton
           v-else
@@ -221,13 +229,13 @@ function anonymize() {
           :loading="busy"
           @click="setConsent(true)"
         >
-          Enregistrer le consentement
+          Registar consentimento
         </UiButton>
       </section>
 
       <section class="space-y-2">
         <p class="font-medium">
-          Historique des rendez-vous
+          Histórico de marcações
         </p>
         <UiAlert
           v-if="historyError"
@@ -258,7 +266,7 @@ function anonymize() {
           v-else
           class="text-ink/60"
         >
-          Aucun rendez-vous.
+          Nenhuma marcação.
         </p>
         <div
           v-if="historyTotalPages > 1"
@@ -270,10 +278,10 @@ function anonymize() {
             :disabled="historyPage === 0"
             @click="loadHistory(historyPage - 1)"
           >
-            ← Plus récents
+            ← Mais recentes
           </UiButton>
           <span class="text-xs text-ink/60">
-            Page {{ historyPage + 1 }} / {{ historyTotalPages }}
+            Página {{ historyPage + 1 }} / {{ historyTotalPages }}
           </span>
           <UiButton
             variant="secondary"
@@ -281,7 +289,7 @@ function anonymize() {
             :disabled="historyPage + 1 >= historyTotalPages"
             @click="loadHistory(historyPage + 1)"
           >
-            Plus anciens →
+            Mais antigas →
           </UiButton>
         </div>
       </section>
@@ -293,16 +301,19 @@ function anonymize() {
           :disabled="busy"
           @click="anonymize"
         >
-          Anonymiser
+          Anonimizar
         </UiButton>
         <UiButton
           v-if="!customer.anonymized"
           :disabled="busy"
           @click="emit('edit', customer)"
         >
-          Modifier
+          Editar
         </UiButton>
       </div>
     </div>
   </UiDialog>
 </template>
+
+
+

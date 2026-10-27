@@ -1,5 +1,8 @@
 import { formatInstant, isValidTimeZone } from "@/lib/zonedTime";
 
+/** Libellé quand un client n'a ni email ni téléphone. */
+export const NO_CONTACT_LABEL = "Sem contacto";
+
 export function fullName(customer: {
   firstName: string;
   lastName: string;
@@ -27,3 +30,6 @@ export function visitLabel(
   }
   return isValidTimeZone(timeZone) ? formatInstant(iso, timeZone) : iso;
 }
+
+
+

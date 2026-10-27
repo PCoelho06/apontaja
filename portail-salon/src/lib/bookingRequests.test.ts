@@ -48,9 +48,12 @@ describe("bookingRequests", () => {
   });
 
   it("libelle l'ancienneté", () => {
-    expect(ageLabel("2099-06-01T09:59:30Z", NOW)).toBe("à l'instant");
-    expect(ageLabel("2099-06-01T09:55:00Z", NOW)).toBe("il y a 5 min");
-    expect(ageLabel("2099-06-01T07:00:00Z", NOW)).toBe("il y a 3 h");
-    expect(ageLabel("2099-05-30T10:00:00Z", NOW)).toBe("il y a 2 j");
+    expect(ageLabel("2099-06-01T09:59:30Z", NOW)).toBe("agora mesmo");
+    expect(ageLabel("2099-06-01T09:55:00Z", NOW)).toBe("há 5 min");
+    expect(ageLabel("2099-06-01T07:00:00Z", NOW)).toBe("há 3 h");
+    expect(ageLabel("2099-05-30T10:00:00Z", NOW)).toBe("há 2 d");
   });
 });
+
+
+

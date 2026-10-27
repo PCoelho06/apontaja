@@ -1,7 +1,7 @@
 import type { AppointmentItem } from "@/stores/agenda";
 
 /** Motif enregistré lorsque le salon refuse une demande (jamais envoyé au client dans l'email). */
-export const DECLINE_REASON = "Demande refusée par le salon";
+export const DECLINE_REASON = "Pedido recusado pelo salão";
 
 /** Fenêtre de recherche des demandes : au-delà de l'horizon maximal de réservation (365 jours). */
 export const REQUEST_WINDOW_DAYS = 400;
@@ -24,20 +24,23 @@ export function pendingRequests(
     );
 }
 
-/** Ancienneté d'une demande : « à l'instant », « il y a 5 min », « il y a 3 h », « il y a 2 j ». */
+/** Ancienneté d'une demande : « agora mesmo », « há 5 min », « há 3 h », « há 2 d ». */
 export function ageLabel(createdAt: string, now: Date): string {
   const minutes = Math.floor(
     (now.getTime() - new Date(createdAt).getTime()) / 60_000,
   );
   if (minutes < 1) {
-    return "à l'instant";
+    return "agora mesmo";
   }
   if (minutes < 60) {
-    return `il y a ${minutes} min`;
+    return `há ${minutes} min`;
   }
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
-    return `il y a ${hours} h`;
+    return `há ${hours} h`;
   }
-  return `il y a ${Math.floor(hours / 24)} j`;
+  return `há ${Math.floor(hours / 24)} d`;
 }
+
+
+
