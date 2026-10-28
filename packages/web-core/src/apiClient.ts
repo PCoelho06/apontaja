@@ -15,6 +15,13 @@ export class ApiError extends Error {
     this.fieldErrors = fieldErrors;
     this.problem = problem;
   }
+
+  /** Code d'erreur stable du back (`code` du ProblemDetail), ou `undefined` s'il n'y en a pas. */
+  get code(): string | undefined {
+    const value = this.problem?.code;
+
+    return typeof value === "string" ? value : undefined;
+  }
 }
 
 interface ProblemDetail {

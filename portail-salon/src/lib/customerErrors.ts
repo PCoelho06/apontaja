@@ -1,54 +1,22 @@
 import { ApiError } from "@apontaja/web-core/api-client";
-import {
-  TOO_MANY_ATTEMPTS,
-  type FormFailure,
-} from "@apontaja/web-core/auth-errors";
+import type { FormFailure } from "@apontaja/web-core/auth-errors";
+
+import { resolveMessage, translateFields } from "@/lib/resolveError";
 
 /**
  * Erreurs des écrans Clientes et Duplicados en pt-PT.
- * Les messages et `fieldErrors` du back sont en français : on s'appuie sur l'opération, le statut
- * HTTP et le nom du champ, jamais sur le texte. Une erreur qui n'est pas une `ApiError` (réseau,
- * jeton absent) donne toujours le message générique de l'opération.
+ * Les messages et `fieldErrors` du back sont en français : on s'appuie sur le `code` stable du back
+ * (5a-1), puis sur l'opération, le statut HTTP et le nom du champ, jamais sur le texte. Une erreur
+ * qui n'est pas une `ApiError` (réseau, jeton absent) donne toujours le message générique.
  */
 
-const FORBIDDEN = "Não tem permissão para esta ação.";
 const SALON_UNREACHABLE = "Não foi possível aceder a este salão.";
 const CUSTOMER_GONE = "Este cliente já não existe.";
 const MANAGERS_ONLY = "Apenas gestores e proprietários";
-
-function byStatus(
-  error: unknown,
-  specific: ReadonlyMap<number, string>,
-  generic: string,
-): string {
-  if (!(error instanceof ApiError)) {
-    return generic;
-  }
-  if (error.status === 429) {
-    return TOO_MANY_ATTEMPTS;
-  }
-  if (error.status === 403) {
-    return specific.get(403) ?? FORBIDDEN;
-  }
-  return specific.get(error.status) ?? generic;
-}
-
-/** Ne garde que les champs connus (Map : une clé arbitraire du back n'atteint jamais un prototype). */
-function translateFields(
-  error: unknown,
-  table: ReadonlyMap<string, string>,
-): Record<string, string> {
-  const fieldErrors: Record<string, string> = {};
-  if (error instanceof ApiError) {
-    for (const field of Object.keys(error.fieldErrors ?? {})) {
-      const message = table.get(field);
-      if (message !== undefined) {
-        fieldErrors[field] = message;
-      }
-    }
-  }
-  return fieldErrors;
-}
+const CONTACT_REQUIRED =
+  "Verifique os dados introduzidos. Indique pelo menos um email ou um telefone.";
+const ANONYMIZED_NO_EDIT = "Este cliente foi anonimizado e já não pode ser editado.";
+const REFRESHED = "A lista foi atualizada.";
 
 export type CustomerLoadSubject = "list" | "history" | "duplicates" | "salon";
 
@@ -59,35 +27,32 @@ export function describeCustomerLoadError(
 ): string {
   switch (subject) {
     case "list":
-      return byStatus(
-        error,
-        new Map([
+      return resolveMessage(error, {
+        statuses: new Map([
           [403, "Não tem permissão para ver os clientes deste salão."],
           [404, SALON_UNREACHABLE],
         ]),
-        "Não foi possível carregar os clientes.",
-      );
+        generic: "Não foi possível carregar os clientes.",
+      });
     case "history":
-      return byStatus(
-        error,
-        new Map([[404, CUSTOMER_GONE]]),
-        "Não foi possível carregar o histórico.",
-      );
+      return resolveMessage(error, {
+        codes: new Map([["CUSTOMER_NOT_FOUND", CUSTOMER_GONE]]),
+        statuses: new Map([[404, CUSTOMER_GONE]]),
+        generic: "Não foi possível carregar o histórico.",
+      });
     case "duplicates":
-      return byStatus(
-        error,
-        new Map([
+      return resolveMessage(error, {
+        statuses: new Map([
           [403, `${MANAGERS_ONLY} podem gerir os duplicados.`],
           [404, SALON_UNREACHABLE],
         ]),
-        "Não foi possível carregar os duplicados.",
-      );
+        generic: "Não foi possível carregar os duplicados.",
+      });
     default:
-      return byStatus(
-        error,
-        new Map([[404, SALON_UNREACHABLE]]),
-        "Não foi possível carregar o salão.",
-      );
+      return resolveMessage(error, {
+        statuses: new Map([[404, SALON_UNREACHABLE]]),
+        generic: "Não foi possível carregar o salão.",
+      });
   }
 }
 
@@ -101,38 +66,58 @@ const CUSTOMER_FIELDS: ReadonlyMap<string, string> = new Map([
 
 /** Criação ou modificação de um cliente. */
 export function describeCustomerSaveError(error: unknown): FormFailure {
-  const fieldErrors = translateFields(error, CUSTOMER_FIELDS);
-  const isBadRequest = error instanceof ApiError && error.status === 400;
-  const message = isBadRequest
-    ? "Verifique os dados introduzidos. Indique pelo menos um email ou um telefone."
-    : byStatus(
-        error,
-        new Map([
-          [404, CUSTOMER_GONE],
-          [409, "Este cliente foi anonimizado e já não pode ser editado."],
-        ]),
-        "Não foi possível guardar o cliente. Tente novamente.",
-      );
-  return { message, fieldErrors };
+  const message = resolveMessage(error, {
+    codes: new Map([
+      ["CUSTOMER_NOT_FOUND", CUSTOMER_GONE],
+      ["CUSTOMER_ANONYMIZED", ANONYMIZED_NO_EDIT],
+      ["CUSTOMER_CONTACT_REQUIRED", CONTACT_REQUIRED],
+    ]),
+    statuses: new Map([
+      [400, CONTACT_REQUIRED],
+      [404, CUSTOMER_GONE],
+      [409, ANONYMIZED_NO_EDIT],
+    ]),
+    generic: "Não foi possível guardar o cliente. Tente novamente.",
+  });
+  return { message, fieldErrors: translateFields(error, CUSTOMER_FIELDS) };
 }
 
 /** Registo ou retirada do consentimento de marketing. */
 export function describeConsentError(error: unknown): string {
-  return byStatus(
-    error,
-    new Map([
-      [404, CUSTOMER_GONE],
-      [409, "Este cliente foi anonimizado: não é possível alterar o consentimento."],
+  const anonymized =
+    "Este cliente foi anonimizado: não é possível alterar o consentimento.";
+  return resolveMessage(error, {
+    codes: new Map([
+      ["CUSTOMER_NOT_FOUND", CUSTOMER_GONE],
+      ["CUSTOMER_ANONYMIZED", anonymized],
     ]),
-    "Não foi possível atualizar o consentimento.",
-  );
+    statuses: new Map([
+      [404, CUSTOMER_GONE],
+      [409, anonymized],
+    ]),
+    generic: "Não foi possível atualizar o consentimento.",
+  });
 }
 
-/** Anonimização (o back não distingue os motivos do 409 : message combiné). */
+/** Anonimização : un message précis par code, message combiné si le code est absent ou inconnu. */
 export function describeAnonymizeError(error: unknown): string {
-  return byStatus(
-    error,
-    new Map([
+  return resolveMessage(error, {
+    codes: new Map([
+      ["CUSTOMER_NOT_FOUND", CUSTOMER_GONE],
+      ["CUSTOMER_ANONYMIZED", "Este cliente já foi anonimizado."],
+      // Le back lève CUSTOMER_SHARED aussi pour un profil réclamé par un compte (5a-2).
+      [
+        "CUSTOMER_SHARED",
+        "Não é possível anonimizar este cliente: está associado a uma conta de " +
+          "cliente ou a outro salão.",
+      ],
+      [
+        "CUSTOMER_HAS_UPCOMING_APPOINTMENTS",
+        "Não é possível anonimizar este cliente: tem marcações futuras. " +
+          "Cancele-as ou conclua-as primeiro.",
+      ],
+    ]),
+    statuses: new Map([
       [403, `${MANAGERS_ONLY} podem anonimizar um cliente.`],
       [404, CUSTOMER_GONE],
       [
@@ -141,29 +126,41 @@ export function describeAnonymizeError(error: unknown): string {
           "cliente ou a outro salão, ou tem marcações futuras.",
       ],
     ]),
-    "Não foi possível anonimizar o cliente.",
-  );
+    generic: "Não foi possível anonimizar o cliente.",
+  });
 }
 
 /** Fusão de perfis. */
 export function describeMergeError(error: unknown): string {
-  return byStatus(
-    error,
-    new Map([
+  const invalid =
+    "Seleção inválida: escolha entre 1 e 10 perfis a fundir, distintos do perfil mantido.";
+  return resolveMessage(error, {
+    codes: new Map([
+      ["INVALID_MERGE_REQUEST", invalid],
+      ["CUSTOMER_NOT_FOUND", `Um dos perfis já não existe neste salão. ${REFRESHED}`],
+      ["CUSTOMER_ANONYMIZED", `Fusão impossível: um dos perfis foi anonimizado. ${REFRESHED}`],
       [
-        400,
-        "Seleção inválida: escolha entre 1 e 10 perfis a fundir, distintos do perfil mantido.",
+        "CUSTOMER_CLAIMED",
+        "Fusão impossível: um dos perfis está associado a uma conta de cliente " +
+          `e só pode ser o perfil mantido. ${REFRESHED}`,
       ],
+      [
+        "CUSTOMER_SHARED",
+        `Fusão impossível: um dos perfis é partilhado com outro salão. ${REFRESHED}`,
+      ],
+    ]),
+    statuses: new Map([
+      [400, invalid],
       [403, `${MANAGERS_ONLY} podem fundir clientes.`],
-      [404, "Um dos perfis já não existe neste salão. A lista foi atualizada."],
+      [404, `Um dos perfis já não existe neste salão. ${REFRESHED}`],
       [
         409,
         "Fusão impossível: um dos perfis foi anonimizado, está associado a uma " +
-          "conta de cliente ou é partilhado com outro salão. A lista foi atualizada.",
+          `conta de cliente ou é partilhado com outro salão. ${REFRESHED}`,
       ],
     ]),
-    "A fusão falhou.",
-  );
+    generic: "A fusão falhou.",
+  });
 }
 
 /** 404/409 : la liste des duplicados est périmée, la vue la recharge. */

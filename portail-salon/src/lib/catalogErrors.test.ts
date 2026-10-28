@@ -133,3 +133,82 @@ describe("chargements", () => {
     expect(describeCatalogSalonLoadError(apiError(403))).toContain("aceder");
   });
 });
+
+function coded(status: number, code: string): ApiError {
+  return new ApiError(status, FRENCH, undefined, { detail: FRENCH, code });
+}
+
+describe("codes stables du back (5a-1)", () => {
+  it("distingue les cas d'un recurso par code, avec ou sans le statut attendu", () => {
+    expect(describeResourceSaveError(coded(409, "RESOURCE_NAME_ALREADY_USED")).message).toContain(
+      "com este nome",
+    );
+    expect(describeResourceSaveError(coded(409, "STAFF_MEMBER_ALREADY_LINKED")).message).toContain(
+      "outro recurso",
+    );
+    expect(describeResourceSaveError(coded(404, "STAFF_MEMBER_NOT_FOUND")).message).toContain(
+      "membro da equipa",
+    );
+    expect(describeResourceSaveError(coded(404, "RESOURCE_NOT_FOUND")).message).toBe(
+      "Este recurso já não existe.",
+    );
+    expect(describeResourceSaveError(coded(400, "RESOURCE_STAFF_LINK_INVALID")).message).toContain(
+      "profissional",
+    );
+    expect(describeResourceSaveError(coded(400, "INVALID_RESOURCE_TYPE")).message).toContain(
+      "Tipo de recurso",
+    );
+  });
+
+  it("garde les champs traduits d'une validation sans code", () => {
+    const failure = describeResourceSaveError(apiError(400, { name: "x" }));
+    expect(Object.keys(failure.fieldErrors)).toEqual(["name"]);
+  });
+
+  it("traduit les erreurs de serviço, de suppression et d'association", () => {
+    expect(describeServiceSaveError(coded(409, "SERVICE_NAME_ALREADY_USED")).message).toContain(
+      "com este nome",
+    );
+    expect(describeServiceSaveError(coded(404, "SERVICE_NOT_FOUND")).message).toContain(
+      "já não existe",
+    );
+    expect(describeDeleteError(coded(409, "RESOURCE_IN_USE"), "resource")).toContain(
+      "recurso",
+    );
+    expect(describeDeleteError(coded(409, "SERVICE_IN_USE"), "service")).toContain("serviço");
+    expect(describeDeleteError(coded(409, "SERVICE_IN_USE"), "resource")).toContain(
+      "tem marcações ativas",
+    );
+    expect(describeLinkError(coded(409, "SERVICE_RESOURCE_LINK_CONFLICT"), "save")).toContain(
+      "alterada entretanto",
+    );
+    expect(describeLinkError(coded(404, "RESOURCE_NOT_FOUND"), "remove")).toBe(
+      "Este recurso já não existe.",
+    );
+  });
+
+  it("traduit horários, encerramentos et définitions", () => {
+    expect(describeScheduleSaveError(coded(400, "INVALID_TIME_RANGE"))).toContain("sobrepõem");
+    expect(describeClosureSaveError(coded(400, "INVALID_TIME_RANGE"))).toContain("fim");
+    expect(describeClosureSaveError(coded(409, "CLOSURE_BLOCKED_BY_APPOINTMENTS"))).toContain(
+      "marcações ativas",
+    );
+    expect(describeClosureSaveError(coded(404, "CLOSURE_NOT_FOUND"))).toBe(
+      "Este encerramento já não existe.",
+    );
+    expect(describeClosureDeleteError(coded(404, "CLOSURE_NOT_FOUND"))).toBe(
+      "Este encerramento já não existe.",
+    );
+    expect(describeSettingsSaveError(coded(400, "INVALID_BOOKING_SETTINGS"))).toContain("limites");
+    expect(describeCatalogLoadError(coded(404, "RESOURCE_NOT_FOUND"), "schedule")).toBe(
+      "Este recurso já não existe.",
+    );
+  });
+
+  it("ignore un code inconnu (repli sur le statut) et n'affiche jamais le français", () => {
+    expect(describeResourceSaveError(coded(409, "NOUVEAU_CODE")).message).toContain("outro recurso");
+    expect(describeSettingsSaveError(coded(500, "NOUVEAU_CODE"))).toContain("guardar as definições");
+    expect(describeDeleteError(coded(409, "constructor"), "service")).not.toContain("français");
+    expect(describeResourceSaveError(coded(429, "RESOURCE_IN_USE")).message).toBe(TOO_MANY_ATTEMPTS);
+  });
+});

@@ -58,3 +58,24 @@ describe("describeRequestActionError", () => {
     expect(shouldReloadRequests(new Error("x"))).toBe(false);
   });
 });
+
+describe("codes stables du back (5a-1)", () => {
+  it("explique qu'un pedido a changé d'après le code", () => {
+    for (const [status, code] of [
+      [404, "APPOINTMENT_NOT_FOUND"],
+      [409, "APPOINTMENT_TRANSITION_FORBIDDEN"],
+    ] as const) {
+      const error = new ApiError(status, FRENCH, undefined, { code });
+      expect(describeRequestActionError(error, "decline")).toContain("mudou entretanto");
+      expect(shouldReloadRequests(error)).toBe(true);
+    }
+  });
+
+  it("ignore un code inconnu et n'affiche jamais le français", () => {
+    const error = new ApiError(500, FRENCH, undefined, { code: "NOUVEAU_CODE" });
+    expect(describeRequestActionError(error, "confirm")).toBe(
+      "Não foi possível confirmar o pedido.",
+    );
+    expect(describeRequestsLoadError(error, "load")).not.toContain("Transition");
+  });
+});

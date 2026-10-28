@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiGet, configureAuthClient } from "./apiClient";
+import { ApiError, apiGet, configureAuthClient } from "./apiClient";
 
 describe("apiClient", () => {
   const accessToken = {
@@ -267,4 +267,18 @@ describe("apiClient", () => {
   });
 });
 
+describe("ApiError.code", () => {
+  it("expose le code stable du ProblemDetail", () => {
+    const error = new ApiError(409, "Message", undefined, {
+      code: "RESOURCE_IN_USE",
+    });
 
+    expect(error.code).toBe("RESOURCE_IN_USE");
+  });
+
+  it("vaut undefined sans corps, sans code ou avec un code qui n'est pas du texte", () => {
+    expect(new ApiError(404, "Message").code).toBeUndefined();
+    expect(new ApiError(400, "Message", undefined, { detail: "x" }).code).toBeUndefined();
+    expect(new ApiError(400, "Message", undefined, { code: 42 }).code).toBeUndefined();
+  });
+});
