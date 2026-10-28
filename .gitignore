@@ -30,3 +30,12 @@ back/src/main/resources/application-local.yaml
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# --- Secrets / config locale ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks

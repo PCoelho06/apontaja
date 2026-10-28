@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,6 +16,8 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -39,6 +42,11 @@ import java.io.IOException;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+        // API JSON pure : aucune ressource n'est jamais chargée ni affichée depuis une réponse de l'API.
+        private static final String CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'";
+        private static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
+        private static final long HSTS_MAX_AGE_SECONDS = 31_536_000L;
 
         private final Filter jwtAuthenticationFilter;
         private final Filter rateLimitingFilter;
@@ -76,6 +84,20 @@ public class SecurityConfig {
                                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                                 .addFilterBefore(rateLimitingFilter, CsrfFilter.class)
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                // En-têtes de sécurité (5b). HSTS n'est émis par Spring Security que sur une requête
+                                // sécurisée : jamais en HTTP local, et en production grâce à X-Forwarded-Proto
+                                // (voir application-prod.yml). Aucun CORS : portails et API partagent l'origine.
+                                .headers(headers -> headers.contentTypeOptions(Customizer.withDefaults())
+                                                .frameOptions(frame -> frame.deny())
+                                                .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
+                                                .contentSecurityPolicy(
+                                                                csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY))
+                                                .httpStrictTransportSecurity(hsts -> hsts
+                                                                .maxAgeInSeconds(HSTS_MAX_AGE_SECONDS)
+                                                                .includeSubDomains(true))
+                                                .addHeaderWriter(
+                                                                new StaticHeadersWriter("Permissions-Policy",
+                                                                                PERMISSIONS_POLICY)))
                                 .httpBasic(httpBasic -> httpBasic.disable())
                                 .formLogin(formLogin -> formLogin.disable());
 
