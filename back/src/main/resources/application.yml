@@ -18,9 +18,9 @@ spring:
 apontaja:
   security:
     jwt:
-      # Placeholder de dev — écrasé par application-local.yml quand le
-      # profil "local" est actif. Un vrai secret d'environnement sera requis
-      # avant toute mise en production (cf. §6 [OPEN] du contexte).
+      # Placeholder de DEV et de TESTS uniquement (les ITs n'activent aucun profil) : écrasé par
+      # application-local.yml (profil "local") et par application-prod.yml (profil "prod", variable
+      # APONTAJA_JWT_SECRET, sans valeur par défaut). Ne jamais déployer sans le profil "prod".
       secret: "placeholder-dev-secret-never-use-in-production-32-bytes-minimum-xx"
 
 server:

@@ -1,0 +1,33 @@
+# Profil de production (SPRING_PROFILES_ACTIVE=prod). Topologie visée : nginx unique devant l'API, qui
+# termine le TLS, ÉCRASE X-Forwarded-For / X-Forwarded-Proto (jamais $proxy_add_x_forwarded_for) et route
+# /api vers le back sur la même origine que chaque portail (donc ni CORS ni cookie cross-site).
+#
+# Toutes les variables ci-dessous sont OBLIGATOIRES et sans valeur par défaut : si l'une manque, Spring
+# refuse de démarrer (placeholder non résolu) plutôt que de retomber sur une valeur de dev.
+#   APONTAJA_JWT_SECRET      secret HS256, >= 32 octets aléatoires (openssl rand -base64 48)
+#   APONTAJA_TRUSTED_PROXIES regex Java des IP de proxys de confiance, ex. 172\.18\.0\.\d+ (IP de nginx)
+#   APONTAJA_SALON_URL       base du portail salon, ex. https://salon.apontaja.pt
+#   APONTAJA_CLIENT_URL      base du portail client, ex. https://app.apontaja.pt
+# La base de données vient des variables standard SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD.
+
+server:
+  # Tomcat (RemoteIpValve) applique X-Forwarded-For et X-Forwarded-Proto UNIQUEMENT s'ils viennent d'un
+  # proxy listé : request.getRemoteAddr() (limitation de débit) renvoie alors l'IP du client, et
+  # request.isSecure() (HSTS) vaut true derrière le TLS de nginx. Le défaut de Tomcat couvrirait tous les
+  # réseaux privés : on le remplace donc par une liste explicite.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+      internal-proxies: ${APONTAJA_TRUSTED_PROXIES}
+
+apontaja:
+  security:
+    jwt:
+      secret: ${APONTAJA_JWT_SECRET}
+    rate-limiting:
+      enabled: true
+  frontend:
+    base-url: ${APONTAJA_SALON_URL}
+    client-base-url: ${APONTAJA_CLIENT_URL}
