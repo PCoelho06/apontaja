@@ -116,3 +116,53 @@ describe("describeMergeError / shouldReloadAfterMerge", () => {
     expect(shouldReloadAfterMerge(new Error("x"))).toBe(false);
   });
 });
+
+function coded(status: number, code: string): ApiError {
+  return new ApiError(status, FRENCH, undefined, { detail: FRENCH, code });
+}
+
+describe("codes stables du back (5a-1)", () => {
+  it("rend l'anonymisation précise par code", () => {
+    expect(describeAnonymizeError(coded(409, "CUSTOMER_SHARED"))).toContain("outro salão");
+    expect(describeAnonymizeError(coded(409, "CUSTOMER_SHARED"))).toContain("conta de cliente");
+    expect(describeAnonymizeError(coded(409, "CUSTOMER_SHARED"))).not.toContain("marcações futuras");
+    expect(describeAnonymizeError(coded(409, "CUSTOMER_HAS_UPCOMING_APPOINTMENTS"))).toContain(
+      "marcações futuras",
+    );
+    expect(describeAnonymizeError(coded(409, "CUSTOMER_ANONYMIZED"))).toBe(
+      "Este cliente já foi anonimizado.",
+    );
+    expect(describeAnonymizeError(coded(404, "CUSTOMER_NOT_FOUND"))).toContain("já não existe");
+  });
+
+  it("garde le message combiné du 409 sans code ou avec un code inconnu", () => {
+    expect(describeAnonymizeError(coded(409, "NOUVEAU_CODE"))).toContain("ou tem marcações futuras");
+    expect(describeAnonymizeError(coded(403, "constructor"))).toContain("gestores e proprietários");
+  });
+
+  it("traduit sauvegarde, consentement et historique par code", () => {
+    expect(describeCustomerSaveError(coded(409, "CUSTOMER_ANONYMIZED")).message).toContain(
+      "anonimizado",
+    );
+    expect(describeCustomerSaveError(coded(400, "CUSTOMER_CONTACT_REQUIRED")).message).toContain(
+      "email ou um telefone",
+    );
+    expect(describeCustomerSaveError(coded(404, "CUSTOMER_NOT_FOUND")).fieldErrors).toEqual({});
+    expect(describeConsentError(coded(409, "CUSTOMER_ANONYMIZED"))).toContain("consentimento");
+    expect(describeCustomerLoadError(coded(404, "CUSTOMER_NOT_FOUND"), "history")).toBe(
+      "Este cliente já não existe.",
+    );
+  });
+
+  it("distingue les motifs d'échec de la fusion", () => {
+    expect(describeMergeError(coded(400, "INVALID_MERGE_REQUEST"))).toContain("Seleção inválida");
+    expect(describeMergeError(coded(404, "CUSTOMER_NOT_FOUND"))).toContain("atualizada");
+    expect(describeMergeError(coded(409, "CUSTOMER_ANONYMIZED"))).toContain("anonimizado");
+    expect(describeMergeError(coded(409, "CUSTOMER_CLAIMED"))).toContain("perfil mantido");
+    expect(describeMergeError(coded(409, "CUSTOMER_SHARED"))).toContain("partilhado");
+    expect(describeMergeError(coded(409, "NOUVEAU_CODE"))).toContain("Fusão impossível");
+    for (const code of ["CUSTOMER_CLAIMED", "CUSTOMER_SHARED", "CUSTOMER_ANONYMIZED"]) {
+      expect(shouldReloadAfterMerge(coded(409, code))).toBe(true);
+    }
+  });
+});

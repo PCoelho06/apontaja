@@ -3,7 +3,7 @@
 @import "@apontaja/ui-kit/theme.css";
 
 /* Tailwind 4 ne scanne que le dossier de ce fichier : on y ajoute les composants du ui-kit */
-@source "../../packages/ui-kit/src";
+@source "../../../packages/ui-kit/src";
 
 body {
     font-family: var(--font-sans);
