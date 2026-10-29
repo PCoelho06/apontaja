@@ -34,6 +34,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,9 +45,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Décisions du staff sur un rendez-vous : emails au client (confirmation, refus, annulation par le salon), filtre
- * {@code status} de l'agenda et autorisations. Le RDV {@code SCHEDULED} est obtenu par SQL natif : l'API staff ne
- * crée que des RDV confirmés.
+ * Décisions du staff sur un rendez-vous : emails au client (confirmation,
+ * refus, annulation par le salon), filtre {@code status} de l'agenda et
+ * autorisations. Le RDV {@code SCHEDULED} est obtenu par SQL natif : l'API
+ * staff ne crée que des RDV confirmés.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = "apontaja.security.rate-limiting.enabled=false")
@@ -93,44 +95,63 @@ class AppointmentStaffEmailIT {
         return JsonPath.read(actions.andReturn().getResponse().getContentAsString(), path);
     }
 
-    /** Salon ouvert le mercredi, une ressource et une prestation associée (45 min, 40,05 €). */
+    /**
+     * Salon ouvert le mercredi, une ressource et une prestation associée (45 min,
+     * 40,05 €).
+     */
     private Fixture fixture() throws Exception {
         UUID organizationId = organizationRepository
                 .save(new Organization(idGenerator.generate(), "Org Test", Instant.now())).getId();
         UUID salonId = salonRepository.save(new Salon(idGenerator.generate(), organizationId, "Salon Test",
                 "1 rue du Test", "06140", "Vence", "France", "Europe/Paris", Instant.now())).getId();
         String owner = authOf(salonId, StaffRole.OWNER);
-        UUID resourceId = resourceRepository.save(new Resource(idGenerator.generate(), salonId, "Chaise 1",
-                ResourceType.EMPLOYEE, Instant.now())).getId();
+        UUID resourceId = resourceRepository
+                .save(new Resource(idGenerator.generate(), salonId, "Chaise 1", ResourceType.EMPLOYEE, Instant.now()))
+                .getId();
         mockMvc.perform(put("/api/salons/{salonId}/schedule", salonId).header("Authorization", owner)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"slots\":[{\"dayOfWeek\":\"WEDNESDAY\",\"startTime\":\"09:00\",\"endTime\":\"18:00\"}]}"))
                 .andExpect(status().isOk());
-        UUID serviceId = UUID.fromString(read(mockMvc.perform(post("/api/salons/{salonId}/services", salonId)
-                .header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Coupe\",\"description\":null,\"defaultDurationMinutes\":45,"
-                        + "\"defaultPriceCents\":4005}"))
-                .andExpect(status().isCreated()), "$.serviceId"));
-        mockMvc.perform(put("/api/salons/{salonId}/services/{serviceId}/resources/{resourceId}", salonId, serviceId,
-                resourceId).header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"overridePriceCents\":null,\"overrideDurationMinutes\":null}"))
+        UUID serviceId = UUID
+                .fromString(read(
+                        mockMvc.perform(post("/api/salons/{salonId}/services", salonId).header("Authorization", owner)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\":\"Coupe\",\"description\":null,\"defaultDurationMinutes\":45,"
+                                        + "\"defaultPriceCents\":4005}"))
+                                .andExpect(status().isCreated()),
+                        "$.serviceId"));
+        mockMvc.perform(
+                put("/api/salons/{salonId}/services/{serviceId}/resources/{resourceId}", salonId, serviceId, resourceId)
+                        .header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"overridePriceCents\":null,\"overrideDurationMinutes\":null}"))
                 .andExpect(status().isOk());
         return new Fixture(salonId, owner, resourceId, serviceId);
     }
 
     private UUID customer(Fixture f, String contactJson) throws Exception {
-        return UUID.fromString(read(mockMvc.perform(post("/api/salons/{salonId}/customers", f.salonId())
-                .header("Authorization", f.owner()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"firstName\":\"Alice\",\"lastName\":\"Martin\"," + contactJson + "}"))
+        return UUID.fromString(read(mockMvc
+                .perform(post("/api/salons/{salonId}/customers", f.salonId()).header("Authorization", f.owner())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\":\"Alice\",\"lastName\":\"Martin\"," + contactJson + "}"))
                 .andExpect(status().isCreated()), "$.customerProfileId"));
     }
 
-    private UUID appointment(Fixture f, UUID customerId, boolean asRequest) throws Exception {
-        UUID id = UUID.fromString(read(mockMvc.perform(post("/api/salons/{salonId}/appointments", f.salonId())
-                .header("Authorization", f.owner()).contentType(MediaType.APPLICATION_JSON)
-                .content(("{\"customerProfileId\":\"%s\",\"serviceId\":\"%s\",\"resourceId\":\"%s\","
-                        + "\"startAt\":\"%s\"}").formatted(customerId, f.serviceId(), f.resourceId(), START)))
+    private UUID postAppointment(Fixture f, UUID customerId) throws Exception {
+        return UUID.fromString(read(mockMvc
+                .perform(post("/api/salons/{salonId}/appointments", f.salonId()).header("Authorization", f.owner())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(("{\"customerProfileId\":\"%s\",\"serviceId\":\"%s\",\"resourceId\":\"%s\","
+                                + "\"startAt\":\"%s\"}").formatted(customerId, f.serviceId(), f.resourceId(), START)))
                 .andExpect(status().isCreated()), "$.appointmentId"));
+    }
+
+    /**
+     * Prépare un RDV ; l'email de sa création (staff) n'est pas l'objet de ces
+     * tests : le mock est remis à zéro.
+     */
+    private UUID appointment(Fixture f, UUID customerId, boolean asRequest) throws Exception {
+        UUID id = postAppointment(f, customerId);
+        clearInvocations(emailSender);
         if (asRequest) {
             jdbcTemplate.update("UPDATE appointment SET status = 'SCHEDULED' WHERE id = ?", id);
         }
@@ -144,9 +165,9 @@ class AppointmentStaffEmailIT {
         Fixture f = fixture();
         UUID id = appointment(f, customer(f, ALICE), true);
 
-        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id)
-                .header("Authorization", f.owner())).andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+        mockMvc.perform(
+                patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id).header("Authorization", f.owner()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CONFIRMED"));
 
         verify(emailSender).send(eq("alice@example.com"), eq("Marcação confirmada - Salon Test"), any());
     }
@@ -180,10 +201,44 @@ class AppointmentStaffEmailIT {
         Fixture f = fixture();
         UUID id = appointment(f, customer(f, "\"email\":null,\"phone\":\"0612345678\",\"internalNotes\":null"), true);
 
-        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id)
-                .header("Authorization", f.owner())).andExpect(status().isOk());
+        mockMvc.perform(
+                patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id).header("Authorization", f.owner()))
+                .andExpect(status().isOk());
 
         verify(emailSender, never()).send(any(), any(), any());
+    }
+
+    @Test
+    void creer_un_rdv_pour_un_client_avec_email_envoie_l_email_de_confirmation() throws Exception {
+        Fixture f = fixture();
+        UUID customerId = customer(f, ALICE);
+
+        postAppointment(f, customerId);
+
+        verify(emailSender).send(eq("alice@example.com"), eq("Marcação confirmada - Salon Test"), any());
+    }
+
+    @Test
+    void creer_un_rdv_pour_un_client_sans_email_n_envoie_rien() throws Exception {
+        Fixture f = fixture();
+        UUID customerId = customer(f, "\"email\":null,\"phone\":\"0612345678\",\"internalNotes\":null");
+
+        postAppointment(f, customerId);
+
+        verify(emailSender, never()).send(any(), any(), any());
+    }
+
+    @Test
+    void deplacer_un_rdv_envoie_l_email_de_modification() throws Exception {
+        Fixture f = fixture();
+        UUID id = appointment(f, customer(f, ALICE), false);
+
+        mockMvc.perform(
+                patch("/api/salons/{s}/appointments/{a}/reschedule", f.salonId(), id).header("Authorization", f.owner())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"startAt\":\"2099-06-10T14:00:00+02:00\"}"))
+                .andExpect(status().isOk());
+
+        verify(emailSender).send(eq("alice@example.com"), eq("Marcação alterada pelo salão - Salon Test"), any());
     }
 
     @Test
@@ -208,11 +263,11 @@ class AppointmentStaffEmailIT {
 
         mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id))
                 .andExpect(status().is4xxClientError());
-        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id)
-                .header("Authorization", other.owner())).andExpect(status().isForbidden());
-        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", UUID.randomUUID(), id)
-                .header("Authorization", f.owner())).andExpect(status().isForbidden());
-        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id)
-                .header("Authorization", authOf(f.salonId(), StaffRole.EMPLOYEE))).andExpect(status().isOk());
+        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id).header("Authorization",
+                other.owner())).andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", UUID.randomUUID(), id).header("Authorization",
+                f.owner())).andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/salons/{s}/appointments/{a}/confirm", f.salonId(), id).header("Authorization",
+                authOf(f.salonId(), StaffRole.EMPLOYEE))).andExpect(status().isOk());
     }
 }
