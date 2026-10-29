@@ -1,5 +1,6 @@
 package com.apontaja.back.appointment.application;
 
+import com.apontaja.back.appointment.application.ClientAppointmentNotification.Kind;
 import com.apontaja.back.appointment.domain.Appointment;
 import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentResource;
@@ -33,6 +34,10 @@ import java.time.temporal.ChronoUnit;
  * d'exclusion PostgreSQL reste la dernière ligne de défense contre une
  * réservation concurrente passée entre deux vérifications applicatives
  * (SQLSTATE 23P01, mappé ici en AppointmentConflictException).
+ *
+ * <p>
+ * Le rendez-vous créé par le staff est confirmé d'emblée : un email « Marcação confirmada » est publié pour le
+ * client ({@link StaffAppointmentNotifier}, envoyé après la validation ; sans effet si le client n'a pas d'email).
  */
 @Service
 public class AppointmentCreationService {
@@ -46,12 +51,13 @@ public class AppointmentCreationService {
     private final IdGenerator idGenerator;
     private final Clock clock;
     private final SalonSchedulingLock schedulingLock;
+    private final StaffAppointmentNotifier notifier;
 
     AppointmentCreationService(AppointmentRepository appointmentRepository,
             AppointmentResourceRepository appointmentResourceRepository, ResourceQueryService resourceQueryService,
             ServiceQueryService serviceQueryService, CustomerQueryService customerQueryService,
             AvailabilityService availabilityService, IdGenerator idGenerator, Clock clock,
-            SalonSchedulingLock schedulingLock) {
+            SalonSchedulingLock schedulingLock, StaffAppointmentNotifier notifier) {
         this.appointmentRepository = appointmentRepository;
         this.appointmentResourceRepository = appointmentResourceRepository;
         this.resourceQueryService = resourceQueryService;
@@ -61,6 +67,7 @@ public class AppointmentCreationService {
         this.idGenerator = idGenerator;
         this.clock = clock;
         this.schedulingLock = schedulingLock;
+        this.notifier = notifier;
     }
 
     @Transactional
@@ -100,7 +107,9 @@ public class AppointmentCreationService {
             throw new AppointmentConflictException();
         }
 
-        return AppointmentSummary.of(appointment, command.resourceId());
+        AppointmentSummary summary = AppointmentSummary.of(appointment, command.resourceId());
+        notifier.notifyClient(Kind.CONFIRMED, summary);
+        return summary;
     }
 
     static Instant parseStartAt(String value) {

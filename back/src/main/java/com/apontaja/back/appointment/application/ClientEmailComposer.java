@@ -49,6 +49,7 @@ final class ClientEmailComposer {
             case CANCELLED -> "Marcação cancelada - " + n.salonName();
             case REQUEST_DECLINED -> "Pedido de marcação recusado - " + n.salonName();
             case CANCELLED_BY_SALON -> "Marcação cancelada pelo salão - " + n.salonName();
+            case RESCHEDULED_BY_SALON -> "Marcação alterada pelo salão - " + n.salonName();
         };
     }
 
@@ -63,6 +64,8 @@ final class ClientEmailComposer {
                     + " não pôde ser aceite pelo salão.";
             case CANCELLED_BY_SALON -> "Lamentamos informar que a sua marcação em " + n.salonName()
                     + " foi cancelada pelo salão.";
+            case RESCHEDULED_BY_SALON -> "Informamos que a sua marcação em " + n.salonName()
+                    + " foi alterada pelo salão. Segue-se o novo horário.";
         };
     }
 
@@ -76,6 +79,8 @@ final class ClientEmailComposer {
             case REQUEST_DECLINED -> "Se desejar, pode fazer um novo pedido para outro horário.";
             case CANCELLED_BY_SALON -> "Pedimos desculpa pelo incómodo. Se desejar, pode fazer uma nova marcação"
                     + " a qualquer momento.";
+            case RESCHEDULED_BY_SALON -> "Se este horário não lhe convier, pode cancelar a marcação em «As minhas"
+                    + " marcações» ou contactar o salão.";
         };
     }
 

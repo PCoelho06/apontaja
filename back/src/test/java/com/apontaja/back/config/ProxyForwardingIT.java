@@ -26,7 +26,12 @@ import static org.assertj.core.api.Assertions.assertThat;
         "APONTAJA_TRUSTED_PROXIES=127\\.0\\.0\\.1|::1|0:0:0:0:0:0:0:1",
         "APONTAJA_JWT_SECRET=a-32-byte-minimum-test-secret-key-for-hs256!!",
         "APONTAJA_SALON_URL=https://salon.example.test",
-        "APONTAJA_CLIENT_URL=https://app.example.test" })
+        "APONTAJA_CLIENT_URL=https://app.example.test",
+        "APONTAJA_MAIL_HOST=smtp.example.test",
+        "APONTAJA_MAIL_PORT=587",
+        "APONTAJA_MAIL_USERNAME=test-user",
+        "APONTAJA_MAIL_PASSWORD=test-password",
+        "APONTAJA_MAIL_FROM=no-reply@example.test" })
 @ActiveProfiles("prod")
 @Import(PostgresTestcontainersConfiguration.class)
 class ProxyForwardingIT {

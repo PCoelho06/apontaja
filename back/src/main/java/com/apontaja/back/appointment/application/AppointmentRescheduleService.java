@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import com.apontaja.back.appointment.application.ClientAppointmentNotification.Kind;
 import com.apontaja.back.appointment.domain.Appointment;
 import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentStatus;
@@ -25,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * Le snapshot prix/durée est conservé : la fin est recalculée à partir de la
  * durée convenue à la réservation, pas de la durée courante de la prestation.
+ *
+ * <p>
+ * Un déplacement qui change réellement l'heure de début publie un email au client ({@link StaffAppointmentNotifier},
+ * envoyé après la validation de la transaction).
  */
 @Service
 public class AppointmentRescheduleService {
@@ -33,13 +38,16 @@ public class AppointmentRescheduleService {
     private final AppointmentQueryService queryService;
     private final AvailabilityService availabilityService;
     private final SalonSchedulingLock schedulingLock;
+    private final StaffAppointmentNotifier notifier;
 
     AppointmentRescheduleService(AppointmentRepository appointmentRepository, AppointmentQueryService queryService,
-            AvailabilityService availabilityService, SalonSchedulingLock schedulingLock) {
+            AvailabilityService availabilityService, SalonSchedulingLock schedulingLock,
+            StaffAppointmentNotifier notifier) {
         this.appointmentRepository = appointmentRepository;
         this.queryService = queryService;
         this.availabilityService = availabilityService;
         this.schedulingLock = schedulingLock;
+        this.notifier = notifier;
     }
 
     @Transactional
@@ -64,6 +72,7 @@ public class AppointmentRescheduleService {
             throw new AppointmentNotAvailableException(availability.issues());
         }
 
+        Instant oldStart = appointment.getStartAt();
         appointment.reschedule(newStart, newEnd);
         try {
             appointment = appointmentRepository.save(appointment);
@@ -71,6 +80,10 @@ public class AppointmentRescheduleService {
             throw new AppointmentConflictException();
         }
 
-        return AppointmentSummary.of(appointment, resourceId);
+        AppointmentSummary summary = AppointmentSummary.of(appointment, resourceId);
+        if (!newStart.equals(oldStart)) {
+            notifier.notifyClient(Kind.RESCHEDULED_BY_SALON, summary);
+        }
+        return summary;
     }
 }

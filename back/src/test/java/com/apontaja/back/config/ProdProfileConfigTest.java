@@ -19,7 +19,12 @@ class ProdProfileConfigTest {
             "server.tomcat.remoteip.internal-proxies",
             "apontaja.security.jwt.secret",
             "apontaja.frontend.base-url",
-            "apontaja.frontend.client-base-url");
+            "apontaja.frontend.client-base-url",
+            "spring.mail.host",
+            "spring.mail.port",
+            "spring.mail.username",
+            "spring.mail.password",
+            "apontaja.mail.from");
 
     private static Properties prod() {
         YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
@@ -54,6 +59,30 @@ class ProdProfileConfigTest {
         assertThat(prod.getProperty("server.forward-headers-strategy")).isEqualTo("native");
         assertThat(prod.getProperty("server.tomcat.remoteip.remote-ip-header")).isEqualTo("X-Forwarded-For");
         assertThat(prod.getProperty("server.tomcat.remoteip.protocol-header")).isEqualTo("X-Forwarded-Proto");
+    }
+
+    @Test
+    void le_relais_smtp_vient_des_bonnes_variables() {
+        Properties prod = prod();
+
+        assertThat(prod.getProperty("spring.mail.host")).isEqualTo("${APONTAJA_MAIL_HOST}");
+        assertThat(prod.getProperty("spring.mail.port")).isEqualTo("${APONTAJA_MAIL_PORT}");
+        assertThat(prod.getProperty("spring.mail.username")).isEqualTo("${APONTAJA_MAIL_USERNAME}");
+        assertThat(prod.getProperty("spring.mail.password")).isEqualTo("${APONTAJA_MAIL_PASSWORD}");
+        assertThat(prod.getProperty("apontaja.mail.from")).isEqualTo("${APONTAJA_MAIL_FROM}");
+    }
+
+    @Test
+    void le_relais_smtp_est_chiffre_authentifie_et_borne_dans_le_temps() {
+        Properties prod = prod();
+        String smtp = "spring.mail.properties.mail.smtp.";
+
+        assertThat(prod.getProperty(smtp + "auth")).isEqualTo("true");
+        assertThat(prod.getProperty(smtp + "starttls.enable")).isEqualTo("true");
+        assertThat(prod.getProperty(smtp + "starttls.required")).isEqualTo("true");
+        assertThat(prod.getProperty(smtp + "connectiontimeout")).isEqualTo("5000");
+        assertThat(prod.getProperty(smtp + "timeout")).isEqualTo("10000");
+        assertThat(prod.getProperty(smtp + "writetimeout")).isEqualTo("10000");
     }
 
     @Test

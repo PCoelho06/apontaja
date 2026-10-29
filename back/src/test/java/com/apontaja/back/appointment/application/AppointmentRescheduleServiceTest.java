@@ -1,5 +1,6 @@
 package com.apontaja.back.appointment.application;
 
+import com.apontaja.back.appointment.application.ClientAppointmentNotification.Kind;
 import com.apontaja.back.appointment.domain.Appointment;
 import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentStatus;
@@ -47,6 +48,8 @@ class AppointmentRescheduleServiceTest {
         private AvailabilityService availabilityService;
         @Mock
         private SalonSchedulingLock schedulingLock;
+        @Mock
+        private StaffAppointmentNotifier notifier;
 
         private AppointmentRescheduleService service;
 
@@ -58,7 +61,7 @@ class AppointmentRescheduleServiceTest {
         @BeforeEach
         void setUp() {
                 service = new AppointmentRescheduleService(appointmentRepository, queryService, availabilityService,
-                                schedulingLock);
+                                schedulingLock, notifier);
                 appointment = new Appointment(UUID.randomUUID(), salonId, UUID.randomUUID(), UUID.randomUUID(),
                                 OLD_START, OLD_END, 4500, 30, Instant.parse("2020-01-01T00:00:00Z"));
                 summary = AppointmentSummary.of(appointment, resourceId);
@@ -87,6 +90,31 @@ class AppointmentRescheduleServiceTest {
         }
 
         @Test
+        void notifiesTheClientWhenTheStartChanges() {
+                stubExistingAppointment();
+                when(availabilityService.check(salonId, resourceId, NEW_START, NEW_END))
+                                .thenReturn(new AvailabilityCheck(true, List.of()));
+                when(appointmentRepository.save(any(Appointment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                AppointmentSummary result = service.reschedule(salonId, appointment.getId(), NEW_START_TEXT);
+
+                verify(notifier).notifyClient(Kind.RESCHEDULED_BY_SALON, result);
+        }
+
+        @Test
+        void doesNotNotifyWhenTheStartIsUnchanged() {
+                stubExistingAppointment();
+                // 10:00+01:00 = 09:00Z : même début que le rendez-vous existant
+                when(availabilityService.check(salonId, resourceId, OLD_START, OLD_END))
+                                .thenReturn(new AvailabilityCheck(true, List.of()));
+                when(appointmentRepository.save(any(Appointment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                service.reschedule(salonId, appointment.getId(), "2099-03-10T10:00:00+01:00");
+
+                verify(notifier, never()).notifyClient(any(), any());
+        }
+
+        @Test
         void locksTheSalonBeforeCheckingAvailability() {
                 stubExistingAppointment();
                 when(availabilityService.check(salonId, resourceId, NEW_START, NEW_END))
@@ -110,6 +138,7 @@ class AppointmentRescheduleServiceTest {
                                 .isInstanceOf(AppointmentNotAvailableException.class);
 
                 verify(appointmentRepository, never()).save(any(Appointment.class));
+                verify(notifier, never()).notifyClient(any(), any());
                 assertThat(appointment.getStartAt()).isEqualTo(OLD_START);
         }
 

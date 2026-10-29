@@ -87,4 +87,14 @@ class ClientEmailComposerTest {
         assertThat(email.body()).contains("foi cancelada pelo salão").contains("Pedimos desculpa")
                 .doesNotContain("a seu pedido");
     }
+
+    @Test
+    void marcacao_alterada_pelo_salao_indique_le_nouvel_horaire() {
+        ClientEmail email = ClientEmailComposer.compose(notification(Kind.RESCHEDULED_BY_SALON, 24), "Alice");
+
+        assertThat(email.subject()).isEqualTo("Marcação alterada pelo salão - Salon Test");
+        assertThat(email.body()).startsWith("Olá, Alice,").contains("foi alterada pelo salão")
+                .contains("novo horário").contains("10 de junho de 2099 às 10:00").contains("«As minhas marcações»")
+                .doesNotContain("a seu pedido").doesNotContain("Pode cancelar até");
+    }
 }

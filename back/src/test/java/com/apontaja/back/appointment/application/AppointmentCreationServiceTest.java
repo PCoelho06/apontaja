@@ -1,5 +1,6 @@
 package com.apontaja.back.appointment.application;
 
+import com.apontaja.back.appointment.application.ClientAppointmentNotification.Kind;
 import com.apontaja.back.appointment.domain.Appointment;
 import com.apontaja.back.appointment.domain.AppointmentRepository;
 import com.apontaja.back.appointment.domain.AppointmentResource;
@@ -68,6 +69,9 @@ class AppointmentCreationServiceTest {
     @Mock
     private SalonSchedulingLock schedulingLock;
 
+    @Mock
+    private StaffAppointmentNotifier notifier;
+
     private AppointmentCreationService service;
 
     private final Instant fixedNow = Instant.parse("2026-09-24T07:00:00Z");
@@ -82,7 +86,7 @@ class AppointmentCreationServiceTest {
     void setUp() {
         service = new AppointmentCreationService(appointmentRepository, appointmentResourceRepository,
                 resourceQueryService, serviceQueryService, customerQueryService, availabilityService,
-                () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC), schedulingLock);
+                () -> new UUID(0, 1), Clock.fixed(fixedNow, ZoneOffset.UTC), schedulingLock, notifier);
     }
 
     private CreateAppointmentCommand command() {
@@ -173,6 +177,7 @@ class AppointmentCreationServiceTest {
                         .containsExactly(AvailabilityIssue.OUTSIDE_SALON_HOURS, AvailabilityIssue.SALON_CLOSED));
 
         verify(appointmentRepository, never()).save(any());
+        verifyNoInteractions(notifier);
     }
 
     @Test
@@ -198,6 +203,7 @@ class AppointmentCreationServiceTest {
         ArgumentCaptor<AppointmentResource> linkCaptor = ArgumentCaptor.forClass(AppointmentResource.class);
         verify(appointmentResourceRepository).save(linkCaptor.capture());
         assertThat(linkCaptor.getValue().getResourceId()).isEqualTo(resourceId);
+        verify(notifier).notifyClient(Kind.CONFIRMED, result);
     }
 
     @Test
@@ -228,5 +234,7 @@ class AppointmentCreationServiceTest {
                 .thenThrow(new DataIntegrityViolationException("exclusion_violation"));
 
         assertThatThrownBy(() -> service.create(command())).isInstanceOf(AppointmentConflictException.class);
+
+        verify(notifier, never()).notifyClient(any(), any());
     }
 }

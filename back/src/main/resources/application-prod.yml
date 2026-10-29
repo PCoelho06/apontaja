@@ -8,6 +8,11 @@
 #   APONTAJA_TRUSTED_PROXIES regex Java des IP de proxys de confiance, ex. 172\.18\.0\.\d+ (IP de nginx)
 #   APONTAJA_SALON_URL       base du portail salon, ex. https://salon.apontaja.pt
 #   APONTAJA_CLIENT_URL      base du portail client, ex. https://app.apontaja.pt
+#   APONTAJA_MAIL_HOST       relais SMTP, ex. smtp-relay.brevo.com (Brevo : voir son compte)
+#   APONTAJA_MAIL_PORT       port SMTP avec STARTTLS, 587 (jamais le 25, souvent bloqué par les hébergeurs)
+#   APONTAJA_MAIL_USERNAME   identifiant SMTP du relais
+#   APONTAJA_MAIL_PASSWORD   clé SMTP du relais
+#   APONTAJA_MAIL_FROM       adresse expéditrice, validée chez le relais (SPF/DKIM/DMARC du domaine configurés)
 # La base de données vient des variables standard SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD.
 
 server:
@@ -22,7 +27,27 @@ server:
       protocol-header: X-Forwarded-Proto
       internal-proxies: ${APONTAJA_TRUSTED_PROXIES}
 
+spring:
+  mail:
+    host: ${APONTAJA_MAIL_HOST}
+    port: ${APONTAJA_MAIL_PORT}
+    username: ${APONTAJA_MAIL_USERNAME}
+    password: ${APONTAJA_MAIL_PASSWORD}
+    # Délais obligatoires : ceux de JavaMail sont infinis, un relais muet bloquerait un fil d'envoi indéfiniment.
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+
 apontaja:
+  mail:
+    from: ${APONTAJA_MAIL_FROM}
   security:
     jwt:
       secret: ${APONTAJA_JWT_SECRET}
