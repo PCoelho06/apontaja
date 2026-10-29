@@ -35,6 +35,19 @@ class AuthEmailComposerTest {
     }
 
     @Test
+    void compte_existant_est_en_portugais_pour_tous_les_portails_avec_les_deux_liens() {
+        for (FrontendPortal portal : ALL_PORTALS) {
+            AuthEmailComposer.AuthEmail email = AuthEmailComposer.accountExists(portal,
+                    "http://localhost:5174/entrar", "http://localhost:5174/recuperar-palavra-passe");
+
+            assertThat(email.subject()).isEqualTo("Já tem uma conta na Apontaja");
+            assertThat(email.body()).contains("\nhttp://localhost:5174/entrar\n")
+                    .contains("\nhttp://localhost:5174/recuperar-palavra-passe\n").contains("Apontaja");
+            assertThat(email.body()).doesNotContain("token=").doesNotContain("Cliquez");
+        }
+    }
+
+    @Test
     void les_durees_d_une_unite_sont_au_singulier() {
         assertThat(AuthEmailComposer.verification(FrontendPortal.SALON, LINK, Duration.ofHours(1)).body())
                 .contains("1 hora)").doesNotContain("1 horas");

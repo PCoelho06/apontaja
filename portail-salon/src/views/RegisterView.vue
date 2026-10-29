@@ -66,8 +66,11 @@ async function handleSubmit() {
       class="space-y-4"
     >
       <p class="text-sm text-ink">
-        Conta criada. Enviámos-lhe um email de confirmação — verifique a sua
-        caixa de correio e depois inicie sessão.
+        Pedido recebido. Vai receber um email em
+        <strong>{{ email }}</strong>.
+        Se acabou de criar a conta, clique na ligação de confirmação para a
+        ativar e depois inicie sessão. Se já tinha uma conta, o email indica
+        como iniciar sessão.
       </p>
       <RouterLink
         :to="{ name: 'login' }"

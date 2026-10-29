@@ -58,7 +58,7 @@ class PasswordResetControllerIT {
                                   "acceptTos": true,
                                   "acceptPrivacy": true
                                 }
-                                """.formatted(email))).andExpect(status().isCreated());
+                                """.formatted(email))).andExpect(status().isAccepted());
 
                 return email;
         }

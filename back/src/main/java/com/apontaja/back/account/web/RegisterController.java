@@ -1,14 +1,13 @@
 package com.apontaja.back.account.web;
 
-import com.apontaja.back.account.application.EmailAlreadyUsedException;
 import com.apontaja.back.account.application.RegisterAccountCommand;
-import com.apontaja.back.account.application.RegisterAccountResult;
 import com.apontaja.back.account.application.RegisterAccountService;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,11 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// ADAPTER LE PREFIXE si votre convention de routage diffère (je pars sur
-// /api/auth, à confirmer/ajuster — voir ma question sur SecurityConfig).
 @RestController
 @RequestMapping("/api/auth")
 class RegisterController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RegisterController.class);
 
     private final RegisterAccountService registerAccountService;
 
@@ -28,17 +27,22 @@ class RegisterController {
         this.registerAccountService = registerAccountService;
     }
 
+    /** 202 sans corps dans tous les cas valides : la réponse ne révèle pas si l'adresse avait déjà un compte. */
     @PostMapping("/register")
-    ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
-        RegisterAccountResult result = registerAccountService.register(new RegisterAccountCommand(request.email(),
-                request.firstName(), request.lastName(), request.password(), request.portal()));
+    ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
+        registerAccountService.register(new RegisterAccountCommand(request.email(), request.firstName(),
+                request.lastName(), request.password(), request.portal()));
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(new RegisterResponse(result.accountId(), result.email()));
+        return ResponseEntity.accepted().build();
     }
 
-    @ExceptionHandler(EmailAlreadyUsedException.class)
-    ResponseEntity<ProblemDetail> handleEmailAlreadyUsed(EmailAlreadyUsedException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
+    /**
+     * Deux inscriptions simultanées de la même adresse : l'index unique fait échouer la seconde. Même réponse
+     * que pour une adresse connue (l'adresse n'est jamais journalisée).
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<Void> handleConcurrentRegistration(DataIntegrityViolationException ex) {
+        LOG.warn("Inscription concurrente ou contrainte violée ({}), réponse neutre.", ex.getClass().getSimpleName());
+        return ResponseEntity.accepted().build();
     }
 }

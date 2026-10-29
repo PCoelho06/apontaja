@@ -93,7 +93,7 @@ class RegisterConsentAndPortalIT {
                 String email = UUID.randomUUID() + "@example.com";
 
                 call("/api/auth/register", registerBody(email, ",\"acceptTos\":true,\"acceptPrivacy\":true"))
-                                .andExpect(status().isCreated());
+                                .andExpect(status().isAccepted());
 
                 assertThat(captureBody(email, "confirmar-email"))
                                 .contains("http://localhost:5173/confirmar-email?token=");
@@ -103,7 +103,7 @@ class RegisterConsentAndPortalIT {
         void le_renvoi_et_le_mot_de_passe_oublie_suivent_le_portail_demande() throws Exception {
                 String email = UUID.randomUUID() + "@example.com";
                 call("/api/auth/register", registerBody(email, ",\"acceptTos\":true,\"acceptPrivacy\":true"))
-                                .andExpect(status().isCreated());
+                                .andExpect(status().isAccepted());
 
                 call("/api/auth/resend-verification-email", "{\"email\":\"%s\",\"portal\":\"CLIENT\"}".formatted(email))
                                 .andExpect(status().isNoContent());

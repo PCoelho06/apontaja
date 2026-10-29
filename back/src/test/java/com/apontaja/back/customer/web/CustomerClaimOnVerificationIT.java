@@ -109,7 +109,7 @@ class CustomerClaimOnVerificationIT {
                   "acceptPrivacy": true,
                   "portal": "CLIENT"
                 }
-                """.formatted(email))).andExpect(status().isCreated());
+                """.formatted(email))).andExpect(status().isAccepted());
     }
 
     private String capturedVerificationBody(String email) {

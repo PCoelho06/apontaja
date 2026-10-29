@@ -10,6 +10,8 @@ class FrontendLinks {
     // Chemins communs aux deux portails (portugais du Portugal, alignés sur leurs routeurs).
     private static final String CONFIRM_EMAIL = "/confirmar-email?token=";
     private static final String RESET_PASSWORD = "/repor-palavra-passe?token=";
+    private static final String LOGIN = "/entrar";
+    private static final String FORGOT_PASSWORD = "/recuperar-palavra-passe";
 
     private final String salonBaseUrl;
     private final String clientBaseUrl;
@@ -37,5 +39,15 @@ class FrontendLinks {
     /** Lien de réinitialisation du mot de passe vers la page du portail visé ({@code null} = portail salon). */
     String resetPasswordLink(FrontendPortal portal, String rawToken) {
         return link(portal, RESET_PASSWORD + rawToken);
+    }
+
+    /** Lien vers la page de connexion du portail visé ({@code null} = portail salon). */
+    String loginLink(FrontendPortal portal) {
+        return link(portal, LOGIN);
+    }
+
+    /** Lien vers la page « mot de passe oublié » (sans jeton) du portail visé ({@code null} = portail salon). */
+    String forgotPasswordLink(FrontendPortal portal) {
+        return link(portal, FORGOT_PASSWORD);
     }
 }

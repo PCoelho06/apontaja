@@ -51,7 +51,7 @@ describe("RegisterView (portail client)", () => {
       vi.fn(async (path: string, init?: RequestInit) => {
         void path;
         void init;
-        return new Response(null, { status: 201 });
+        return new Response(null, { status: 202 });
       }),
     );
   });
@@ -95,7 +95,7 @@ describe("RegisterView (portail client)", () => {
     expect(router.currentRoute.value.name).toBe("verify-email");
   });
 
-  it("traduit un email déjà utilisé (409) sans afficher le message du back", async () => {
+  it("affiche un message générique pour une erreur serveur (500), sans le texte du back", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (path: string, init?: RequestInit) => {
@@ -104,7 +104,7 @@ describe("RegisterView (portail client)", () => {
         return new Response(
           JSON.stringify({ detail: "Adresse déjà utilisée." }),
           {
-            status: 409,
+            status: 500,
             headers: { "content-type": "application/json" },
           },
         );
@@ -117,7 +117,7 @@ describe("RegisterView (portail client)", () => {
     await wrapper.find("form").trigger("submit");
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Já existe uma conta com este email.");
+    expect(wrapper.text()).toContain("Não foi possível criar a conta.");
     expect(wrapper.text()).not.toContain("Adresse déjà utilisée.");
     expect(router.currentRoute.value.name).toBe("register");
   });
