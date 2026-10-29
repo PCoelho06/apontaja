@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 public class RegisterAccountService {
@@ -30,29 +31,41 @@ public class RegisterAccountService {
     private final PasswordEncoder passwordEncoder;
     private final IdGenerator idGenerator;
     private final Clock clock;
+    private final ExistingAccountNotifier existingAccountNotifier;
 
     RegisterAccountService(AccountRepository accountRepository, ConsentRecordRepository consentRecordRepository,
             EmailVerificationService emailVerificationService, PasswordEncoder passwordEncoder, IdGenerator idGenerator,
-            Clock clock) {
+            Clock clock, ExistingAccountNotifier existingAccountNotifier) {
         this.accountRepository = accountRepository;
         this.consentRecordRepository = consentRecordRepository;
         this.emailVerificationService = emailVerificationService;
         this.passwordEncoder = passwordEncoder;
         this.idGenerator = idGenerator;
         this.clock = clock;
+        this.existingAccountNotifier = existingAccountNotifier;
     }
 
+    /**
+     * Inscription sans énumération de comptes : le résultat est le même que l'adresse soit connue ou non.
+     * Adresse inconnue : compte, consentements et email de vérification. Adresse déjà utilisée : aucune
+     * écriture (le nom et le mot de passe soumis sont ignorés) et un email « já tem uma conta » au titulaire.
+     */
     @Transactional
-    public RegisterAccountResult register(RegisterAccountCommand command) {
+    public void register(RegisterAccountCommand command) {
         String email = command.email().trim();
 
-        if (accountRepository.existsAliveByEmail(email)) {
-            throw new EmailAlreadyUsedException(email);
+        // Le hachage domine le temps de réponse : on le paie dans les deux cas, avant de regarder la base.
+        String passwordHash = passwordEncoder.encode(command.rawPassword());
+
+        Optional<Account> existing = accountRepository.findAliveByEmail(email);
+        if (existing.isPresent()) {
+            existingAccountNotifier.notifyAccountExists(existing.get(), command.portal());
+            return;
         }
 
         Instant now = clock.instant();
         Account account = new Account(idGenerator.generate(), email, command.firstName(), command.lastName(),
-                passwordEncoder.encode(command.rawPassword()), now);
+                passwordHash, now);
         accountRepository.save(account);
 
         consentRecordRepository
@@ -61,7 +74,5 @@ public class RegisterAccountService {
                 new ConsentRecord(idGenerator.generate(), account.getId(), ConsentType.PRIVACY, PRIVACY_VERSION, now));
 
         emailVerificationService.issueAndSend(account, command.portal());
-
-        return new RegisterAccountResult(account.getId(), account.getEmail());
     }
 }

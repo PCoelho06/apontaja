@@ -61,7 +61,7 @@ class RateLimitingIT {
 
         for (int i = 0; i < 5; i++) {
             mockMvc.perform(registerRequest("rate-limit-" + i + "-" + suffix + "@example.com"))
-                    .andExpect(status().isCreated());
+                    .andExpect(status().isAccepted());
         }
 
         mockMvc.perform(registerRequest("rate-limit-6-" + suffix + "@example.com"))

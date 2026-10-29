@@ -63,9 +63,11 @@ async function handleSubmitEmail() {
       class="space-y-4"
     >
       <p class="text-sm text-ink">
-        Enviámos uma ligação de confirmação para
+        Vai receber um email em
         <strong>{{ verification.pendingEmail }}</strong>.
-        Clique nela para ativar a sua conta e depois inicie sessão.
+        Se acabou de criar a conta, clique na ligação de confirmação para a
+        ativar e depois inicie sessão. Se já tinha uma conta, o email indica
+        como iniciar sessão.
       </p>
 
       <UiAlert

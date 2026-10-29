@@ -36,9 +36,9 @@ describe("describeLoginError", () => {
 });
 
 describe("describeRegisterError", () => {
-  it("traduit un email déjà utilisé (409)", () => {
+  it("ne distingue plus un email déjà utilisé : un 409 reste générique", () => {
     expect(describeRegisterError(apiError(409))).toEqual({
-      message: "Já existe uma conta com este email.",
+      message: "Não foi possível criar a conta. Tente novamente.",
       fieldErrors: {},
     });
   });

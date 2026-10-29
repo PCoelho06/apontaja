@@ -48,7 +48,7 @@ class RegisterIdentityIT {
     void inscrit_un_compte_et_enregistre_les_noms_sans_espaces_autour() throws Exception {
         String email = UUID.randomUUID() + "@example.com";
 
-        register(payload(email, "  Pierre ", " Dupont  ")).andExpect(status().isCreated());
+        register(payload(email, "  Pierre ", " Dupont  ")).andExpect(status().isAccepted());
 
         Account account = accountRepository.findAliveByEmail(email).orElseThrow();
         assertThat(account.getFirstName()).isEqualTo("Pierre");

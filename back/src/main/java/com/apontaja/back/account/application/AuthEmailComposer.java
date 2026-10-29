@@ -34,6 +34,17 @@ final class AuthEmailComposer {
                 "Com os melhores cumprimentos,", "Apontaja"));
     }
 
+    /** Inscription tentée avec une adresse qui a déjà un compte : liens de connexion et de réinitialisation. */
+    static AuthEmail accountExists(FrontendPortal portal, String loginLink, String forgotPasswordLink) {
+        return new AuthEmail("Já tem uma conta na Apontaja", String.join("\n", "Olá,", "",
+                "Recebemos um pedido para criar uma conta com este endereço de email, mas já existe uma conta "
+                        + "associada.",
+                "", "Para iniciar sessão, utilize a ligação abaixo:", "", loginLink, "",
+                "Se se esqueceu da palavra-passe, pode repô-la aqui:", "", forgotPasswordLink, "",
+                "Se não fez este pedido, pode ignorar esta mensagem.", "", "Com os melhores cumprimentos,",
+                "Apontaja"));
+    }
+
     private static String units(long count, String singular, String plural) {
         return count + " " + (count == 1 ? singular : plural);
     }

@@ -64,11 +64,7 @@ export function describeRegisterError(error: unknown): FormFailure {
     return { message: generic, fieldErrors: {} };
   }
   switch (error.status) {
-    case 409:
-      return {
-        message: "Já existe uma conta com este email.",
-        fieldErrors: {},
-      };
+    // Pas de cas 409 : l'inscription ne révèle jamais qu'une adresse a déjà un compte.
     case 429:
       return { message: TOO_MANY_ATTEMPTS, fieldErrors: {} };
     case 400:
