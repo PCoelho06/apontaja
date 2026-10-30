@@ -110,6 +110,6 @@ class ClientAppointmentController {
                 new ClientAppointmentResponse.ServiceRef(a.service().id(), a.service().name()),
                 new ClientAppointmentResponse.ResourceRef(a.resource().id(), a.resource().name()), a.startAt(),
                 a.endAt(), a.status(), a.priceCents(), a.durationMinutes(), a.cancellable(),
-                a.cancellableUntil(), a.cancelledAt());
+                a.cancellableUntil(), a.cancelledAt(), a.expired());
     }
 }

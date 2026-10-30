@@ -44,7 +44,8 @@ class ClientAppointmentRepositoryAdapter implements ClientAppointmentRepository 
         return new ClientAppointmentRow((UUID) c[0], (UUID) c[1], (String) c[2], (String) c[3], (String) c[4],
                 (String) c[5], (String) c[6], (UUID) c[7], (String) c[8], (UUID) c[9], (String) c[10],
                 toInstant(c[11]), toInstant(c[12]), (String) c[13], ((Number) c[14]).intValue(),
-                ((Number) c[15]).intValue(), c[16] == null ? null : toInstant(c[16]));
+                ((Number) c[15]).intValue(), c[16] == null ? null : toInstant(c[16]),
+                Boolean.TRUE.equals(c[17]));
     }
 
     /** Selon la configuration de Hibernate, une colonne timestamptz native arrive sous l'un de ces types. */
