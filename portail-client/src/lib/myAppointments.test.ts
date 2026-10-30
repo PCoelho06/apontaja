@@ -66,6 +66,15 @@ describe("statusInfo", () => {
       "Estado desconhecido",
     );
   });
+
+    it("distingue une demande expirée d'une annulation", () => {
+    expect(
+      statusInfo({ status: "CANCELLED", endAt: "2099-06-10T09:30:00Z", expired: true }, NOW),
+    ).toEqual({ label: "Pedido expirado", tone: "neutral" });
+    expect(
+      statusInfo({ status: "CANCELLED", endAt: "2099-06-10T09:30:00Z", expired: false }, NOW).label,
+    ).toBe("Cancelada");
+  });
 });
 
 describe("cancellationState", () => {

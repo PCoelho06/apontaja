@@ -115,6 +115,6 @@ public class ClientAppointmentService {
                 new ClientAppointment.ServiceRef(row.serviceId(), row.serviceName()),
                 new ClientAppointment.ResourceRef(row.resourceId(), row.resourceName()), row.startAt(),
                 row.endAt(), row.status(), row.priceCents(), row.durationMinutes(), cancellable, until,
-                row.cancelledAt());
+                row.cancelledAt(), row.expired());
     }
 }

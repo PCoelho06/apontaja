@@ -20,6 +20,8 @@ export interface ClientAppointment {
   cancellable: boolean;
   cancellableUntil: string | null;
   cancelledAt: string | null;
+  /** Demande annulée par le système faute de réponse du salon (absent des anciennes fixtures). */
+  expired?: boolean;
 }
 
 export interface ClientAppointmentPage {
@@ -43,7 +45,7 @@ export interface StatusInfo {
 
 /** Libellé et teinte du badge. Une demande non traitée dont l'heure est passée n'est plus « pendente ». */
 export function statusInfo(
-  appointment: Pick<ClientAppointment, "status" | "endAt">,
+  appointment: Pick<ClientAppointment, "status" | "endAt" | "expired">,
   now: Date,
 ): StatusInfo {
   switch (appointment.status) {
@@ -56,7 +58,9 @@ export function statusInfo(
     case "COMPLETED":
       return { label: "Concluída", tone: "neutral" };
     case "CANCELLED":
-      return { label: "Cancelada", tone: "danger" };
+      return appointment.expired
+        ? { label: "Pedido expirado", tone: "neutral" }
+        : { label: "Cancelada", tone: "danger" };
     case "NO_SHOW":
       return { label: "Não compareceu", tone: "neutral" };
     default:
@@ -77,7 +81,10 @@ export function cancellationState(
   if (appointment.cancellable) {
     return "CANCELLABLE";
   }
-  if (appointment.status === "CONFIRMED" && new Date(appointment.startAt) > now) {
+  if (
+    appointment.status === "CONFIRMED" &&
+    new Date(appointment.startAt) > now
+  ) {
     return "DEADLINE_PASSED";
   }
   return "NONE";
